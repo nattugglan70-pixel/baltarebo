@@ -15,24 +15,25 @@
     justify-content: center;
     align-items: center;
     flex-direction: column;
+    text-align: center;
   }
 
   .temp {
-    font-size: 60px;
+    font-size: 15vw; /* skalar med bredden på skärmen */
     font-weight: bold;
-    margin-bottom: 10px;
+    margin-bottom: 1vh;
   }
 
   .date {
-    font-size: 24px;
+    font-size: 5vw; /* lite mindre, skalar med skärmen */
     opacity: 0.7;
-    margin-bottom: 5px;
+    margin-bottom: 1vh;
   }
 
   .update {
-    font-size: 16px;
+    font-size: 3vw; /* ännu mindre */
     opacity: 0.5;
-    margin-top: 5px;
+    margin-top: 1vh;
   }
 </style>
 </head>
@@ -63,18 +64,17 @@ async function update(){
   const temp = parseFloat(station.temp);
   document.getElementById("temp").textContent = temp + "°C";
 
-  // Visa dagens datum
+  // Dagens datum
   const now = new Date();
   const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
   document.getElementById("date").textContent = now.toLocaleDateString('sv-SE', options);
 
-  // Visa uppdateringstid (HH:MM)
+  // Uppdateringstid HH:MM
   const hours = now.getHours().toString().padStart(2,'0');
   const minutes = now.getMinutes().toString().padStart(2,'0');
   document.getElementById("update").textContent = "Senast uppdaterad: " + hours + ":" + minutes;
 }
 
-// Kör direkt och uppdatera varje 5 min
 update();
 setInterval(update, 300000);
 </script>
