@@ -4,104 +4,79 @@
 <meta charset="UTF-8">
 <title>Utanför dörren</title>
 <style>
-  body {
-    font-family: 'Arial', sans-serif;
+  html, body {
     margin: 0;
     padding: 0;
-    text-align: center;
-    background: linear-gradient(to bottom, #e0f7fa, #ffffff);
-    transition: background 1s;
-    color: #004d40;
-  }
-  h1 {
-    font-size: 48px;
-    margin-top: 50px;
-    letter-spacing: 2px;
-  }
-  .temp {
-    font-size: 90px;
-    font-weight: bold;
-    margin: 20px 0;
+    background: #000;
+    color: #fff;
+    font-family: Arial, sans-serif;
+    height: 100%;
     display: flex;
     justify-content: center;
     align-items: center;
+    flex-direction: column;
   }
-  .temp span {
-    margin-left: 15px;
-    font-size: 80px;
+
+  .temp {
+    font-size: 60px;
+    font-weight: bold;
+    margin-bottom: 10px;
   }
+
+  .date {
+    font-size: 24px;
+    opacity: 0.7;
+    margin-bottom: 5px;
+  }
+
   .update {
-    font-size: 20px;
-    color: #00796b;
-    margin-bottom: 50px;
+    font-size: 16px;
+    opacity: 0.5;
+    margin-top: 5px;
   }
 </style>
 </head>
 <body>
 
-<h1>Utanför dörren</h1>
-<div class="temp" id="temp">– °C <span id="icon">🌡️</span></div>
-<div class="update" id="update">Uppdateras automatiskt</div>
+<div class="temp" id="temp">Laddar…</div>
+<div class="date" id="date"></div>
+<div class="update" id="update"></div>
 
 <script>
-// Väljer ikon beroende på temp
-function getWeatherIcon(temp){
-  if(temp <= 0) return "❄️";
-  if(temp <= 10) return "🧥";
-  if(temp <= 20) return "🌤️";
-  if(temp <= 30) return "☀️";
-  return "🔥";
-}
-
-// Bakgrund baserat på temp
-function getBackground(temp){
-  if(temp <= 0) return "linear-gradient(to bottom, #b3e5fc, #e0f7fa)";
-  if(temp <= 10) return "linear-gradient(to bottom, #b2dfdb, #e0f2f1)";
-  if(temp <= 20) return "linear-gradient(to bottom, #fff9c4, #fffde7)";
-  if(temp <= 30) return "linear-gradient(to bottom, #ffe082, #fff3e0)";
-  return "linear-gradient(to bottom, #ff8a65, #ffccbc)";
-}
-
-// Hämtar temp från API
-async function fetchTemperature(){
+async function fetchTemp(){
   try {
-    const response = await fetch(
-      "https://api.temperatur.nu/tnu_1.17.php?p=karlsbro&cli=githubpage"
-    );
+    const response = await fetch("https://api.temperatur.nu/tnu_1.17.php?p=karlsbro&cli=githubpage");
     const data = await response.json();
-    return data.stations && data.stations[0] && data.stations[0].temp;
-  } catch (err) {
+    return data.stations[0];
+  } catch {
     return null;
   }
 }
 
-// Uppdaterar sidan med temp
-async function updateTemp(){
-  const temp = await fetchTemperature();
-  const tempElem = document.getElementById("temp");
-  const iconElem = document.getElementById("icon");
-  
-  if(temp !== null){
-    tempElem.textContent = temp + " °C ";
-    iconElem.textContent = getWeatherIcon(parseFloat(temp));
-    tempElem.appendChild(iconElem);
-    document.body.style.background = getBackground(parseFloat(temp));
-    
-    const now = new Date();
-    const h = now.getHours().toString().padStart(2,'0');
-    const m = now.getMinutes().toString().padStart(2,'0');
-    document.getElementById("update").textContent = 
-      "Senast uppdaterad: " + h + ":" + m;
-  } else {
-    tempElem.textContent = "– °C 🌡️";
-    document.getElementById("update").textContent =
-      "Kunde inte hämta temperatur";
+async function update(){
+  const station = await fetchTemp();
+  if(!station){
+    document.getElementById("temp").textContent = "Kunde inte hämta temperatur";
+    return;
   }
+
+  const temp = parseFloat(station.temp);
+  document.getElementById("temp").textContent = temp + "°C";
+
+  // Visa dagens datum
+  const now = new Date();
+  const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+  document.getElementById("date").textContent = now.toLocaleDateString('sv-SE', options);
+
+  // Visa uppdateringstid (HH:MM)
+  const hours = now.getHours().toString().padStart(2,'0');
+  const minutes = now.getMinutes().toString().padStart(2,'0');
+  document.getElementById("update").textContent = "Senast uppdaterad: " + hours + ":" + minutes;
 }
 
-// Kör direkt och varje 5:e minut
-updateTemp();
-setInterval(updateTemp, 300000);
+// Kör direkt och uppdatera varje 5 min
+update();
+setInterval(update, 300000);
 </script>
 
 </body>
