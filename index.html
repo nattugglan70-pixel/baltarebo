@@ -19,7 +19,7 @@
     letter-spacing: 2px;
   }
   .temp {
-    font-size: 100px;
+    font-size: 90px;
     font-weight: bold;
     margin: 20px 0;
     display: flex;
@@ -29,7 +29,6 @@
   .temp span {
     margin-left: 15px;
     font-size: 80px;
-    transition: transform 0.5s;
   }
   .update {
     font-size: 20px;
@@ -45,50 +44,65 @@
 <div class="update" id="update">Uppdateras automatiskt</div>
 
 <script>
-// Funktioner för ikon och bakgrund
+// Väljer ikon beroende på temp
 function getWeatherIcon(temp){
-    temp = parseFloat(temp);
-    if(temp <= 0) return "❄️";
-    if(temp <= 10) return "🧥";
-    if(temp <= 20) return "🌤️";
-    if(temp <= 30) return "☀️";
-    return "🔥";
+  if(temp <= 0) return "❄️";
+  if(temp <= 10) return "🧥";
+  if(temp <= 20) return "🌤️";
+  if(temp <= 30) return "☀️";
+  return "🔥";
 }
 
+// Bakgrund baserat på temp
 function getBackground(temp){
-    temp = parseFloat(temp);
-    if(temp <= 0) return "linear-gradient(to bottom, #b3e5fc, #e0f7fa)";
-    if(temp <= 10) return "linear-gradient(to bottom, #b2dfdb, #e0f2f1)";
-    if(temp <= 20) return "linear-gradient(to bottom, #fff9c4, #fffde7)";
-    if(temp <= 30) return "linear-gradient(to bottom, #ffe082, #fff3e0)";
-    return "linear-gradient(to bottom, #ff8a65, #ffccbc)";
+  if(temp <= 0) return "linear-gradient(to bottom, #b3e5fc, #e0f7fa)";
+  if(temp <= 10) return "linear-gradient(to bottom, #b2dfdb, #e0f2f1)";
+  if(temp <= 20) return "linear-gradient(to bottom, #fff9c4, #fffde7)";
+  if(temp <= 30) return "linear-gradient(to bottom, #ffe082, #fff3e0)";
+  return "linear-gradient(to bottom, #ff8a65, #ffccbc)";
 }
 
-// Funktion som väntar tills temp finns i DOM
-function waitForTemp(callback){
-    const tempContainer = document.getElementById("temp");
-    const interval = setInterval(() => {
-        const match = tempContainer.textContent.match(/[0-9.]+/);
-        if(match){
-            clearInterval(interval);
-            callback(match[0]);
-        }
-    }, 50);
+// Hämtar temp från API
+async function fetchTemperature(){
+  try {
+    const response = await fetch(
+      "http://api.temperatur.nu/tnu_1.17.php?p=baltarebo&cli=githubpage"
+    );
+    const data = await response.json();
+    return data.stations && data.stations[0] && data.stations[0].temp;
+  } catch (err) {
+    return null;
+  }
 }
 
-// Lägg till widget-scriptet
-function addTempScript(){
-    const oldScript = document.querySelector("script[src*='jstemp.php']");
-    if(oldScript) oldScript.remove();
-
-    const script = document.createElement("script");
-    script.src = "https://www.temperatur.nu/jstemp.php?s=baltarebo"; 
-    document.body.appendChild(script);
+// Uppdaterar sidan med temp
+async function updateTemp(){
+  const temp = await fetchTemperature();
+  const tempElem = document.getElementById("temp");
+  const iconElem = document.getElementById("icon");
+  
+  if(temp !== null){
+    tempElem.textContent = temp + " °C ";
+    iconElem.textContent = getWeatherIcon(parseFloat(temp));
+    tempElem.appendChild(iconElem);
+    document.body.style.background = getBackground(parseFloat(temp));
+    
+    const now = new Date();
+    const h = now.getHours().toString().padStart(2,'0');
+    const m = now.getMinutes().toString().padStart(2,'0');
+    document.getElementById("update").textContent = 
+      "Senast uppdaterad: " + h + ":" + m;
+  } else {
+    tempElem.textContent = "– °C 🌡️";
+    document.getElementById("update").textContent =
+      "Kunde inte hämta temperatur";
+  }
 }
 
-// Uppdatera temp, ikon, bakgrund och tid
-function updateTemp(){
-    addTempScript();
-    waitForTemp((temp) => {
-        const tempContainer = document.getElementById("temp");
-        const iconSpan = document
+// Kör direkt och varje 5:e minut
+updateTemp();
+setInterval(updateTemp, 300000);
+</script>
+
+</body>
+</html>
