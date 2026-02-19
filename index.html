@@ -66,7 +66,7 @@ function getBackground(temp){
 async function fetchTemperature(){
   try {
     const response = await fetch(
-      "http://api.temperatur.nu/tnu_1.17.php?p=baltarebo&cli=githubpage"
+      "https://api.temperatur.nu/tnu_1.17.php?p=karlsbro&cli=githubpage"
     );
     const data = await response.json();
     return data.stations && data.stations[0] && data.stations[0].temp;
