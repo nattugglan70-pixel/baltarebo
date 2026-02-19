@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
-<title>Baltarebo Temperatur</title>
+<title>Utanför dörren</title>
 <style>
   body {
     font-family: 'Arial', sans-serif;
@@ -28,6 +28,8 @@
   }
   .temp span {
     margin-left: 15px;
+    font-size: 80px;
+    transition: transform 0.5s;
   }
   .update {
     font-size: 20px;
@@ -38,13 +40,13 @@
 </head>
 <body>
 
-<h1>Baltarebo</h1>
-<div class="temp" id="temp">– °C <span id="emoji">🌡️</span></div>
+<h1>Utanför dörren</h1>
+<div class="temp" id="temp">– °C <span id="icon">🌡️</span></div>
 <div class="update" id="update">Uppdateras automatiskt</div>
 
 <script>
-// Funktion för emoji baserat på temp
-function getEmoji(temp){
+// Funktioner för ikon och bakgrund
+function getWeatherIcon(temp){
     temp = parseFloat(temp);
     if(temp <= 0) return "❄️";
     if(temp <= 10) return "🧥";
@@ -53,7 +55,6 @@ function getEmoji(temp){
     return "🔥";
 }
 
-// Funktion för bakgrundsfärg baserat på temp
 function getBackground(temp){
     temp = parseFloat(temp);
     if(temp <= 0) return "linear-gradient(to bottom, #b3e5fc, #e0f7fa)";
@@ -63,44 +64,13 @@ function getBackground(temp){
     return "linear-gradient(to bottom, #ff8a65, #ffccbc)";
 }
 
-// Hämta temp från temperatur.nu widget
-function updateTemp(){
-    const tempContainer = document.getElementById("temp");
-    const emojiSpan = document.getElementById("emoji");
-
-    // Skapa script för temperatur.nu widget
-    const script = document.createElement("script");
-    script.src = "https://www.temperatur.nu/jstemp.php?s=baltarebo";
-    document.body.appendChild(script);
-
-    // Vänta lite tills scriptet laddat
-    setTimeout(() => {
-        const tempMatch = tempContainer.textContent.match(/[0-9.]+/);
-        if(tempMatch){
-            const temp = tempMatch[0];
-            emojiSpan.textContent = getEmoji(temp);
-            tempContainer.textContent = temp + " °C ";
-            tempContainer.appendChild(emojiSpan);
-            document.body.style.background = getBackground(temp);
-        } else {
-            tempContainer.textContent = "N/A 🌡️";
-        }
-
-        // Visa uppdateringstid
-        const now = new Date();
-        const hours = now.getHours().toString().padStart(2,'0');
-        const minutes = now.getMinutes().toString().padStart(2,'0');
-        document.getElementById('update').textContent = "Senast uppdaterad: " + hours + ":" + minutes;
-    }, 500);
-}
-
-// Initial uppdatering
-updateTemp();
-
-// Uppdatera varje 5:e minut
-setInterval(updateTemp, 300000);
-</script>
-
-</body>
-</html>
-
+// Hämta temp direkt från temperatur.nu
+function fetchTemp(){
+    return new Promise((resolve) => {
+        const script = document.createElement("script");
+        script.src = "https://www.temperatur.nu/jstemp.php?s=baltarebo";
+        script.onload = () => {
+            // Vänta på att temp skrivs ut
+            const checkTemp = setInterval(() => {
+                const tempContainer = document.getElementById("temp");
+                const match = tempContainer.textContent.match(/[0-9.]+/);
