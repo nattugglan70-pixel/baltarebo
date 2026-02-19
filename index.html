@@ -19,21 +19,34 @@
   }
 
   .temp {
-    font-size: 15vw; /* skalar med bredden på skärmen */
+    font-size: 60px; /* grundstorlek för dator */
     font-weight: bold;
-    margin-bottom: 1vh;
+    margin-bottom: 10px;
   }
 
   .date {
-    font-size: 5vw; /* lite mindre, skalar med skärmen */
+    font-size: 24px;
     opacity: 0.7;
-    margin-bottom: 1vh;
+    margin-bottom: 5px;
   }
 
   .update {
-    font-size: 3vw; /* ännu mindre */
+    font-size: 16px;
     opacity: 0.5;
-    margin-top: 1vh;
+    margin-top: 5px;
+  }
+
+  /* Mobilanpassning */
+  @media (max-width: 600px) {
+    .temp {
+      font-size: 12vw; /* växer med mobilens bredd */
+    }
+    .date {
+      font-size: 5vw;
+    }
+    .update {
+      font-size: 3.5vw;
+    }
   }
 </style>
 </head>
@@ -64,12 +77,10 @@ async function update(){
   const temp = parseFloat(station.temp);
   document.getElementById("temp").textContent = temp + "°C";
 
-  // Dagens datum
   const now = new Date();
   const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
   document.getElementById("date").textContent = now.toLocaleDateString('sv-SE', options);
 
-  // Uppdateringstid HH:MM
   const hours = now.getHours().toString().padStart(2,'0');
   const minutes = now.getMinutes().toString().padStart(2,'0');
   document.getElementById("update").textContent = "Senast uppdaterad: " + hours + ":" + minutes;
