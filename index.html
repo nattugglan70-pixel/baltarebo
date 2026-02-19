@@ -64,13 +64,62 @@ function getBackground(temp){
     return "linear-gradient(to bottom, #ff8a65, #ffccbc)";
 }
 
-// Hämta temp direkt från temperatur.nu
-function fetchTemp(){
-    return new Promise((resolve) => {
-        const script = document.createElement("script");
-        script.src = "https://www.temperatur.nu/jstemp.php?s=baltarebo";
-        script.onload = () => {
-            // Vänta på att temp skrivs ut
-            const checkTemp = setInterval(() => {
-                const tempContainer = document.getElementById("temp");
-                const match = tempContainer.textContent.match(/[0-9.]+/);
+// Funktion som kollar om temp finns i DOM
+function waitForTemp(callback){
+    const tempContainer = document.getElementById("temp");
+    const interval = setInterval(() => {
+        const match = tempContainer.textContent.match(/[0-9.]+/);
+        if(match){
+            clearInterval(interval);
+            callback(match[0]);
+        }
+    }, 50);
+}
+
+// Lägg till original-widget script
+const script = document.createElement("script");
+script.src = "https://www.temperatur.nu/jstemp.php?s=baltarebo";
+document.body.appendChild(script);
+
+// Kör första uppdateringen när temp är tillgänglig
+waitForTemp((temp) => {
+    const tempContainer = document.getElementById("temp");
+    const iconSpan = document.getElementById("icon");
+    iconSpan.textContent = getWeatherIcon(temp);
+    tempContainer.textContent = temp + " °C ";
+    tempContainer.appendChild(iconSpan);
+    document.body.style.background = getBackground(temp);
+
+    const now = new Date();
+    const hours = now.getHours().toString().padStart(2,'0');
+    const minutes = now.getMinutes().toString().padStart(2,'0');
+    document.getElementById('update').textContent = "Senast uppdaterad: " + hours + ":" + minutes;
+});
+
+// Automatisk uppdatering var 5:e minut
+setInterval(() => {
+    const oldScript = document.querySelector("script[src*='jstemp.php']");
+    if(oldScript) oldScript.remove();
+
+    const newScript = document.createElement("script");
+    newScript.src = "https://www.temperatur.nu/jstemp.php?s=baltarebo";
+    document.body.appendChild(newScript);
+
+    waitForTemp((temp) => {
+        const tempContainer = document.getElementById("temp");
+        const iconSpan = document.getElementById("icon");
+        iconSpan.textContent = getWeatherIcon(temp);
+        tempContainer.textContent = temp + " °C ";
+        tempContainer.appendChild(iconSpan);
+        document.body.style.background = getBackground(temp);
+
+        const now = new Date();
+        const hours = now.getHours().toString().padStart(2,'0');
+        const minutes = now.getMinutes().toString().padStart(2,'0');
+        document.getElementById('update').textContent = "Senast uppdaterad: " + hours + ":" + minutes;
+    });
+}, 300000);
+</script>
+
+</body>
+</html>
