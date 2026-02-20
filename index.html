@@ -21,7 +21,7 @@
     border-radius: 12px;
     width: 380px;
     box-shadow: 0 2px 10px rgba(255,255,255,0.2);
-    text-align: center; /* All text centrerad i alla sektioner */
+    text-align: center; /* All text centrerad */
   }
 
   .value {
@@ -48,6 +48,11 @@
     vertical-align: middle;
   }
 
+  .legend {
+    font-size: 14px;
+    color: #aaa;
+    margin-top: 8px;
+  }
 </style>
 </head>
 <body>
@@ -65,6 +70,9 @@
   <div class="subtext" id="humidity">Luftfuktighet: -- %</div>
   <div class="subtext" id="pressure">Tryck: -- hPa</div>
   <div class="subtext" id="precipitation">Nederbörd: -- % <span class="trend" id="trend-arrow">-</span></div>
+  <div class="legend">
+    Pilens färg och riktning visar: ↑ Grön = Nederbörd på väg, → Vit = Ingen nederbörd
+  </div>
 </div>
 
 <div class="section">
@@ -110,7 +118,7 @@ async function updateWeatherNow() {
     document.getElementById('humidity').innerText = `Luftfuktighet: ${humidity.toFixed(0)} %`;
     document.getElementById('pressure').innerText = `Tryck: ${pressure.toFixed(0)} hPa`;
 
-    const arrow = precipitation > 0 ? '↑' : '→'; // Enkel trendindikator
+    const arrow = precipitation > 0 ? '↑' : '→'; 
     const color = precipitation > 0 ? 'green' : 'white';
     const trendArrow = document.getElementById('trend-arrow');
     trendArrow.innerText = arrow;
