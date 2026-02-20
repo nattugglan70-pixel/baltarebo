@@ -80,13 +80,15 @@ async function fetchWeather() {
   }
 }
 
-// ===== Elpris: uppdatera endast när timmen byts
+// ===== Elpris: hämta 3 min efter timslag
 let lastHour = -1;
 async function fetchElpris() {
   const now = new Date();
   const currentHour = now.getHours();
 
-  if(currentHour === lastHour) return; // ingen ny timme, hoppa över
+  const minutes = now.getMinutes();
+  // Hämta bara 3+ minuter efter timmen och om timmen ändrats
+  if(minutes < 3 || currentHour === lastHour) return;
   lastHour = currentHour;
 
   try {
@@ -120,11 +122,12 @@ showDate();
 fetchWeather();
 fetchElpris();
 
-// Vädret var 5:e minut
+// Vädret uppdateras var 5:e minut
 setInterval(fetchWeather, 5*60*1000);
 
-// Elpriset kontrolleras varje minut, men hämtas bara vid timbyte
+// Elpriset kontrolleras varje minut, hämtas först 3 min efter timslag
 setInterval(fetchElpris, 60*1000);
+
 </script>
 </body>
 </html>
