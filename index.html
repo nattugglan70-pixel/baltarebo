@@ -16,21 +16,26 @@
     flex-direction: column;
     justify-content: center;
   }
+  .date { font-size: 18px; margin-bottom: 20px; }
   .temp { font-size: 70px; font-weight: bold; }
   .feels { font-size: 22px; margin-top: -6px; opacity: 0.8; }
-  .date, .updated, .elprice { font-size: 18px; margin-top: 8px; }
+  .weather-updated { font-size: 16px; margin-top: 5px; opacity: 0.7; }
+  .elprice { font-size: 20px; margin-top: 40px; }
+  .el-updated { font-size: 16px; margin-top: 5px; opacity: 0.7; }
 </style>
 </head>
 <body>
 
+<div class="date" id="date"></div>
+
 <div class="temp" id="temp">--°C</div>
 <div class="feels" id="feels">Känns som --°C</div>
-<div class="date" id="date"></div>
-<div class="updated" id="updated"></div>
+<div class="weather-updated" id="updated">Senast väderuppdatering: --:--</div>
+
 <div class="elprice" id="elprice">Elpris: -- kr/kWh</div>
+<div class="el-updated" id="el-updated">Senast elprisuppdatering: --:--</div>
 
 <script>
-
 // ===== Datum + Veckonummer
 function showDate() {
   const now = new Date();
@@ -46,7 +51,7 @@ function feelsLike(tempC, windMS) {
   return Math.round(13.12 + 0.6215*tempC - 11.37*Math.pow(windMS,0.16) + 0.3965*tempC*Math.pow(windMS,0.16));
 }
 
-// ===== Open-Meteo: temperatur + vind
+// ===== Väder: temperatur + vind
 async function fetchWeather() {
   const latitude = 57.114025;
   const longitude = 14.168177;
@@ -66,23 +71,22 @@ async function fetchWeather() {
     const now = new Date();
     const hh = now.getHours().toString().padStart(2,"0");
     const mm = now.getMinutes().toString().padStart(2,"0");
-    document.getElementById("updated").textContent = `Senast uppdaterad: ${hh}:${mm}`;
+    document.getElementById("updated").textContent = `Senast väderuppdatering: ${hh}:${mm}`;
 
   } catch(e) {
     document.getElementById("temp").textContent = "--°C";
     document.getElementById("feels").textContent = "Känns som --°C";
-    document.getElementById("updated").textContent = `Senast uppdaterad: -`;
+    document.getElementById("updated").textContent = `Senast väderuppdatering: --:--`;
   }
 }
 
-// ===== Elpris: uppdatera endast vid timbyte
+// ===== Elpris: uppdatera endast när timmen byts
 let lastHour = -1;
 async function fetchElpris() {
   const now = new Date();
   const currentHour = now.getHours();
 
-  // Hämta bara om timmen ändrats
-  if(currentHour === lastHour) return;
+  if(currentHour === lastHour) return; // ingen ny timme, hoppa över
   lastHour = currentHour;
 
   try {
@@ -99,12 +103,15 @@ async function fetchElpris() {
     const price = data[currentHour]?.price_sek ?? null;
     if(price !== null) {
       document.getElementById("elprice").textContent = `Elpris: ${price.toFixed(2)} kr/kWh`;
+      document.getElementById("el-updated").textContent = `Senast elprisuppdatering: ${currentHour}:00`;
     } else {
-      document.getElementById("elprice").textContent = "Elpris: -";
+      document.getElementById("elprice").textContent = `Elpris: -`;
+      document.getElementById("el-updated").textContent = `Senast elprisuppdatering: --:--`;
     }
 
   } catch(e) {
-    document.getElementById("elprice").textContent = "Elpris: -";
+    document.getElementById("elprice").textContent = `Elpris: -`;
+    document.getElementById("el-updated").textContent = `Senast elprisuppdatering: --:--`;
   }
 }
 
@@ -113,12 +120,11 @@ showDate();
 fetchWeather();
 fetchElpris();
 
-// Vädret uppdateras var 5:e minut
+// Vädret var 5:e minut
 setInterval(fetchWeather, 5*60*1000);
 
-// Elpriset kontrolleras varje minut men hämtas bara vid timbyte
+// Elpriset kontrolleras varje minut, men hämtas bara vid timbyte
 setInterval(fetchElpris, 60*1000);
-
 </script>
 </body>
 </html>
