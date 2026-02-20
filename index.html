@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
-<title>Min Dashboard</title>
+<title>Dashboard</title>
 
 <style>
 body {
@@ -20,12 +20,12 @@ body {
   padding: 20px;
   margin: 15px;
   border-radius: 10px;
-  width: 320px;
+  width: 340px;
 }
 
 h2 {
-  margin-bottom: 15px;
   text-align: center;
+  margin-bottom: 15px;
 }
 
 .row {
@@ -54,6 +54,22 @@ h2 {
 <body>
 
 <div class="box">
+  <h2>Väder</h2>
+
+  <div class="row">
+    <div>Temperatur</div>
+    <div id="temp" class="big">--</div>
+  </div>
+
+  <div class="row">
+    <div>Vind</div>
+    <div id="wind" class="big">--</div>
+  </div>
+
+  <div class="small" id="weatherUpdated">Uppdaterar...</div>
+</div>
+
+<div class="box">
   <h2>Elpris SE4</h2>
 
   <div class="row">
@@ -66,10 +82,44 @@ h2 {
     <div id="previous" class="big orange">--</div>
   </div>
 
-  <div id="updated" class="small">Uppdaterar...</div>
+  <div id="elUpdated" class="small">Uppdaterar...</div>
 </div>
 
 <script>
+
+// ===== VÄDER =====
+async function loadWeather() {
+  try {
+    const lat = 57.114025;
+    const lon = 14.168177;
+
+    const response = await fetch(
+      `https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${lon}/lat/${lat}/data.json`
+    );
+
+    const data = await response.json();
+    const now = new Date();
+
+    const next = data.timeSeries.find(t =>
+      new Date(t.validTime) >= now
+    );
+
+    const temp = next.parameters.find(p => p.name === "t").values[0];
+    const wind = next.parameters.find(p => p.name === "ws").values[0];
+
+    document.getElementById("temp").innerText = temp.toFixed(1) + " °C";
+    document.getElementById("wind").innerText = wind.toFixed(1) + " m/s";
+    document.getElementById("weatherUpdated").innerText =
+      "Uppdaterad: " + now.toLocaleTimeString("sv-SE");
+
+  } catch (e) {
+    console.error("Weather error:", e);
+    document.getElementById("temp").innerText = "Fel";
+  }
+}
+
+
+// ===== ELPRIS =====
 async function loadElectricity() {
   try {
     const response = await fetch(
@@ -86,23 +136,33 @@ async function loadElectricity() {
     const current = data.records[0];
     const previous = data.records[1];
 
+    const currentPrice =
+      current.SpotPriceSEK ?? current.SpotPriceEUR ?? 0;
+
+    const previousPrice =
+      previous.SpotPriceSEK ?? previous.SpotPriceEUR ?? 0;
+
     document.getElementById("current").innerText =
-      (current.SpotPriceSEK / 1000).toFixed(2) + " SEK/kWh";
+      (currentPrice / 1000).toFixed(2) + " SEK/kWh";
 
     document.getElementById("previous").innerText =
-      (previous.SpotPriceSEK / 1000).toFixed(2) + " SEK/kWh";
+      (previousPrice / 1000).toFixed(2) + " SEK/kWh";
 
-    document.getElementById("updated").innerText =
-      "Senast uppdaterad: " + new Date().toLocaleTimeString("sv-SE");
+    document.getElementById("elUpdated").innerText =
+      "Uppdaterad: " + new Date().toLocaleTimeString("sv-SE");
 
-  } catch (error) {
-    console.error(error);
+  } catch (e) {
+    console.error("Electric error:", e);
     document.getElementById("current").innerText = "Fel vid hämtning";
   }
 }
 
+loadWeather();
 loadElectricity();
+
+setInterval(loadWeather, 300000);
 setInterval(loadElectricity, 300000);
+
 </script>
 
 </body>
