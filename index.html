@@ -57,7 +57,6 @@
   <div class="subtext" id="wind">Vind: -- m/s</div>
   <div class="subtext" id="humidity">Luftfuktighet: -- %</div>
   <div class="subtext" id="pressure">Tryck: -- hPa</div>
-  <div class="subtext" id="precipitation">Nederbörd: -- %</div>
 </div>
 
 <div class="section">
@@ -65,6 +64,17 @@
     Min: -- °C kl --:--<br>
     Max: -- °C kl --:--
   </div>
+</div>
+
+<div class="section">
+  <div class="minmax" id="temp-yesterday">
+    Högsta igår: -- °C kl --:--<br>
+    Lägsta igår: -- °C kl --:--
+  </div>
+</div>
+
+<div class="section">
+  <div class="subtext" id="precipitation">Nederbörd: -- %</div>
 </div>
 
 <div class="section">
@@ -96,14 +106,13 @@ async function updateWeatherNow() {
     const wind = params.find(p => p.name === 'ws').values[0];
     const humidity = params.find(p => p.name === 'r').values[0];
     const pressure = params.find(p => p.name === 'msl').values[0];
-    const precipitation = params.find(p => p.name === 'pcat').values[0]; // Sannolik nederbörd
+    const precip = params.find(p => p.name === 'pmean')?.values[0] || 0;
 
     document.getElementById('temp-now').innerText = `${temp.toFixed(1)} °C (${feels.toFixed(1)} °C)`;
     document.getElementById('wind').innerText = `Vind: ${wind.toFixed(1)} m/s`;
     document.getElementById('humidity').innerText = `Luftfuktighet: ${humidity.toFixed(0)} %`;
     document.getElementById('pressure').innerText = `Tryck: ${pressure.toFixed(0)} hPa`;
-    document.getElementById('precipitation').innerText = `Nederbörd: ${precipitation.toFixed(0)} %`;
-
+    document.getElementById('precipitation').innerText = `Nederbörd: ${precip.toFixed(0)} %`;
     document.getElementById('weather-updated').innerText = 'Senast uppdaterad: ' + now.toLocaleTimeString('sv-SE');
   } catch(err) {
     console.error('SMHI weather error:', err);
@@ -137,14 +146,44 @@ async function updateMinMax() {
   }
 }
 
+// Open-Meteo: Gårdagens min/max
+async function updateYesterday() {
+  try {
+    const yesterdayDate = new Date();
+    yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+    const yesterday = yesterdayDate.toISOString().split('T')[0];
+
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m&timezone=Europe/Stockholm&start=${yesterday}T00:00&end=${yesterday}T23:59`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    const hours = data.hourly.time.map(t => new Date(t));
+    const temps = data.hourly.temperature_2m;
+
+    let minTemp = temps[0], maxTemp = temps[0], minTime = hours[0], maxTime = hours[0];
+    for(let i=0;i<temps.length;i++){
+      if(temps[i] < minTemp){ minTemp = temps[i]; minTime = hours[i]; }
+      if(temps[i] > maxTemp){ maxTemp = temps[i]; maxTime = hours[i]; }
+    }
+
+    document.getElementById('temp-yesterday').innerHTML = 
+      `Högsta igår: ${maxTemp.toFixed(1)} °C kl ${maxTime.getHours()}:${String(maxTime.getMinutes()).padStart(2,'0')}<br>` +
+      `Lägsta igår: ${minTemp.toFixed(1)} °C kl ${minTime.getHours()}:${String(minTime.getMinutes()).padStart(2,'0')}`;
+  } catch(err) {
+    console.error('Open-Meteo yesterday error:', err);
+  }
+}
+
 // Initial
 updateDateWeek();
 updateWeatherNow();
 updateMinMax();
+updateYesterday();
 
 // Intervaller
 setInterval(updateWeatherNow, 5*60*1000); 
-setInterval(updateMinMax, 15*60*1000); 
+setInterval(updateMinMax, 15*60*1000);
+setInterval(updateYesterday, 60*60*1000); // uppdatera gårdagens var timme
 </script>
 
 </body>
