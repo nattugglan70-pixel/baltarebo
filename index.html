@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
-<title>VÄDER</title>
+<title>Väderdashboard</title>
 <style>
   body {
     font-family: Arial, sans-serif;
@@ -21,7 +21,7 @@
     border-radius: 12px;
     width: 380px;
     box-shadow: 0 2px 10px rgba(255,255,255,0.2);
-    text-align: center; /* All text centered */
+    text-align: center;
   }
 
   .value {
@@ -37,7 +37,7 @@
   }
 
   .minmax {
-    font-size: 16px;
+    font-size: 20px;
     margin: 6px 0;
     line-height: 1.5;
   }
@@ -47,7 +47,7 @@
 
 <div class="section">
   <div id="date-week">--</div>
-  <div class="subtext" id="weather-updated">Senast uppdaterad: --:--</div>
+  <div class="subtext" id="weather-updated">--</div>
 </div>
 
 <div class="section">
@@ -58,15 +58,15 @@
   <div class="subtext" id="wind">Vind: -- m/s</div>
   <div class="subtext" id="humidity">Luftfuktighet: -- %</div>
   <div class="subtext" id="pressure">Tryck: -- hPa</div>
-  <div class="subtext" id="precip">Nederbörd: -- mm | Risk 24h: -- %</div>
+  <div class="subtext" id="precip">Nederbörd: -- mm, Risk 24h: -- %</div>
 </div>
 
 <div class="section">
   <div class="minmax" id="temp-minmax">
     Min idag: -- °C kl --:--<br>
     Max idag: -- °C kl --:--<br>
-    Lägsta igår: -- °C kl --:--<br>
-    Högsta igår: -- °C kl --:--
+    Lägsta igår: --<br>
+    Högsta igår: --
   </div>
 </div>
 
@@ -81,6 +81,14 @@ function updateDateWeek() {
   document.getElementById('date-week').innerText = now.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + ' | Vecka ' + week;
 }
 
+// "Känns som"-temperatur (Wind Chill)
+function feelsLike(temp, wind) {
+  if(temp <= 10 && wind > 4.8){
+    return 13.12 + 0.6215*temp - 11.37*Math.pow(wind,0.16) + 0.3965*temp*Math.pow(wind,0.16);
+  }
+  return temp;
+}
+
 // SMHI: Nuvarande väder
 async function updateWeatherNow() {
   try {
@@ -88,86 +96,73 @@ async function updateWeatherNow() {
     const res = await fetch(url);
     const data = await res.json();
     const now = new Date();
-
     const nearest = data.timeSeries.reduce((a,b) => Math.abs(new Date(b.validTime)-now) < Math.abs(new Date(a.validTime)-now) ? b : a);
     const params = nearest.parameters;
-    const temp = params.find(p => p.name === 't').values[0];
-    const wind = params.find(p => p.name === 'ws').values[0];
-    const humidity = params.find(p => p.name === 'r').values[0];
-    const pressure = params.find(p => p.name === 'msl').values[0];
+    const temp = params.find(p => p.name==='t').values[0];
+    const wind = params.find(p => p.name==='ws').values[0];
+    const humidity = params.find(p => p.name==='r').values[0];
+    const pressure = params.find(p => p.name==='msl').values[0];
 
-    // Känns som (wind chill) approximation
-    let feels = temp;
-    if(temp <= 10 && wind > 1) {
-      feels = 13.12 + 0.6215*temp - 11.37*Math.pow(wind,0.16) + 0.3965*temp*Math.pow(wind,0.16);
-    }
-
-    document.getElementById('temp-now').innerText = `${temp.toFixed(1)} °C (${feels.toFixed(1)} °C)`;
+    document.getElementById('temp-now').innerText = `${temp.toFixed(1)} °C (${feelsLike(temp,wind).toFixed(1)} °C)`;
     document.getElementById('wind').innerText = `Vind: ${wind.toFixed(1)} m/s`;
     document.getElementById('humidity').innerText = `Luftfuktighet: ${humidity.toFixed(0)} %`;
     document.getElementById('pressure').innerText = `Tryck: ${pressure.toFixed(0)} hPa`;
-    const nowTimeStr = isNaN(now.getTime()) ? '--:--' : now.toLocaleTimeString('sv-SE');
-    document.getElementById('weather-updated').innerText = 'Senast uppdaterad: ' + nowTimeStr;
+    document.getElementById('weather-updated').innerText = 'Senast uppdaterad: ' + now.toLocaleTimeString('sv-SE');
   } catch(err) {
     console.error('SMHI weather error:', err);
   }
 }
 
-// Open-Meteo: Dagens min/max + gårdagens min/max + nederbörd risk
+// Open-Meteo: Dagens min/max + gårdagens min/max + nederbörd
 async function updateMinMax() {
   try {
     const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(today.getDate()-1);
-
     const todayStr = today.toISOString().split('T')[0];
+    const yesterday = new Date(today.getTime() - 86400000);
     const yesterdayStr = yesterday.toISOString().split('T')[0];
 
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation_probability,precipitation&timezone=Europe/Stockholm`;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation&timezone=Europe/Stockholm`;
     const res = await fetch(url);
     const data = await res.json();
-
-    const hours = data.hourly.time.map(t => new Date(t));
+    const hours = data.hourly.time.map(t=>new Date(t));
     const temps = data.hourly.temperature_2m;
-    const precs = data.hourly.precipitation;
-    const precProbs = data.hourly.precipitation_probability;
+    const precips = data.hourly.precipitation;
 
-    // Dagens min/max
-    let minTemp = null, maxTemp = null, minTime = null, maxTime = null;
-    // Gårdagens min/max
-    let minYest = null, maxYest = null, minYTime = null, maxYTime = null;
-    // Nederbörd risk 24h
-    let precip24 = 0, precipProb24 = 0;
+    let minTemp = temps[0], maxTemp = temps[0], minTime=hours[0], maxTime=hours[0];
+    let minYest=null,maxYest=null,minYTime=null,maxYTime=null;
+
+    const nowHour = today.getHours();
+    let precipToday = 0;
+    let precipChance24=0;
 
     for(let i=0;i<temps.length;i++){
       const dateStr = hours[i].toISOString().split('T')[0];
-
-      if(dateStr === todayStr){
-        if(minTemp===null || temps[i]<minTemp){ minTemp=temps[i]; minTime=hours[i]; }
-        if(maxTemp===null || temps[i]>maxTemp){ maxTemp=temps[i]; maxTime=hours[i]; }
-        precip24 += precs[i];
-        if(precProbs[i] > precipProb24) precipProb24 = precProbs[i];
+      // Dagens min/max
+      if(dateStr===todayStr){
+        if(temps[i]<minTemp){ minTemp=temps[i]; minTime=hours[i]; }
+        if(temps[i]>maxTemp){ maxTemp=temps[i]; maxTime=hours[i]; }
+        precipToday += precips[i];
       }
-
-      if(dateStr === yesterdayStr){
+      // Gårdagens min/max (först efter 06:00)
+      if(nowHour>=6 && dateStr===yesterdayStr){
         if(minYest===null || temps[i]<minYest){ minYest=temps[i]; minYTime=hours[i]; }
         if(maxYest===null || temps[i]>maxYest){ maxYest=temps[i]; maxYTime=hours[i]; }
       }
+      // Nederbörd 24h chans (max per timme under 24h)
+      if(i<24){ 
+        precipChance24 = Math.max(precipChance24, precips[i]>0?100:0);
+      }
     }
 
-    document.getElementById('temp-minmax').innerHTML =
-      `Min idag: ${minTemp!==null ? minTemp.toFixed(1)+' °C kl '+minTime.getHours()+':'+String(minTime.getMinutes()).padStart(2,'0') : '--'}<br>`+
-      `Max idag: ${maxTemp!==null ? maxTemp.toFixed(1)+' °C kl '+maxTime.getHours()+':'+String(maxTime.getMinutes()).padStart(2,'0') : '--'}<br>`+
-      `Lägsta igår: ${minYest!==null ? minYest.toFixed(1)+' °C kl '+minYTime.getHours()+':'+String(minYTime.getMinutes()).padStart(2,'0') : '--'}<br>`+
-      `Högsta igår: ${maxYest!==null ? maxYest.toFixed(1)+' °C kl '+maxYTime.getHours()+':'+String(maxYTime.getMinutes()).padStart(2,'0') : '--'}`;
+    document.getElementById('precip').innerText = `Nederbörd: ${precipToday.toFixed(1)} mm, Risk 24h: ${precipChance24}%`;
 
-    document.getElementById('precip').innerText =
-      `Nederbörd: ${precip24.toFixed(1)} mm | Risk 24h: ${precipProb24.toFixed(0)} %`;
-
-  } catch(err){
+    document.getElementById('temp-minmax').innerHTML = 
+      `Min idag: ${minTemp.toFixed(1)} °C kl ${minTime.getHours()}:${String(minTime.getMinutes()).padStart(2,'0')}<br>`+
+      `Max idag: ${maxTemp.toFixed(1)} °C kl ${maxTime.getHours()}:${String(maxTime.getMinutes()).padStart(2,'0')}<br>`+
+      `Lägsta igår: ${minYest!==null ? minYest.toFixed(1)+' °C kl '+minYTime.getHours()+':'+String(minYTime.getMinutes()).padStart(2,'0') : 'Uppdateras 06:00'}<br>`+
+      `Högsta igår: ${maxYest!==null ? maxYest.toFixed(1)+' °C kl '+maxYTime.getHours()+':'+String(maxYTime.getMinutes()).padStart(2,'0') : 'Uppdateras 06:00'}`;
+  } catch(err) {
     console.error('Open-Meteo min/max error:', err);
-    document.getElementById('temp-minmax').innerHTML = '--';
-    document.getElementById('precip').innerText = 'Nederbörd: -- mm | Risk 24h: -- %';
   }
 }
 
@@ -179,7 +174,7 @@ updateMinMax();
 // Intervaller
 setInterval(updateWeatherNow, 5*60*1000);
 setInterval(updateMinMax, 15*60*1000);
-
 </script>
+
 </body>
 </html>
