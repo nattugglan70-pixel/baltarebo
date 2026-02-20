@@ -2,167 +2,216 @@
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
-<title>Väder</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Väderstation</title>
+
 <style>
-  body {
-    background: #000;
-    color: #fff;
-    font-family: Arial, sans-serif;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 30px;
-  }
+body {
+  margin:0;
+  font-family: Arial, sans-serif;
+  background:#0f172a;
+  color:#e2e8f0;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+}
 
-  .box {
-    background: #111;
-    padding: 20px 30px;
-    margin: 15px 0;
-    border-radius: 12px;
-    width: 360px;
-  }
+.container {
+  text-align:center;
+  background:#1e293b;
+  padding:40px;
+  border-radius:20px;
+  box-shadow:0 0 40px rgba(0,0,0,0.5);
+  width:420px;
+}
 
-  .date {
-    text-align: center;
-    font-size: 16px;
-  }
+h1 {
+  margin-bottom:10px;
+  font-weight:600;
+}
 
-  .temp-main {
-    font-size: 48px;
-    font-weight: bold;
-    text-align: center;
-    margin-bottom: 10px;
-  }
+.date {
+  font-size:14px;
+  opacity:0.7;
+  margin-bottom:25px;
+}
 
-  .grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    font-size: 14px;
-  }
+.temp-main {
+  font-size:64px;
+  font-weight:700;
+  margin:10px 0;
+}
 
-  .small {
-    color: #aaa;
-    text-align: center;
-    font-size: 12px;
-    margin-top: 10px;
-  }
+.temp-minmax {
+  font-size:14px;
+  opacity:0.8;
+  margin-bottom:10px;
+}
+
+.trend {
+  font-size:18px;
+  margin-bottom:20px;
+}
+
+.weather-icon {
+  font-size:48px;
+  margin:10px 0;
+}
+
+.grid {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:15px;
+  margin-top:20px;
+  font-size:14px;
+}
+
+.card {
+  background:#0f172a;
+  padding:15px;
+  border-radius:12px;
+}
+
+.updated {
+  margin-top:20px;
+  font-size:12px;
+  opacity:0.6;
+}
 </style>
 </head>
+
 <body>
 
-<div class="box">
-  <div class="date" id="date-week">--</div>
-</div>
+<div class="container">
+  <h1>Väderstation</h1>
+  <div class="date" id="date"></div>
 
-<div class="box">
-  <div class="temp-main" id="temperature">-- °C</div>
+  <div class="temp-main" id="temp">--°</div>
+  <div class="trend" id="trend"></div>
+  <div class="temp-minmax" id="minmax"></div>
+  <div class="weather-icon" id="symbol"></div>
 
   <div class="grid">
-    <div id="feels">Känns som: -- °C</div>
-    <div id="wind">Vind: -- m/s</div>
-    <div id="humidity">Fuktighet: -- %</div>
-    <div id="pressure">Tryck: -- hPa</div>
+    <div class="card">Känns som<br><strong id="feels">--°</strong></div>
+    <div class="card">Vind<br><strong id="wind">-- m/s</strong></div>
+    <div class="card">Lufttryck<br><strong id="pressure">-- hPa</strong></div>
+    <div class="card">Fuktighet<br><strong id="humidity">-- %</strong></div>
   </div>
 
-  <div class="small" id="updated">Uppdaterar...</div>
+  <div class="updated" id="updated"></div>
 </div>
 
 <script>
-const lat = 57.114025;
-const lon = 14.168177;
 
-/* DATUM + VECKA */
-function updateDate() {
+let previousTemp = null;
+
+function weekNumber(d){
+  d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
+  let yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+}
+
+function updateDate(){
   const now = new Date();
-  const start = new Date(now.getFullYear(), 0, 1);
-  const week = Math.ceil((((now - start) / 86400000) + start.getDay() + 1) / 7);
-
-  document.getElementById("date-week").textContent =
-    now.toLocaleDateString("sv-SE", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric"
-    }) + " | Vecka " + week;
+  const options = { weekday:'long', year:'numeric', month:'long', day:'numeric' };
+  document.getElementById("date").innerText =
+    now.toLocaleDateString("sv-SE", options) +
+    " | Vecka " + weekNumber(now);
 }
 
-/* TEMPERATUR.NU – STABIL DEL */
-async function updateTemperature() {
-  try {
-    const response = await fetch(
-      "https://api.temperatur.nu/tnu_1.17.php?p=karlsbro&cli=api_demo"
-    );
-    const data = await response.json();
-    const temp = parseFloat(data.stations[0].temp);
+async function fetchTemperature(){
+  try{
+    const response = await fetch("https://api.allorigins.win/raw?url=https://api.temperatur.nu/tnu_1.17.php?p=karlsbro");
+    const text = await response.text();
+    const match = text.match(/-?\d+(\.\d+)?/);
+    if(match){
+      const currentTemp = parseFloat(match[0]);
+      document.getElementById("temp").innerText = currentTemp.toFixed(1)+"°";
 
-    if (!isNaN(temp)) {
-      document.getElementById("temperature").textContent =
-        temp.toFixed(1) + " °C";
+      if(previousTemp !== null){
+        if(currentTemp > previousTemp){
+          document.getElementById("trend").innerText = "↑ Stiger";
+        } else if(currentTemp < previousTemp){
+          document.getElementById("trend").innerText = "↓ Sjunker";
+        } else {
+          document.getElementById("trend").innerText = "→ Oförändrat";
+        }
+      }
+
+      previousTemp = currentTemp;
     }
-
-  } catch (error) {
-    console.error("Temperatur-fel:", error);
+  }catch(err){
+    document.getElementById("temp").innerText="--°";
   }
 }
 
-/* SMHI – SEPARAT DEL */
-async function updateSMHI() {
-  try {
-    const url =
-      `https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${lon}/lat/${lat}/data.json`;
+function weatherSymbol(code){
+  const symbols = {
+    1:"☀️",2:"⛅",3:"⛅",
+    4:"☁️",5:"☁️",6:"☁️",
+    7:"🌫️",
+    8:"🌧️",9:"🌧️",10:"🌧️",
+    11:"⛈️",
+    12:"🌨️",13:"🌨️",14:"🌨️",
+    15:"🌨️"
+  };
+  return symbols[code] || "";
+}
 
-    const response = await fetch(url);
-    const data = await response.json();
+async function fetchSMHI(){
+  const lat = 59.5;  // din lat
+  const lon = 15.3;  // din lon
+  const url = `https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${lon}/lat/${lat}/data.json`;
 
-    const now = new Date();
-    const forecast = data.timeSeries.find(t =>
-      new Date(t.validTime) >= now
+  try{
+    const res = await fetch(url);
+    const data = await res.json();
+
+    const now = data.timeSeries[0];
+    const params = now.parameters;
+
+    const get = name => params.find(p=>p.name===name)?.values[0];
+
+    document.getElementById("feels").innerText = get("apparent_t")+"°";
+    document.getElementById("wind").innerText = get("ws")+" m/s";
+    document.getElementById("pressure").innerText = get("msl")+" hPa";
+    document.getElementById("humidity").innerText = get("r")+" %";
+
+    const symbolCode = get("Wsymb2");
+    document.getElementById("symbol").innerText = weatherSymbol(symbolCode);
+
+    // Max/min idag
+    const today = new Date().toISOString().split("T")[0];
+    const todayData = data.timeSeries.filter(t => t.validTime.startsWith(today));
+
+    const temps = todayData.map(t =>
+      t.parameters.find(p=>p.name==="t").values[0]
     );
 
-    if (!forecast) return;
+    const max = Math.max(...temps).toFixed(1);
+    const min = Math.min(...temps).toFixed(1);
 
-    const p = forecast.parameters;
+    document.getElementById("minmax").innerText =
+      "Max: "+max+"° | Min: "+min+"°";
 
-    const feels = p.find(x => x.name === "t")?.values[0];
-    const wind = p.find(x => x.name === "ws")?.values[0];
-    const humidity = p.find(x => x.name === "r")?.values[0];
-    const pressure = p.find(x => x.name === "msl")?.values[0];
+    document.getElementById("updated").innerText =
+      "Senast uppdaterad: "+new Date().toLocaleTimeString("sv-SE");
 
-    if (feels !== undefined)
-      document.getElementById("feels").textContent =
-        "Känns som: " + feels.toFixed(1) + " °C";
-
-    if (wind !== undefined)
-      document.getElementById("wind").textContent =
-        "Vind: " + wind.toFixed(1) + " m/s";
-
-    if (humidity !== undefined)
-      document.getElementById("humidity").textContent =
-        "Fuktighet: " + humidity.toFixed(0) + " %";
-
-    if (pressure !== undefined)
-      document.getElementById("pressure").textContent =
-        "Tryck: " + pressure.toFixed(0) + " hPa";
-
-    document.getElementById("updated").textContent =
-      "Senast uppdaterad: " +
-      new Date().toLocaleTimeString("sv-SE");
-
-  } catch (error) {
-    console.error("SMHI-fel:", error);
+  }catch(err){
+    console.log("SMHI fel",err);
   }
 }
 
-/* START */
-updateDate();
-updateTemperature();
-updateSMHI();
+function updateAll(){
+  updateDate();
+  fetchTemperature();
+  fetchSMHI();
+}
 
-/* INTERVALL */
-setInterval(updateDate, 60 * 1000);
-setInterval(updateTemperature, 5 * 60 * 1000);
-setInterval(updateSMHI, 5 * 60 * 1000);
+updateAll();
+setInterval(updateAll, 300000);
 
 </script>
 
