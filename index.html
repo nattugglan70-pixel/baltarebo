@@ -2,53 +2,168 @@
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
-<title>Temperatur</title>
+<title>Väder</title>
 <style>
   body {
     background: #000;
     color: #fff;
     font-family: Arial, sans-serif;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
     align-items: center;
-    height: 100vh;
+    padding: 30px;
   }
-  .temp {
+
+  .box {
+    background: #111;
+    padding: 20px 30px;
+    margin: 15px 0;
+    border-radius: 12px;
+    width: 360px;
+  }
+
+  .date {
+    text-align: center;
+    font-size: 16px;
+  }
+
+  .temp-main {
     font-size: 48px;
     font-weight: bold;
+    text-align: center;
+    margin-bottom: 10px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    font-size: 14px;
+  }
+
+  .small {
+    color: #aaa;
+    text-align: center;
+    font-size: 12px;
+    margin-top: 10px;
   }
 </style>
 </head>
 <body>
 
-<div class="temp" id="temperature">-- °C</div>
+<div class="box">
+  <div class="date" id="date-week">--</div>
+</div>
+
+<div class="box">
+  <div class="temp-main" id="temperature">-- °C</div>
+
+  <div class="grid">
+    <div id="feels">Känns som: -- °C</div>
+    <div id="wind">Vind: -- m/s</div>
+    <div id="humidity">Fuktighet: -- %</div>
+    <div id="pressure">Tryck: -- hPa</div>
+  </div>
+
+  <div class="small" id="updated">Uppdaterar...</div>
+</div>
 
 <script>
-async function getTemperature() {
+const lat = 57.114025;
+const lon = 14.168177;
+
+/* DATUM + VECKA */
+function updateDate() {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 1);
+  const week = Math.ceil((((now - start) / 86400000) + start.getDay() + 1) / 7);
+
+  document.getElementById("date-week").textContent =
+    now.toLocaleDateString("sv-SE", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric"
+    }) + " | Vecka " + week;
+}
+
+/* TEMPERATUR.NU – STABIL DEL */
+async function updateTemperature() {
   try {
     const response = await fetch(
       "https://api.temperatur.nu/tnu_1.17.php?p=karlsbro&cli=api_demo"
     );
-
     const data = await response.json();
-
     const temp = parseFloat(data.stations[0].temp);
 
     if (!isNaN(temp)) {
       document.getElementById("temperature").textContent =
         temp.toFixed(1) + " °C";
-    } else {
-      document.getElementById("temperature").textContent = "-- °C";
     }
 
   } catch (error) {
-    console.error("Fel vid hämtning:", error);
-    document.getElementById("temperature").textContent = "-- °C";
+    console.error("Temperatur-fel:", error);
   }
 }
 
-getTemperature();
-setInterval(getTemperature, 5 * 60 * 1000);
+/* SMHI – SEPARAT DEL */
+async function updateSMHI() {
+  try {
+    const url =
+      `https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${lon}/lat/${lat}/data.json`;
+
+    const response = await fetch(url);
+    const data = await response.json();
+
+    const now = new Date();
+    const forecast = data.timeSeries.find(t =>
+      new Date(t.validTime) >= now
+    );
+
+    if (!forecast) return;
+
+    const p = forecast.parameters;
+
+    const feels = p.find(x => x.name === "t")?.values[0];
+    const wind = p.find(x => x.name === "ws")?.values[0];
+    const humidity = p.find(x => x.name === "r")?.values[0];
+    const pressure = p.find(x => x.name === "msl")?.values[0];
+
+    if (feels !== undefined)
+      document.getElementById("feels").textContent =
+        "Känns som: " + feels.toFixed(1) + " °C";
+
+    if (wind !== undefined)
+      document.getElementById("wind").textContent =
+        "Vind: " + wind.toFixed(1) + " m/s";
+
+    if (humidity !== undefined)
+      document.getElementById("humidity").textContent =
+        "Fuktighet: " + humidity.toFixed(0) + " %";
+
+    if (pressure !== undefined)
+      document.getElementById("pressure").textContent =
+        "Tryck: " + pressure.toFixed(0) + " hPa";
+
+    document.getElementById("updated").textContent =
+      "Senast uppdaterad: " +
+      new Date().toLocaleTimeString("sv-SE");
+
+  } catch (error) {
+    console.error("SMHI-fel:", error);
+  }
+}
+
+/* START */
+updateDate();
+updateTemperature();
+updateSMHI();
+
+/* INTERVALL */
+setInterval(updateDate, 60 * 1000);
+setInterval(updateTemperature, 5 * 60 * 1000);
+setInterval(updateSMHI, 5 * 60 * 1000);
+
 </script>
 
 </body>
