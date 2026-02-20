@@ -18,8 +18,8 @@
     padding: 20px;
     background: #111;
     border-radius: 10px;
-    width: 350px;
-    box-shadow: 0 2px 5px rgba(255,255,255,0.2);
+    width: 360px;
+    box-shadow: 0 2px 8px rgba(255,255,255,0.2);
   }
   h2 {
     margin: 0 0 10px;
@@ -29,14 +29,16 @@
     padding-bottom: 5px;
   }
   .value {
-    font-size: 22px;
+    font-size: 26px;
     font-weight: bold;
     text-align: center;
+    margin: 5px 0;
   }
   .subtext {
-    font-size: 12px;
+    font-size: 13px;
     color: #aaa;
     text-align: center;
+    margin: 3px 0;
   }
 </style>
 </head>
@@ -47,12 +49,23 @@
 </div>
 
 <div class="section">
-  <h2>Väder (SMHI + Open-Meteo)</h2>
-  <div class="value" id="temp-now">-- °C (känns som -- °C)</div>
-  <div class="subtext" id="temp-minmax">Min: -- °C kl --:-- | Max: -- °C kl --:--</div>
+  <h2>Temperatur</h2>
+  <div class="value" id="temp-now">-- °C (-- °C)</div>
+</div>
+
+<div class="section">
+  <h2>Väderdetaljer</h2>
   <div class="subtext" id="wind">Vind: -- m/s</div>
   <div class="subtext" id="humidity">Luftfuktighet: -- %</div>
   <div class="subtext" id="pressure">Tryck: -- hPa</div>
+</div>
+
+<div class="section">
+  <h2>Dagens Min/Max</h2>
+  <div class="subtext" id="temp-minmax">Min: -- °C kl --:-- | Max: -- °C kl --:--</div>
+</div>
+
+<div class="section">
   <div class="subtext" id="weather-updated">Senast uppdaterad: --:--</div>
 </div>
 
@@ -77,12 +90,12 @@ async function updateWeatherNow() {
     const nearest = data.timeSeries.reduce((a,b) => Math.abs(new Date(b.validTime)-now) < Math.abs(new Date(a.validTime)-now) ? b : a);
     const params = nearest.parameters;
     const temp = params.find(p => p.name === 't').values[0];
-    const feels = params.find(p => p.name === 't').values[0]; // SMHI har ej feels-like, vi sätter samma
+    const feels = params.find(p => p.name === 't').values[0]; 
     const wind = params.find(p => p.name === 'ws').values[0];
     const humidity = params.find(p => p.name === 'r').values[0];
     const pressure = params.find(p => p.name === 'msl').values[0];
 
-    document.getElementById('temp-now').innerText = `${temp.toFixed(1)} °C (känns som ${feels.toFixed(1)} °C)`;
+    document.getElementById('temp-now').innerText = `${temp.toFixed(1)} °C (${feels.toFixed(1)} °C)`;
     document.getElementById('wind').innerText = `Vind: ${wind.toFixed(1)} m/s`;
     document.getElementById('humidity').innerText = `Luftfuktighet: ${humidity.toFixed(0)} %`;
     document.getElementById('pressure').innerText = `Tryck: ${pressure.toFixed(0)} hPa`;
@@ -123,8 +136,8 @@ updateWeatherNow();
 updateMinMax();
 
 // Intervaller
-setInterval(updateWeatherNow, 5*60*1000); // SMHI uppdatering var 5:e minut
-setInterval(updateMinMax, 15*60*1000);   // Open-Meteo min/max var 15:e minut
+setInterval(updateWeatherNow, 5*60*1000); 
+setInterval(updateMinMax, 15*60*1000); 
 </script>
 
 </body>
