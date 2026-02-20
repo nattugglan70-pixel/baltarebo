@@ -71,11 +71,11 @@ h2 {
 const lat = 57.114025;
 const lon = 14.168177;
 
-// Datum och veckonummer
+// Datum och veckonummer (utan klocka)
 function updateDateWeek() {
   const now = new Date();
   const week = Math.ceil((((now - new Date(now.getFullYear(),0,1))/86400000) + new Date(now.getFullYear(),0,1).getDay()+1)/7);
-  document.getElementById('date-week').innerText = now.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + ' | Vecka ' + week + ' | ' + now.toLocaleTimeString('sv-SE');
+  document.getElementById('date-week').innerText = now.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + ' | Vecka ' + week;
 }
 
 // Hämtar temperatur från Karlsbro (temperatur.nu)
@@ -83,7 +83,8 @@ async function fetchKarlsbroTemp() {
   try {
     const res = await fetch('https://temperatur.nu/station/karlsbro/json'); // Exempel URL
     const data = await res.json();
-    return data.temp ?? null;
+    // Kolla nyckeln för aktuell temp, ofta "temperature" eller "temp"
+    return data.temperature ?? data.temp ?? null;
   } catch (e) {
     console.error("Karlsbro temp error:", e);
     return null;
@@ -99,12 +100,11 @@ async function fetchSMHIWeather() {
     const next = data.timeSeries.find(t => new Date(t.validTime) >= now);
     const params = next.parameters;
 
-    const temp = params.find(p => p.name === "t").values[0]; // används ej, bara SMHI-feels
     const wind = params.find(p => p.name === "ws").values[0];
     const humidity = params.find(p => p.name === "r").values[0];
     const clouds = params.find(p => p.name === "tcc_mean").values[0];
     const precip = params.find(p => p.name === "pmean").values[0];
-    const feels = params.find(p => p.name === "t").values[0]; // SMHI-feels placeholder
+    const feels = params.find(p => p.name === "t").values[0]; // SMHI-feels
     const conditionParam = params.find(p => p.name === "Wsymb2")?.values[0] ?? 0;
 
     const conditions = {
@@ -122,7 +122,7 @@ async function fetchSMHIWeather() {
 
     const karlsbroTemp = await fetchKarlsbroTemp();
 
-    document.getElementById("temp").innerText = karlsbroTemp ? karlsbroTemp.toFixed(1) + " °C" : "--";
+    document.getElementById("temp").innerText = karlsbroTemp !== null ? karlsbroTemp.toFixed(1) + " °C" : "--";
     document.getElementById("feels").innerText = feels.toFixed(1) + " °C";
     document.getElementById("wind").innerText = wind.toFixed(1) + " m/s";
     document.getElementById("humidity").innerText = humidity.toFixed(0) + " %";
