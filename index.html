@@ -37,7 +37,7 @@
   }
 
   .minmax {
-    font-size: 20px;
+    font-size: 16px; /* ändrad från 20px till 16px för jämn storlek */
     margin: 6px 0;
     line-height: 1.5;
   }
@@ -183,7 +183,7 @@ updateYesterday();
 // Intervaller
 setInterval(updateWeatherNow, 5*60*1000); 
 setInterval(updateMinMax, 15*60*1000);
-setInterval(updateYesterday, 60*60*1000); // uppdatera gårdagens var timme
+setInterval(updateYesterday, 60*60*1000); 
 </script>
 
 </body>
