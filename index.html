@@ -131,7 +131,7 @@ function updateDateWeek() {
 }
 
 
-// ===== VÄDER (SMHI) =====
+// ===== VÄDER =====
 async function updateWeather() {
   try {
     const url =
@@ -149,7 +149,6 @@ async function updateWeather() {
     const wind = ts.find(p => p.name === 'ws').values[0];
     const hum  = ts.find(p => p.name === 'r').values[0];
 
-    // Enkel "känns som"
     const feels = temp - (wind * 0.3);
 
     document.getElementById('temperature').innerText =
@@ -174,7 +173,7 @@ async function updateWeather() {
 }
 
 
-// ===== ELPRIS SE4 (Nord Pool via EnergiDataService) =====
+// ===== ELPRIS SE4 =====
 async function updateElPrice() {
   try {
     const now = new Date();
@@ -190,35 +189,33 @@ async function updateElPrice() {
     const res = await fetch(url);
     const data = await res.json();
 
-    if (!data.records || data.records.length === 0) return;
+    if (!data.records || data.records.length < 2) return;
 
-    const current = data.records.find(r => {
-      const start = new Date(r.HourUTC);
-      const end = new Date(start.getTime() + 3600000);
-      return start <= now && end > now;
-    });
+    const sorted = data.records.sort((a, b) =>
+      new Date(a.HourUTC) - new Date(b.HourUTC)
+    );
 
-    const previous = data.records
-      .filter(r => new Date(r.HourUTC) <= now)
-      .slice(-2)[0];
+    const available = sorted.filter(r =>
+      new Date(r.HourUTC) <= now
+    );
 
-    const currentPrice = current
-      ? (current.SpotPriceSEK / 1000).toFixed(2)
-      : "--";
+    if (available.length < 2) return;
 
-    const previousPrice = previous
-      ? (previous.SpotPriceSEK / 1000).toFixed(2)
-      : "--";
+    const current = available[available.length - 1];
+    const previous = available[available.length - 2];
 
     document.getElementById('previous-price').innerText =
-      previousPrice + " SEK/kWh";
+      (previous.SpotPriceSEK / 1000).toFixed(2) + " SEK/kWh";
 
     document.getElementById('current-price').innerText =
-      currentPrice + " SEK/kWh";
+      (current.SpotPriceSEK / 1000).toFixed(2) + " SEK/kWh";
 
     document.getElementById('current-price-time').innerText =
       "Pris för: " +
-      now.getHours().toString().padStart(2,"0") + ":00";
+      new Date(current.HourUTC).toLocaleTimeString("sv-SE", {
+        hour: "2-digit",
+        minute: "2-digit"
+      });
 
     document.getElementById('price-updated').innerText =
       "Senaste uppdatering: " +
