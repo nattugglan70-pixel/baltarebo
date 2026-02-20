@@ -23,14 +23,6 @@
     box-shadow: 0 2px 10px rgba(255,255,255,0.2);
   }
 
-  h2 {
-    margin: 0 0 12px;
-    font-size: 20px;
-    text-align: center;
-    border-bottom: 1px solid #fff;
-    padding-bottom: 8px;
-  }
-
   .value {
     font-size: 32px;
     font-weight: bold;
@@ -49,30 +41,31 @@
     font-size: 20px;
     text-align: center;
     margin: 6px 0;
+    line-height: 1.5;
   }
 </style>
 </head>
 <body>
 
 <div class="section">
-  <h2 id="date-week"></h2>
+  <div id="date-week"></div>
 </div>
 
 <div class="section">
-  <h2>Temperatur</h2>
   <div class="value" id="temp-now">-- °C (-- °C)</div>
 </div>
 
 <div class="section">
-  <h2>Väderdetaljer</h2>
   <div class="subtext" id="wind">Vind: -- m/s</div>
   <div class="subtext" id="humidity">Luftfuktighet: -- %</div>
   <div class="subtext" id="pressure">Tryck: -- hPa</div>
 </div>
 
 <div class="section">
-  <h2>Dagens Min/Max</h2>
-  <div class="minmax" id="temp-minmax">Min: -- °C kl --:-- | Max: -- °C kl --:--</div>
+  <div class="minmax" id="temp-minmax">
+    Min: -- °C kl --:--<br>
+    Max: -- °C kl --:--
+  </div>
 </div>
 
 <div class="section">
@@ -134,7 +127,9 @@ async function updateMinMax() {
       }
     }
 
-    document.getElementById('temp-minmax').innerText = `Min: ${minTemp.toFixed(1)} °C kl ${minTime.getHours()}:${String(minTime.getMinutes()).padStart(2,'0')} | Max: ${maxTemp.toFixed(1)} °C kl ${maxTime.getHours()}:${String(maxTime.getMinutes()).padStart(2,'0')}`;
+    document.getElementById('temp-minmax').innerHTML = 
+      `Min: ${minTemp.toFixed(1)} °C kl ${minTime.getHours()}:${String(minTime.getMinutes()).padStart(2,'0')}<br>` +
+      `Max: ${maxTemp.toFixed(1)} °C kl ${maxTime.getHours()}:${String(maxTime.getMinutes()).padStart(2,'0')}`;
   } catch(err) {
     console.error('Open-Meteo min/max error:', err);
   }
