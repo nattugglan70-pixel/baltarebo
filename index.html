@@ -2,8 +2,7 @@
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
-<title>Dashboard</title>
-
+<title>Väderdashboard</title>
 <style>
 body {
   font-family: Arial, sans-serif;
@@ -20,7 +19,7 @@ body {
   padding: 20px;
   margin: 15px;
   border-radius: 10px;
-  width: 340px;
+  width: 380px;
 }
 
 h2 {
@@ -31,16 +30,13 @@ h2 {
 .row {
   display: flex;
   justify-content: space-between;
-  margin: 8px 0;
+  margin: 6px 0;
 }
 
 .big {
   font-size: 20px;
   font-weight: bold;
 }
-
-.green { color: #00ff99; }
-.orange { color: #ff9900; }
 
 .small {
   font-size: 12px;
@@ -54,114 +50,100 @@ h2 {
 <body>
 
 <div class="box">
-  <h2>Väder</h2>
-
-  <div class="row">
-    <div>Temperatur</div>
-    <div id="temp" class="big">--</div>
-  </div>
-
-  <div class="row">
-    <div>Vind</div>
-    <div id="wind" class="big">--</div>
-  </div>
-
-  <div class="small" id="weatherUpdated">Uppdaterar...</div>
+  <h2 id="date-week">--</h2>
 </div>
 
 <div class="box">
-  <h2>Elpris SE4</h2>
+  <h2>Väder</h2>
 
-  <div class="row">
-    <div>Aktuell timme</div>
-    <div id="current" class="big green">--</div>
-  </div>
-
-  <div class="row">
-    <div>Föregående timme</div>
-    <div id="previous" class="big orange">--</div>
-  </div>
-
-  <div id="elUpdated" class="small">Uppdaterar...</div>
+  <div class="row"><div>Temperatur (Karlsbro)</div><div id="temp" class="big">-- °C</div></div>
+  <div class="row"><div>Känns som</div><div id="feels" class="big">-- °C</div></div>
+  <div class="row"><div>Vind</div><div id="wind" class="big">-- m/s</div></div>
+  <div class="row"><div>Luftfuktighet</div><div id="humidity" class="big">-- %</div></div>
+  <div class="row"><div>Molnighet</div><div id="clouds" class="big">-- %</div></div>
+  <div class="row"><div>Nederbörd</div><div id="precip" class="big">-- mm</div></div>
+  <div class="row"><div>Väderstatus</div><div id="condition" class="big">--</div></div>
+  
+  <div class="small" id="updated">Uppdaterar...</div>
 </div>
 
 <script>
+const lat = 57.114025;
+const lon = 14.168177;
 
-// ===== VÄDER =====
-async function loadWeather() {
+// Datum och veckonummer
+function updateDateWeek() {
+  const now = new Date();
+  const week = Math.ceil((((now - new Date(now.getFullYear(),0,1))/86400000) + new Date(now.getFullYear(),0,1).getDay()+1)/7);
+  document.getElementById('date-week').innerText = now.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + ' | Vecka ' + week + ' | ' + now.toLocaleTimeString('sv-SE');
+}
+
+// Hämtar temperatur från Karlsbro (temperatur.nu)
+async function fetchKarlsbroTemp() {
   try {
-    const lat = 57.114025;
-    const lon = 14.168177;
+    const res = await fetch('https://temperatur.nu/station/karlsbro/json'); // Exempel URL
+    const data = await res.json();
+    return data.temp ?? null;
+  } catch (e) {
+    console.error("Karlsbro temp error:", e);
+    return null;
+  }
+}
 
-    const response = await fetch(
-      `https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${lon}/lat/${lat}/data.json`
-    );
-
-    const data = await response.json();
+// Hämtar SMHI data för resten av vädret
+async function fetchSMHIWeather() {
+  try {
+    const res = await fetch(`https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${lon}/lat/${lat}/data.json`);
+    const data = await res.json();
     const now = new Date();
+    const next = data.timeSeries.find(t => new Date(t.validTime) >= now);
+    const params = next.parameters;
 
-    const next = data.timeSeries.find(t =>
-      new Date(t.validTime) >= now
-    );
+    const temp = params.find(p => p.name === "t").values[0]; // används ej, bara SMHI-feels
+    const wind = params.find(p => p.name === "ws").values[0];
+    const humidity = params.find(p => p.name === "r").values[0];
+    const clouds = params.find(p => p.name === "tcc_mean").values[0];
+    const precip = params.find(p => p.name === "pmean").values[0];
+    const feels = params.find(p => p.name === "t").values[0]; // SMHI-feels placeholder
+    const conditionParam = params.find(p => p.name === "Wsymb2")?.values[0] ?? 0;
 
-    const temp = next.parameters.find(p => p.name === "t").values[0];
-    const wind = next.parameters.find(p => p.name === "ws").values[0];
+    const conditions = {
+      1: "Klart",
+      2: "Halvklart",
+      3: "Molnigt",
+      4: "Mulet",
+      5: "Dimma",
+      6: "Regn",
+      7: "Snö",
+      8: "Åska",
+      9: "Regnskurar",
+      10: "Snöblandat"
+    };
 
-    document.getElementById("temp").innerText = temp.toFixed(1) + " °C";
+    const karlsbroTemp = await fetchKarlsbroTemp();
+
+    document.getElementById("temp").innerText = karlsbroTemp ? karlsbroTemp.toFixed(1) + " °C" : "--";
+    document.getElementById("feels").innerText = feels.toFixed(1) + " °C";
     document.getElementById("wind").innerText = wind.toFixed(1) + " m/s";
-    document.getElementById("weatherUpdated").innerText =
-      "Uppdaterad: " + now.toLocaleTimeString("sv-SE");
+    document.getElementById("humidity").innerText = humidity.toFixed(0) + " %";
+    document.getElementById("clouds").innerText = clouds.toFixed(0) + " %";
+    document.getElementById("precip").innerText = precip.toFixed(1) + " mm";
+    document.getElementById("condition").innerText = conditions[conditionParam] ?? "Okänt";
+    document.getElementById("updated").innerText = "Senast uppdaterad: " + now.toLocaleTimeString("sv-SE");
 
-  } catch (e) {
-    console.error("Weather error:", e);
-    document.getElementById("temp").innerText = "Fel";
+  } catch(e) {
+    console.error("SMHI fetch error:", e);
+    document.getElementById("updated").innerText = "Fel vid hämtning";
   }
 }
 
+// Initial uppdatering
+updateDateWeek();
+fetchSMHIWeather();
 
-// ===== ELPRIS =====
-async function loadElectricity() {
-  try {
-    const response = await fetch(
-      "https://api.energidataservice.dk/dataset/Elspotprices?limit=2&sort=-HourUTC&filter={\"PriceArea\":\"SE4\"}"
-    );
-
-    const data = await response.json();
-
-    if (!data.records || data.records.length < 2) {
-      document.getElementById("current").innerText = "Ingen data";
-      return;
-    }
-
-    const current = data.records[0];
-    const previous = data.records[1];
-
-    const currentPrice =
-      current.SpotPriceSEK ?? current.SpotPriceEUR ?? 0;
-
-    const previousPrice =
-      previous.SpotPriceSEK ?? previous.SpotPriceEUR ?? 0;
-
-    document.getElementById("current").innerText =
-      (currentPrice / 1000).toFixed(2) + " SEK/kWh";
-
-    document.getElementById("previous").innerText =
-      (previousPrice / 1000).toFixed(2) + " SEK/kWh";
-
-    document.getElementById("elUpdated").innerText =
-      "Uppdaterad: " + new Date().toLocaleTimeString("sv-SE");
-
-  } catch (e) {
-    console.error("Electric error:", e);
-    document.getElementById("current").innerText = "Fel vid hämtning";
-  }
-}
-
-loadWeather();
-loadElectricity();
-
-setInterval(loadWeather, 300000);
-setInterval(loadElectricity, 300000);
+// Intervall var 5:e minut
+setInterval(updateDateWeek, 60*1000);
+setInterval(fetchSMHIWeather, 5*60*1000);
 
 </script>
 
