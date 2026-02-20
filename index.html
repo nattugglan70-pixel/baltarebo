@@ -32,8 +32,9 @@
 <div class="feels" id="feels">Känns som --°C</div>
 <div class="weather-updated" id="updated">Senast väderuppdatering: --:--</div>
 
-<div class="elprice" id="elprice">Elpris: -- kr/kWh</div>
-<div class="el-updated" id="el-updated">Senast elprisuppdatering: --:--</div>
+<div class="elprice" id="current-el">Elpris klockan --:00: -- kr/kWh</div>
+<div class="el-updated" id="current-updated">Senast elprisuppdatering: --:--</div>
+<div class="elprice" id="next-el">Nästa pris klockan --:00: -</div>
 
 <script>
 // ===== Datum + Veckonummer
@@ -55,7 +56,6 @@ function feelsLike(tempC, windMS) {
 async function fetchWeather() {
   const latitude = 57.114025;
   const longitude = 14.168177;
-
   try {
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&windspeed_unit=ms`;
     const res = await fetch(url);
@@ -80,16 +80,12 @@ async function fetchWeather() {
   }
 }
 
-// ===== Elpris: hämta 3 min efter timslag
+// ===== Elpris: två rader, current + next
 let lastHour = -1;
 async function fetchElpris() {
   const now = new Date();
   const currentHour = now.getHours();
-
-  const minutes = now.getMinutes();
-  // Hämta bara 3+ minuter efter timmen och om timmen ändrats
-  if(minutes < 3 || currentHour === lastHour) return;
-  lastHour = currentHour;
+  const nextHour = (currentHour+1)%24;
 
   try {
     const year  = now.getFullYear();
@@ -102,18 +98,38 @@ async function fetchElpris() {
     const res = await fetch(url);
     const data = await res.json();
 
-    const price = data[currentHour]?.price_sek ?? null;
-    if(price !== null) {
-      document.getElementById("elprice").textContent = `Elpris: ${price.toFixed(2)} kr/kWh`;
-      document.getElementById("el-updated").textContent = `Senast elprisuppdatering: ${currentHour}:00`;
+    // Aktuellt pris (latest available)
+    let currentPrice = null;
+    let currentPriceHour = null;
+    for(let h=currentHour; h>=0; h--) {
+      if(data[h]?.price_sek != null) {
+        currentPrice = data[h].price_sek;
+        currentPriceHour = h;
+        break;
+      }
+    }
+
+    if(currentPrice != null) {
+      document.getElementById("current-el").textContent = `Elpris klockan ${currentPriceHour}:00: ${currentPrice.toFixed(2)} kr/kWh`;
+      const nowTime = now.getHours().toString().padStart(2,"0") + ":" + now.getMinutes().toString().padStart(2,"0");
+      document.getElementById("current-updated").textContent = `Senast elprisuppdatering: ${nowTime}`;
     } else {
-      document.getElementById("elprice").textContent = `Elpris: -`;
-      document.getElementById("el-updated").textContent = `Senast elprisuppdatering: --:--`;
+      document.getElementById("current-el").textContent = `Elpris klockan --:00: -`;
+      document.getElementById("current-updated").textContent = `Senast elprisuppdatering: --:--`;
+    }
+
+    // Nästa pris
+    let nextPrice = data[nextHour]?.price_sek ?? null;
+    if(nextPrice != null) {
+      document.getElementById("next-el").textContent = `Nästa pris klockan ${nextHour}:00: ${nextPrice.toFixed(2)} kr/kWh`;
+    } else {
+      document.getElementById("next-el").textContent = `Nästa pris klockan ${nextHour}:00: -`;
     }
 
   } catch(e) {
-    document.getElementById("elprice").textContent = `Elpris: -`;
-    document.getElementById("el-updated").textContent = `Senast elprisuppdatering: --:--`;
+    document.getElementById("current-el").textContent = `Elpris klockan --:00: -`;
+    document.getElementById("current-updated").textContent = `Senast elprisuppdatering: --:--`;
+    document.getElementById("next-el").textContent = `Nästa pris klockan --:00: -`;
   }
 }
 
@@ -122,12 +138,11 @@ showDate();
 fetchWeather();
 fetchElpris();
 
-// Vädret uppdateras var 5:e minut
+// Vädret var 5:e minut
 setInterval(fetchWeather, 5*60*1000);
 
-// Elpriset kontrolleras varje minut, hämtas först 3 min efter timslag
+// Elpriset kontrolleras varje minut
 setInterval(fetchElpris, 60*1000);
-
 </script>
 </body>
 </html>
