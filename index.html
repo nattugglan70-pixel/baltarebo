@@ -44,17 +44,34 @@
     line-height: 1.5;
   }
 
-  .extra {
-    display: flex;
-    justify-content: space-between;
-    margin: 6px 0;
-    font-size: 16px;
+  .tooltip {
+    display: inline-block;
+    position: relative;
+    cursor: pointer;
+    margin-left: 5px;
   }
 
-  .trend {
-    font-size: 22px;
-    margin-left: 5px;
-    color: #0f0;
+  .tooltip .tooltiptext {
+    visibility: hidden;
+    width: 130px;
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%; 
+    left: 50%;
+    margin-left: -65px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    font-size: 14px;
+  }
+
+  .tooltip:hover .tooltiptext {
+    visibility: visible;
+    opacity: 1;
   }
 
 </style>
@@ -62,7 +79,7 @@
 <body>
 
 <div class="section">
-  <div id="date-week" style="text-align:center;"></div>
+  <div id="date-week"></div>
 </div>
 
 <div class="section">
@@ -70,17 +87,14 @@
 </div>
 
 <div class="section">
-  <div class="extra">
-    <div id="wind">Vind: -- m/s</div>
-    <div id="wind-dir">--</div>
-  </div>
-  <div class="extra">
-    <div id="humidity">Luftfuktighet: -- %</div>
-    <div id="clouds">Molnighet: -- %</div>
-  </div>
-  <div class="extra">
-    <div id="precip">Nederbörd: -- %</div>
-    <div id="trend" class="trend">→</div>
+  <div class="subtext" id="wind">Vind: -- m/s</div>
+  <div class="subtext" id="humidity">Luftfuktighet: -- %</div>
+  <div class="subtext" id="pressure">Tryck: -- hPa</div>
+  <div class="subtext">
+    Nederbörd: <span id="precipitation">-- %</span>
+    <span class="tooltip">⬆
+      <span class="tooltiptext" id="precip-tooltip">Ingen nederbörd</span>
+    </span>
   </div>
 </div>
 
@@ -106,7 +120,7 @@ function updateDateWeek() {
   document.getElementById('date-week').innerText = now.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + ' | Vecka ' + week;
 }
 
-// SMHI: Nuvarande väder och sannolik nederbörd
+// SMHI: Nuvarande väder
 async function updateWeatherNow() {
   try {
     const url = `https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${lon}/lat/${lat}/data.json`;
@@ -118,31 +132,20 @@ async function updateWeatherNow() {
     const temp = params.find(p => p.name === 't').values[0];
     const feels = params.find(p => p.name === 't').values[0]; 
     const wind = params.find(p => p.name === 'ws').values[0];
-    const windDirDeg = params.find(p => p.name === 'wd').values[0];
     const humidity = params.find(p => p.name === 'r').values[0];
     const pressure = params.find(p => p.name === 'msl').values[0];
-    const precProb = params.find(p => p.name === 'pcat').values[0]; // sannolik nederbörd
-    const clouds = params.find(p => p.name === 'tcc_mean')?.values[0] ?? 0; // molnighet
-
-    // Vindriktning (N, NE, E, ...)
-    const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
-    const dirIndex = Math.round(windDirDeg/22.5) % 16;
-    const windDir = dirs[dirIndex];
+    const precipProb = params.find(p => p.name === 'pmean')?.values[0] || 0; 
 
     document.getElementById('temp-now').innerText = `${temp.toFixed(1)} °C (${feels.toFixed(1)} °C)`;
     document.getElementById('wind').innerText = `Vind: ${wind.toFixed(1)} m/s`;
-    document.getElementById('wind-dir').innerText = windDir;
     document.getElementById('humidity').innerText = `Luftfuktighet: ${humidity.toFixed(0)} %`;
     document.getElementById('pressure').innerText = `Tryck: ${pressure.toFixed(0)} hPa`;
-    document.getElementById('precip').innerText = `Nederbörd: ${precProb} %`;
-    document.getElementById('clouds').innerText = `Molnighet: ${clouds} %`;
-
-    // Enkel trend: jämför med gårdagens medeltemperatur (dummy ex här)
-    const yesterdayTemp = temp - (Math.random()*4-2); // ersätt med riktig data om du vill
-    const trendEl = document.getElementById('trend');
-    trendEl.innerText = temp > yesterdayTemp ? '↑' : (temp < yesterdayTemp ? '↓' : '→');
-    trendEl.style.color = temp > yesterdayTemp ? '#0f0' : (temp < yesterdayTemp ? '#f00' : '#ccc');
-
+    document.getElementById('precipitation').innerText = `${precipProb.toFixed(0)} %`;
+    
+    // Pil och tooltip för nederbörd
+    const tooltipText = precipProb > 0 ? 'Risk för nederbörd' : 'Ingen nederbörd';
+    document.getElementById('precip-tooltip').innerText = tooltipText;
+    
     document.getElementById('weather-updated').innerText = 'Senast uppdaterad: ' + now.toLocaleTimeString('sv-SE');
   } catch(err) {
     console.error('SMHI weather error:', err);
