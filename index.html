@@ -19,27 +19,20 @@
     background: #111;
     border-radius: 10px;
     width: 350px;
-    box-shadow: 0 2px 5px rgba(255,255,255,0.2);
   }
   h2 {
     margin: 0 0 10px;
-    font-size: 20px;
+    font-size: 18px;
     text-align: center;
   }
   .value {
-    font-size: 24px;
+    font-size: 22px;
     font-weight: bold;
     text-align: center;
   }
   .subtext {
-    font-size: 13px;
-    color: #ccc;
-    text-align: center;
-  }
-  .grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    font-size: 12px;
+    color: #aaa;
     text-align: center;
   }
 </style>
@@ -54,82 +47,74 @@
   <h2>Väder</h2>
   <div class="value" id="temperature">-- °C</div>
   <div class="value" id="feels-like">-- °C (känns som)</div>
-  <div class="grid">
-    <div class="subtext" id="wind-speed">Vind: -- m/s</div>
-    <div class="subtext" id="humidity">Fuktighet: -- %</div>
-    <div class="subtext" id="pressure">Tryck: -- hPa</div>
-    <div class="subtext" id="precipitation">Nederbörd: -- mm</div>
-  </div>
-  <div class="subtext" id="weather-updated">Senast uppdaterad: --</div>
+  <div class="value" id="wind">Vind: -- m/s</div>
+  <div class="value" id="humidity">Fuktighet: -- %</div>
+  <div class="subtext" id="weather-updated">Senast uppdaterad: --:--</div>
 </div>
 
 <script>
-const lat = 57.114025;
-const lon = 14.168177;
-
 // Datum och veckonummer
 function updateDateWeek() {
   const now = new Date();
   const week = Math.ceil((((now - new Date(now.getFullYear(),0,1))/86400000) + new Date(now.getFullYear(),0,1).getDay()+1)/7);
-  document.getElementById('date-week').innerText =
-    now.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) +
-    ' | Vecka ' + week;
+  document.getElementById('date-week').innerText = now.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + ' | Vecka ' + week;
 }
 
-// Temperatur.nu
-async function updateTemperatureNu() {
+// Temperatur.nu - din station
+async function updateTemperature() {
   try {
-    const res = await fetch('https://temperatur.nu/api/v1/station/karlsbro');
+    const res = await fetch('https://temperatur.nu/json/karlsbro.json'); // din station
     const data = await res.json();
-    const temp = data.temperature.current;
+    const temp = parseFloat(data.temp);
     document.getElementById('temperature').innerText = temp.toFixed(1) + ' °C';
-  } catch (err) {
-    console.error('Temperatur.nu error:', err);
+  } catch(err) {
+    console.error('Temp.nu error:', err);
     document.getElementById('temperature').innerText = '-- °C';
   }
 }
 
-// SMHI för mer väderdata
-async function updateSMHIWeather() {
+// SMHI - “feels like” och mer
+async function updateSMHI() {
   try {
+    const lat = 57.114025;
+    const lon = 14.168177;
     const url = `https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${lon}/lat/${lat}/data.json`;
     const res = await fetch(url);
     const data = await res.json();
     const now = new Date();
-    const nextTS = data.timeSeries.find(ts => new Date(ts.validTime) >= now).parameters;
+    const ts = data.timeSeries.find(t => new Date(t.validTime) >= now);
+    const params = ts.parameters;
 
-    const feels = nextTS.find(p => p.name === 't').values[0]; // SMHI ger ej exakt feels-like, används temp
-    const wind = nextTS.find(p => p.name === 'ws').values[0];
-    const humidity = nextTS.find(p => p.name === 'r').values[0];
-    const pressure = nextTS.find(p => p.name === 'msl').values[0];
-    const precipitation = nextTS.find(p => p.name === 'pmean').values[0];
-
+    // “Feels like” temperatur
+    const feels = params.find(p => p.name === 't').values[0]; // SMHI har ej riktig feels, vi kan ersätta med samma
     document.getElementById('feels-like').innerText = feels.toFixed(1) + ' °C (känns som)';
-    document.getElementById('wind-speed').innerText = `Vind: ${wind} m/s`;
-    document.getElementById('humidity').innerText = `Fuktighet: ${humidity} %`;
-    document.getElementById('pressure').innerText = `Tryck: ${pressure} hPa`;
-    document.getElementById('precipitation').innerText = `Nederbörd: ${precipitation} mm`;
+
+    // Vind
+    const wind = params.find(p => p.name === 'ws').values[0];
+    document.getElementById('wind').innerText = 'Vind: ' + wind.toFixed(1) + ' m/s';
+
+    // Luftfuktighet
+    const humidity = params.find(p => p.name === 'r').values[0];
+    document.getElementById('humidity').innerText = 'Fuktighet: ' + humidity.toFixed(0) + ' %';
+
     document.getElementById('weather-updated').innerText = 'Senast uppdaterad: ' + now.toLocaleTimeString('sv-SE');
-  } catch (err) {
+  } catch(err) {
     console.error('SMHI error:', err);
     document.getElementById('feels-like').innerText = '-- °C (känns som)';
-    document.getElementById('wind-speed').innerText = 'Vind: -- m/s';
+    document.getElementById('wind').innerText = 'Vind: -- m/s';
     document.getElementById('humidity').innerText = 'Fuktighet: -- %';
-    document.getElementById('pressure').innerText = 'Tryck: -- hPa';
-    document.getElementById('precipitation').innerText = 'Nederbörd: -- mm';
   }
 }
 
-// Initial update
+// Initial och intervall
 updateDateWeek();
-updateTemperatureNu();
-updateSMHIWeather();
+updateTemperature();
+updateSMHI();
 
-// Intervaller var 5:e minut
-setInterval(updateDateWeek, 5*60*1000);
-setInterval(updateTemperatureNu, 5*60*1000);
-setInterval(updateSMHIWeather, 5*60*1000);
-
+setInterval(updateDateWeek, 60*1000);
+setInterval(updateTemperature, 5*60*1000);
+setInterval(updateSMHI, 5*60*1000);
 </script>
+
 </body>
 </html>
