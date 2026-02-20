@@ -2,24 +2,23 @@
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
-<title>Väder & Elpris - Zon 4</title>
+<title>Dashboard Väder & Elpris</title>
 <style>
   body {
     font-family: Arial, sans-serif;
-    background: #000;       /* Svart bakgrund */
-    color: #fff;            /* Vit text */
+    background: #f4f4f4;
+    color: #222;
     margin: 20px;
   }
   h1, h2 {
     margin: 10px 0;
-    color: #fff;
   }
   .section {
     margin-bottom: 25px;
     padding: 10px;
-    background: #111;       /* Mörk sektion */
+    background: #fff;
     border-radius: 8px;
-    box-shadow: 0 0 8px rgba(255,255,255,0.1);
+    box-shadow: 0 0 8px rgba(0,0,0,0.1);
   }
   .weather-grid {
     display: grid;
@@ -27,144 +26,153 @@
     gap: 10px;
   }
   .weather-item {
-    background: #222;       /* Mörk ruta */
+    background: #e9f0f7;
     padding: 10px;
     border-radius: 6px;
     text-align: center;
-    color: #fff;
   }
   .elpris {
     display: flex;
     justify-content: space-around;
     padding: 10px;
-    background: #111;       /* Mörk sektion */
+    background: #fff4e6;
     border-radius: 6px;
   }
   .elpris div {
     text-align: center;
-    color: #fff;
-  }
-  .elpris-now {
-    font-weight: bold;
-    color: #ff5555; /* Rött för aktuellt pris */
-  }
-  .elpris-prev {
-    color: #55aaff; /* Blått för föregående pris */
   }
   .small-text {
     font-size: 0.8em;
-    color: #aaa;
+    color: #555;
   }
 </style>
 </head>
 <body>
-  <h1>Väder & Elpris - Södra Sverige (Zon 4)</h1>
-  <div id="dateTime" class="small-text"></div>
 
-  <div class="section">
-    <h2>Väder</h2>
-    <div class="weather-grid" id="weatherGrid">
-      <!-- Här fylls väderdata -->
-    </div>
-    <div class="small-text" id="weatherUpdateTime"></div>
-  </div>
+<div class="section">
+  <h1 id="datum">Datum: --</h1>
+  <h2 id="veckonummer">Vecka: --</h2>
+</div>
 
-  <div class="section">
-    <h2>Elpriser</h2>
-    <div class="elpris">
-      <div>
-        Föregående pris<br>
-        <span class="elpris-prev" id="elprisPrev">--</span><br>
-        <span class="small-text" id="elprisPrevTime">--:--</span>
-      </div>
-      <div>
-        Aktuellt pris<br>
-        <span class="elpris-now" id="elprisNow">--</span><br>
-        <span class="small-text" id="elprisNowTime">--:--</span>
-      </div>
+<div class="section">
+  <h2>Väder</h2>
+  <div class="weather-grid" id="weatherGrid">
+    <!-- Väderdata fylls på här -->
+  </div>
+  <p class="small-text" id="weatherUpdated">Senast uppdaterad: --:--</p>
+</div>
+
+<div class="section">
+  <h2>Elpris (SEK/kWh)</h2>
+  <div class="elpris">
+    <div>
+      <h3 id="elprisTidigare">Tidigare: --</h3>
+      <p class="small-text" id="elprisTidigareTid">Tid: --:--</p>
+    </div>
+    <div>
+      <h3 id="elprisNu">Nu: --</h3>
+      <p class="small-text" id="elprisNuTid">Uppdaterad: --:--</p>
     </div>
   </div>
+</div>
 
 <script>
 const lat = 57.114025;
 const lon = 14.168177;
 
-// Uppdatera datum och tid överst
-function updateDateTime() {
-  const now = new Date();
-  document.getElementById('dateTime').innerText = now.toLocaleString('sv-SE', {weekday:'long', year:'numeric', month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'});
+// Datum och veckonummer
+function uppdateraDatum() {
+  const nu = new Date();
+  const vecka = getWeekNumber(nu);
+  document.getElementById("datum").textContent = `Datum: ${nu.toISOString().split('T')[0]}`;
+  document.getElementById("veckonummer").textContent = `Vecka: ${vecka}`;
+}
+function getWeekNumber(d) {
+  d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1)/7);
 }
 
-// Hämta väder från temperatur.nu (SMHI “känns som” approximation)
+// Väder (temperatur.nu via GitHub)
 async function fetchWeather() {
   try {
-    const res = await fetch(`https://temperatur.nu/api/v1/weather/point?lat=${lat}&lon=${lon}`);
-    const data = await res.json();
-    const grid = document.getElementById('weatherGrid');
-    grid.innerHTML = '';
+    const response = await fetch(`https://temperatur.nu/api/forecast?lat=${lat}&lon=${lon}`);
+    const data = await response.json();
+    const weatherGrid = document.getElementById("weatherGrid");
+    weatherGrid.innerHTML = "";
 
-    const tempNow = data.temperature.value.toFixed(1);
-    const feelsLike = data.feels_like.value.toFixed(1);
+    // Hämta första timmen (eller mer om du vill)
+    const now = new Date();
+    const firstHour = data.hours[0]; // justera om API har annan struktur
+    const items = [
+      {label: "Temperatur", value: firstHour.temp + " °C"},
+      {label: "Känns som", value: firstHour.feelsLike + " °C"},
+      {label: "Vind", value: firstHour.windSpeed + " m/s"},
+      {label: "Vindriktning", value: firstHour.windDir}
+    ];
 
-    grid.innerHTML += `
-      <div class="weather-item">
-        Temperatur<br>
-        <b>${tempNow}°C</b>
-      </div>
-      <div class="weather-item">
-        Känns som<br>
-        <b>${feelsLike}°C</b>
-      </div>
-      <div class="weather-item">
-        Vind<br>
-        <b>${data.wind_speed} m/s</b>
-      </div>
-      <div class="weather-item">
-        Luftfuktighet<br>
-        <b>${data.humidity}%</b>
-      </div>
-    `;
+    items.forEach(i => {
+      const div = document.createElement("div");
+      div.className = "weather-item";
+      div.innerHTML = `<strong>${i.label}</strong><br>${i.value}`;
+      weatherGrid.appendChild(div);
+    });
 
-    const updateTime = new Date(data.last_update);
-    document.getElementById('weatherUpdateTime').innerText = `Senast uppdaterad: ${updateTime.toLocaleTimeString('sv-SE')}`;
+    document.getElementById("weatherUpdated").textContent = 
+      `Senast väderuppdatering: ${now.getHours()}:${now.getMinutes().toString().padStart(2,'0')}`;
   } catch(e) {
-    console.error('Fel vid hämtning av väder:', e);
+    console.error("Fel vid hämtning av väder:", e);
   }
 }
 
-// Hämta elpriser för zon 4
+// Elpris (elprisetjustnu.se) – zon 4, södra Sverige
+let elprisTidigare = null;
 async function fetchElpris() {
   try {
-    const res = await fetch('https://api.elprisetjustnu.se/v1/prices/SE4.json');
-    const data = await res.json();
+    const response = await fetch("https://elprisetjustnu.se/api/v1/zone/4.json");
+    const data = await response.json();
 
-    const now = new Date();
-    // Hitta aktuell kvartspris för nu
-    let currentPrice = data.find(p => new Date(p.time_start) <= now && now < new Date(p.time_end));
-    let prevPrice = data[data.indexOf(currentPrice)-1] || currentPrice;
+    // Hämta aktuell timme
+    const nu = new Date();
+    const currentHour = nu.getHours();
 
-    document.getElementById('elprisNow').innerText = currentPrice.SEK_per_kWh.toFixed(2) + ' kr/kWh';
-    document.getElementById('elprisNowTime').innerText = new Date(currentPrice.time_start).toLocaleTimeString('sv-SE', {hour:'2-digit', minute:'2-digit'});
+    // Sortera och hitta senaste priset
+    const priser = data.filter(p => new Date(p.time_start).getHours() <= currentHour);
+    const senaste = priser[priser.length-1];
+    const tidigare = priser[priser.length-2];
 
-    document.getElementById('elprisPrev').innerText = prevPrice.SEK_per_kWh.toFixed(2) + ' kr/kWh';
-    document.getElementById('elprisPrevTime').innerText = new Date(prevPrice.time_start).toLocaleTimeString('sv-SE', {hour:'2-digit', minute:'2-digit'});
+    if(tidigare) {
+      document.getElementById("elprisTidigare").textContent = `Tidigare: ${tidigare.SEK_per_kWh.toFixed(2)}`;
+      document.getElementById("elprisTidigareTid").textContent = `Tid: ${new Date(tidigare.time_start).getHours()}:00`;
+    } else {
+      document.getElementById("elprisTidigare").textContent = `Tidigare: --`;
+      document.getElementById("elprisTidigareTid").textContent = `Tid: --`;
+    }
+
+    if(senaste) {
+      document.getElementById("elprisNu").textContent = `Nu: ${senaste.SEK_per_kWh.toFixed(2)}`;
+      document.getElementById("elprisNuTid").textContent = `Uppdaterad: ${new Date(senaste.time_start).getHours()}:00`;
+    } else {
+      document.getElementById("elprisNu").textContent = `Nu: --`;
+      document.getElementById("elprisNuTid").textContent = `Uppdaterad: --:--`;
+    }
+
   } catch(e) {
-    console.error('Fel vid hämtning av elpris:', e);
+    console.error("Fel vid hämtning av elpris:", e);
   }
 }
 
-// Init
-function init() {
-  updateDateTime();
-  fetchWeather();
-  fetchElpris();
-  // Uppdatera varje 5 min för väder, varje 15 min för elpris
-  setInterval(updateDateTime, 60000);
-  setInterval(fetchWeather, 5*60*1000);
-  setInterval(fetchElpris, 15*60*1000);
-}
+// Init & interval
+uppdateraDatum();
+fetchWeather();
+fetchElpris();
 
-init();
+setInterval(uppdateraDatum, 60000);
+setInterval(fetchWeather, 300000); // var 5:e minut
+setInterval(fetchElpris, 900000);   // var 15:e minut
 </script>
+
 </body>
 </html>
