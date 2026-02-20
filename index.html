@@ -93,6 +93,7 @@ async function updateWeatherNow() {
     const res = await fetch(url);
     const data = await res.json();
     const now = new Date();
+
     const timeSeries = data.timeSeries.map(ts => ({ 
       time: new Date(ts.validTime), 
       temp: ts.parameters.find(p => p.name==='t').values[0],
@@ -101,7 +102,7 @@ async function updateWeatherNow() {
       pressure: ts.parameters.find(p => p.name==='msl').values[0]
     }));
 
-    // Hitta närmaste timmar före och efter
+    // Hitta timmen före och timmen efter nu
     let before = timeSeries[0], after = timeSeries[timeSeries.length-1];
     for(let i=0;i<timeSeries.length-1;i++){
       if(timeSeries[i].time <= now && timeSeries[i+1].time >= now){
@@ -111,7 +112,6 @@ async function updateWeatherNow() {
       }
     }
 
-    // Linjär interpolation
     const tFrac = (now - before.time)/(after.time - before.time);
     const tempNow = before.temp + tFrac*(after.temp - before.temp);
     const windNow = before.wind + tFrac*(after.wind - before.wind);
@@ -140,6 +140,7 @@ async function updateMinMax() {
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation_probability,precipitation&timezone=Europe/Stockholm`;
     const res = await fetch(url);
     const data = await res.json();
+
     const hours = data.hourly.time.map(t => new Date(t));
     const temps = data.hourly.temperature_2m;
     const precProb = data.hourly.precipitation_probability;
@@ -181,6 +182,7 @@ async function updateMinMax() {
         `Min: ${minTemp.toFixed(1)} °C kl ${minTime.getHours()}:${String(minTime.getMinutes()).padStart(2,'0')}<br>` +
         `Max: ${maxTemp.toFixed(1)} °C kl ${maxTime.getHours()}:${String(maxTime.getMinutes()).padStart(2,'0')}`;
     }
+
     if(minY!==null){
       document.getElementById('temp-yesterday').innerHTML =
         `Igår - Min: ${minY.toFixed(1)} °C kl ${minYTime.getHours()}:${String(minYTime.getMinutes()).padStart(2,'0')}<br>` +
