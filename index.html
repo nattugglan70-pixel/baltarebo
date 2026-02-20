@@ -81,10 +81,9 @@ function updateDateWeek() {
   document.getElementById('date-week').innerText = now.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + ' | Vecka ' + week;
 }
 
-// Hjälpfunktion: Konvertera UTC-tid från Open-Meteo till svensk tid
+// Konvertera UTC till svensk lokal tid
 function toLocalTimeUTC(utcDateStr) {
   const d = new Date(utcDateStr + 'Z'); // säkerställ UTC
-  // Svenska lokal tid (UTC+1 eller +2 vid sommartid)
   return new Date(d.toLocaleString('sv-SE', { timeZone: 'Europe/Stockholm' }));
 }
 
@@ -102,10 +101,9 @@ async function updateWeatherNow() {
     const humidity = params.find(p => p.name === 'r').values[0];
     const pressure = params.find(p => p.name === 'msl').values[0];
 
-    // Känns som temperatur (vindpåverkan)
+    // Känns som temperatur
     let feels = temp;
     if(wind >= 1.3 && temp <= 10){
-      // Enkel vindkylningsformel
       feels = 13.12 + 0.6215*temp - 11.37*Math.pow(wind,0.16) + 0.3965*temp*Math.pow(wind,0.16);
     }
 
@@ -120,7 +118,7 @@ async function updateWeatherNow() {
   }
 }
 
-// Open-Meteo: Min/max idag och gårdagens min/max samt nederbörd
+// Open-Meteo: Min/max idag och gårdagens min/max + nederbörd
 async function updateMinMax() {
   try {
     const today = new Date();
@@ -143,25 +141,31 @@ async function updateMinMax() {
 
     for(let i=0;i<hoursUTC.length;i++){
       const localTime = toLocalTimeUTC(hoursUTC[i]);
-      const localDateStr = localTime.getFullYear()+'-'+String(localTime.getMonth()+1).padStart(2,'0')+'-'+String(localTime.getDate()).padStart(2,'0');
+      const localDateStr = localTime.toISOString().split('T')[0];
 
+      // Dagens min/max
       if(localDateStr === todayStr){
         if(minTempToday === undefined || temps[i] < minTempToday){ minTempToday = temps[i]; minTimeToday = localTime; }
         if(maxTempToday === undefined || temps[i] > maxTempToday){ maxTempToday = temps[i]; maxTimeToday = localTime; }
         precip24h += precs[i];
         risk24h = Math.max(risk24h, precProbs[i]);
       }
+
+      // Gårdagens min/max
       if(localDateStr === yesterdayStr){
         if(minTempY === undefined || temps[i] < minTempY){ minTempY = temps[i]; minTimeY = localTime; }
         if(maxTempY === undefined || temps[i] > maxTempY){ maxTempY = temps[i]; maxTimeY = localTime; }
       }
     }
 
+    // Fallbacks
+    const formatTemp = (v) => v !== undefined ? v.toFixed(1) : '--';
+    const formatTime = (t) => t !== undefined ? t.getHours() + ':' + String(t.getMinutes()).padStart(2,'0') : '--:--';
     document.getElementById('temp-minmax').innerHTML =
-      `Min idag: ${minTempToday.toFixed(1)} °C kl ${minTimeToday.getHours()}:${String(minTimeToday.getMinutes()).padStart(2,'0')}<br>` +
-      `Max idag: ${maxTempToday.toFixed(1)} °C kl ${maxTimeToday.getHours()}:${String(maxTimeToday.getMinutes()).padStart(2,'0')}<br>` +
-      `Min igår: ${minTempY.toFixed(1)} °C kl ${minTimeY.getHours()}:${String(minTimeY.getMinutes()).padStart(2,'0')}<br>` +
-      `Max igår: ${maxTempY.toFixed(1)} °C kl ${maxTimeY.getHours()}:${String(maxTimeY.getMinutes()).padStart(2,'0')}`;
+      `Min idag: ${formatTemp(minTempToday)} °C kl ${formatTime(minTimeToday)}<br>` +
+      `Max idag: ${formatTemp(maxTempToday)} °C kl ${formatTime(maxTimeToday)}<br>` +
+      `Min igår: ${formatTemp(minTempY)} °C kl ${formatTime(minTimeY)}<br>` +
+      `Max igår: ${formatTemp(maxTempY)} °C kl ${formatTime(maxTimeY)}`;
 
     document.getElementById('precipitation').innerText =
       `Nederbörd: ${precip24h.toFixed(1)} mm, risk 24h: ${risk24h.toFixed(0)} %`;
