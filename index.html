@@ -14,11 +14,12 @@
     padding: 20px;
   }
   .section {
-    margin: 15px 0;
+    margin: 20px 0;
     padding: 15px 20px;
     background: #111;
     border-radius: 10px;
-    width: 320px;
+    width: 350px;
+    box-shadow: 0 2px 5px rgba(255,255,255,0.2);
   }
   h2 {
     margin: 0 0 10px;
@@ -26,19 +27,20 @@
     text-align: center;
   }
   .value {
-    font-size: 22px;
+    font-size: 24px;
     font-weight: bold;
     text-align: center;
   }
   .subtext {
-    font-size: 12px;
-    color: #aaa;
+    font-size: 13px;
+    color: #ccc;
     text-align: center;
   }
-  .weather-row {
-    display: flex;
-    justify-content: space-between;
-    margin: 5px 0;
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    text-align: center;
   }
 </style>
 </head>
@@ -49,28 +51,16 @@
 </div>
 
 <div class="section">
-  <h2>Väder (Karlsbro & SMHI)</h2>
-  <div class="weather-row">
-    <div>Temperatur:</div>
-    <div class="value" id="temperature">-- °C</div>
+  <h2>Väder</h2>
+  <div class="value" id="temperature">-- °C</div>
+  <div class="value" id="feels-like">-- °C (känns som)</div>
+  <div class="grid">
+    <div class="subtext" id="wind-speed">Vind: -- m/s</div>
+    <div class="subtext" id="humidity">Fuktighet: -- %</div>
+    <div class="subtext" id="pressure">Tryck: -- hPa</div>
+    <div class="subtext" id="precipitation">Nederbörd: -- mm</div>
   </div>
-  <div class="weather-row">
-    <div>Känns som:</div>
-    <div class="value" id="feels-like">-- °C</div>
-  </div>
-  <div class="weather-row">
-    <div>Vind:</div>
-    <div class="value" id="wind">-- m/s</div>
-  </div>
-  <div class="weather-row">
-    <div>Nederbörd:</div>
-    <div class="value" id="precipitation">-- mm</div>
-  </div>
-  <div class="weather-row">
-    <div>Molnighet:</div>
-    <div class="value" id="clouds">-- %</div>
-  </div>
-  <div class="subtext" id="weather-updated">Senast uppdaterad: --:--</div>
+  <div class="subtext" id="weather-updated">Senast uppdaterad: --</div>
 </div>
 
 <script>
@@ -80,18 +70,18 @@ const lon = 14.168177;
 // Datum och veckonummer
 function updateDateWeek() {
   const now = new Date();
-  const start = new Date(now.getFullYear(), 0, 1);
-  const week = Math.ceil((((now - start)/86400000) + start.getDay()+1)/7);
-  const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
-  document.getElementById('date-week').innerText = now.toLocaleDateString('sv-SE', options) + ' | Vecka ' + week;
+  const week = Math.ceil((((now - new Date(now.getFullYear(),0,1))/86400000) + new Date(now.getFullYear(),0,1).getDay()+1)/7);
+  document.getElementById('date-week').innerText =
+    now.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) +
+    ' | Vecka ' + week;
 }
 
-// Temperatur.nu Karlsbro
+// Temperatur.nu
 async function updateTemperatureNu() {
   try {
-    const res = await fetch('https://temperatur.nu/api/station/karlsbro'); // EXAKT URL från din tidigare fungerande kod
+    const res = await fetch('https://temperatur.nu/api/v1/station/karlsbro');
     const data = await res.json();
-    const temp = data.temperature; // exakta nyckeln från din JSON
+    const temp = data.temperature.current;
     document.getElementById('temperature').innerText = temp.toFixed(1) + ' °C';
   } catch (err) {
     console.error('Temperatur.nu error:', err);
@@ -99,43 +89,47 @@ async function updateTemperatureNu() {
   }
 }
 
-// SMHI - övrig väderdata
-async function updateSMHI() {
+// SMHI för mer väderdata
+async function updateSMHIWeather() {
   try {
     const url = `https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${lon}/lat/${lat}/data.json`;
     const res = await fetch(url);
     const data = await res.json();
     const now = new Date();
-    const parameters = data.timeSeries.find(ts => new Date(ts.validTime) >= now).parameters;
+    const nextTS = data.timeSeries.find(ts => new Date(ts.validTime) >= now).parameters;
 
-    const feels = parameters.find(p => p.name === 't').values[0]; // Känns som
-    const wind = parameters.find(p => p.name === 'ws').values[0]; // Vindhastighet m/s
-    const precip = parameters.find(p => p.name === 'pmean').values[0]; // Nederbörd mm/h
-    const clouds = parameters.find(p => p.name === 'tcc_mean').values[0]; // Molnighet %
+    const feels = nextTS.find(p => p.name === 't').values[0]; // SMHI ger ej exakt feels-like, används temp
+    const wind = nextTS.find(p => p.name === 'ws').values[0];
+    const humidity = nextTS.find(p => p.name === 'r').values[0];
+    const pressure = nextTS.find(p => p.name === 'msl').values[0];
+    const precipitation = nextTS.find(p => p.name === 'pmean').values[0];
 
-    document.getElementById('feels-like').innerText = feels.toFixed(1) + ' °C';
-    document.getElementById('wind').innerText = wind.toFixed(1) + ' m/s';
-    document.getElementById('precipitation').innerText = precip.toFixed(1) + ' mm';
-    document.getElementById('clouds').innerText = clouds.toFixed(0) + ' %';
+    document.getElementById('feels-like').innerText = feels.toFixed(1) + ' °C (känns som)';
+    document.getElementById('wind-speed').innerText = `Vind: ${wind} m/s`;
+    document.getElementById('humidity').innerText = `Fuktighet: ${humidity} %`;
+    document.getElementById('pressure').innerText = `Tryck: ${pressure} hPa`;
+    document.getElementById('precipitation').innerText = `Nederbörd: ${precipitation} mm`;
     document.getElementById('weather-updated').innerText = 'Senast uppdaterad: ' + now.toLocaleTimeString('sv-SE');
   } catch (err) {
     console.error('SMHI error:', err);
-    document.getElementById('feels-like').innerText = '-- °C';
-    document.getElementById('wind').innerText = '-- m/s';
-    document.getElementById('precipitation').innerText = '-- mm';
-    document.getElementById('clouds').innerText = '-- %';
+    document.getElementById('feels-like').innerText = '-- °C (känns som)';
+    document.getElementById('wind-speed').innerText = 'Vind: -- m/s';
+    document.getElementById('humidity').innerText = 'Fuktighet: -- %';
+    document.getElementById('pressure').innerText = 'Tryck: -- hPa';
+    document.getElementById('precipitation').innerText = 'Nederbörd: -- mm';
   }
 }
 
-// Initiala uppdateringar
+// Initial update
 updateDateWeek();
 updateTemperatureNu();
-updateSMHI();
+updateSMHIWeather();
 
-// Intervaller
+// Intervaller var 5:e minut
+setInterval(updateDateWeek, 5*60*1000);
 setInterval(updateTemperatureNu, 5*60*1000);
-setInterval(updateSMHI, 5*60*1000);
-</script>
+setInterval(updateSMHIWeather, 5*60*1000);
 
+</script>
 </body>
 </html>
