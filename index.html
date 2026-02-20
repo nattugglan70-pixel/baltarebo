@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="sv">
 <head>
 <meta charset="UTF-8">
-<title>VÄDER</title>
+<title>Väderdashboard</title>
 <style>
   body {
     font-family: Arial, sans-serif;
@@ -41,14 +41,12 @@
 const lat = 57.114025;
 const lon = 14.168177;
 
-// Datum och veckonummer
 function updateDateWeek() {
   const now = new Date();
   const week = Math.ceil((((now - new Date(now.getFullYear(),0,1))/86400000) + new Date(now.getFullYear(),0,1).getDay()+1)/7);
   document.getElementById('date-week').innerText = now.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + ' | Vecka ' + week;
 }
 
-// SMHI: Nuvarande väder och känns som
 async function updateWeatherNow() {
   try {
     const url = `https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${lon}/lat/${lat}/data.json`;
@@ -62,9 +60,8 @@ async function updateWeatherNow() {
     const humidity = params.find(p => p.name === 'r').values[0];
     const pressure = params.find(p => p.name === 'msl').values[0];
 
-    // Beräkna känns som temperatur (Wind Chill)
     let feels = temp;
-    if (temp <= 10 && wind > 1.3) {
+    if(temp <= 10 && wind > 1.3){
       feels = 13.12 + 0.6215*temp - 11.37*Math.pow(wind,0.16) + 0.3965*temp*Math.pow(wind,0.16);
     }
 
@@ -78,7 +75,6 @@ async function updateWeatherNow() {
   }
 }
 
-// Open-Meteo: Min/Max idag och gårdagens min/max + nederbörd/risk
 async function updateMinMax() {
   try {
     const today = new Date();
@@ -95,18 +91,22 @@ async function updateMinMax() {
     const precs = data.hourly.precipitation;
     const risks = data.hourly.precipitation_probability;
 
-    let minToday = temps[0], maxToday = temps[0], minTimeToday = times[0], maxTimeToday = times[0];
-    let minYesterday = temps[0], maxYesterday = temps[0], minTimeY = times[0], maxTimeY = times[0];
+    let minToday = Infinity, maxToday = -Infinity, minTimeToday, maxTimeToday;
+    let minYesterday = Infinity, maxYesterday = -Infinity, minTimeY, maxTimeY;
     let totalPrecip = 0, maxRisk = 0;
 
     for(let i=0;i<temps.length;i++){
       const tStr = times[i].toISOString().split('T')[0];
+
+      // Dagens min/max och nederbörd
       if(tStr === todayStr){
         if(temps[i] < minToday){ minToday = temps[i]; minTimeToday = times[i]; }
         if(temps[i] > maxToday){ maxToday = temps[i]; maxTimeToday = times[i]; }
         totalPrecip += precs[i];
         if(risks[i] > maxRisk){ maxRisk = risks[i]; }
       }
+
+      // Gårdagens min/max
       if(tStr === yesterdayStr){
         if(temps[i] < minYesterday){ minYesterday = temps[i]; minTimeY = times[i]; }
         if(temps[i] > maxYesterday){ maxYesterday = temps[i]; maxTimeY = times[i]; }
@@ -126,12 +126,10 @@ async function updateMinMax() {
   }
 }
 
-// Initial
 updateDateWeek();
 updateWeatherNow();
 updateMinMax();
 
-// Intervaller
 setInterval(updateWeatherNow, 5*60*1000);
 setInterval(updateMinMax, 15*60*1000);
 </script></body>
