@@ -14,38 +14,47 @@
     padding: 20px;
   }
   .section {
-    margin: 20px 0;
-    padding: 15px 20px;
+    margin: 15px 0;
+    padding: 20px;
     background: #111;
-    border-radius: 10px;
-    width: 350px;
+    border-radius: 12px;
+    width: 380px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
   h2 {
-    margin: 0 0 10px;
-    font-size: 20px;
-    text-align: center;
+    margin: 0 0 15px;
+    font-size: 22px;
   }
   .value {
-    font-size: 24px;
+    font-size: 28px;
     font-weight: bold;
-    text-align: center;
+    margin: 5px 0;
   }
   .subtext {
-    font-size: 14px;
+    font-size: 16px;
     color: #ccc;
+    margin: 3px 0;
     text-align: center;
   }
-  .weather-icons {
+  .row {
     display: flex;
     justify-content: space-around;
+    width: 100%;
     margin-top: 10px;
   }
-  .icon {
+  .box {
+    flex: 1;
+    margin: 0 5px;
+    padding: 10px;
+    background: #222;
+    border-radius: 8px;
     text-align: center;
   }
   .icon img {
-    width: 40px;
-    height: 40px;
+    width: 60px;
+    height: 60px;
   }
 </style>
 </head>
@@ -56,20 +65,39 @@
 </div>
 
 <div class="section">
-  <h2>Väder (SMHI)</h2>
+  <h2>Temperatur & Känns som</h2>
   <div class="value" id="temperature">-- °C</div>
   <div class="subtext" id="feels-like">-- °C (känns som)</div>
-  <div class="subtext" id="temp-min-max">Min: -- | Max: --</div>
-  <div class="subtext" id="wind">Vind: -- m/s</div>
-  <div class="subtext" id="humidity">Fuktighet: -- %</div>
-  <div class="subtext" id="pressure">Lufttryck: -- hPa</div>
-  <div class="weather-icons" id="icons"></div>
+</div>
+
+<div class="section">
+  <h2>Dagens min/max</h2>
+  <div class="value" id="temp-min-max">Min: -- | Max: --</div>
+</div>
+
+<div class="section">
+  <h2>Vind, Fukt & Tryck</h2>
+  <div class="row">
+    <div class="box" id="wind">Vind: -- m/s</div>
+    <div class="box" id="humidity">Fuktighet: -- %</div>
+    <div class="box" id="pressure">Tryck: -- hPa</div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Väderikon</h2>
+  <div class="icon" id="icons">
+    <img src="" alt="Väderikon">
+  </div>
+</div>
+
+<div class="section">
   <div class="subtext" id="updated">Senast uppdaterad: --:--</div>
 </div>
 
 <script>
-const lat = 57.114025; // din latitud
-const lon = 14.168177; // din longitud
+const lat = 57.114025;
+const lon = 14.168177;
 
 // Datum och vecka
 function updateDateWeek() {
@@ -86,54 +114,45 @@ async function updateWeather() {
     const data = await res.json();
     const now = new Date();
 
-    // Hitta närmaste timme
     const ts = data.timeSeries.find(ts => new Date(ts.validTime) >= now);
     if(!ts) return;
 
     const params = ts.parameters;
-    const temp = params.find(p => p.name === 't')?.values[0];
-    const feels = params.find(p => p.name === 't')?.values[0]; // SMHI har ej “feels-like”, vi sätter samma
-    const wind = params.find(p => p.name === 'ws')?.values[0];
-    const windDir = params.find(p => p.name === 'wd')?.values[0];
-    const humidity = params.find(p => p.name === 'r')?.values[0];
-    const pressure = params.find(p => p.name === 'msl')?.values[0];
-    const weatherCode = params.find(p => p.name === 'Wsymb2')?.values[0];
+    const temp = params.find(p => p.name==='t')?.values[0];
+    const feels = params.find(p => p.name==='t')?.values[0];
+    const wind = params.find(p => p.name==='ws')?.values[0];
+    const windDir = params.find(p => p.name==='wd')?.values[0];
+    const humidity = params.find(p => p.name==='r')?.values[0];
+    const pressure = params.find(p => p.name==='msl')?.values[0];
+    const weatherCode = params.find(p => p.name==='Wsymb2')?.values[0];
 
-    // Max och min under dagen
     const today = now.toISOString().split('T')[0];
     const todaySeries = data.timeSeries.filter(s => s.validTime.startsWith(today));
     const temps = todaySeries.map(s => s.parameters.find(p => p.name==='t').values[0]);
     const minTemp = Math.min(...temps);
     const maxTemp = Math.max(...temps);
 
-    document.getElementById('temperature').innerText = temp.toFixed(1) + ' °C';
-    document.getElementById('feels-like').innerText = feels.toFixed(1) + ' °C (känns som)';
+    document.getElementById('temperature').innerText = temp.toFixed(1)+' °C';
+    document.getElementById('feels-like').innerText = feels.toFixed(1)+' °C (känns som)';
     document.getElementById('temp-min-max').innerText = `Min: ${minTemp.toFixed(1)} | Max: ${maxTemp.toFixed(1)}`;
     document.getElementById('wind').innerText = `Vind: ${wind.toFixed(1)} m/s (${windDir}°)`;
     document.getElementById('humidity').innerText = `Fuktighet: ${humidity.toFixed(0)} %`;
-    document.getElementById('pressure').innerText = `Lufttryck: ${pressure.toFixed(0)} hPa`;
-    document.getElementById('updated').innerText = 'Senast uppdaterad: ' + now.toLocaleTimeString('sv-SE');
+    document.getElementById('pressure').innerText = `Tryck: ${pressure.toFixed(0)} hPa`;
+    document.getElementById('updated').innerText = 'Senast uppdaterad: '+now.toLocaleTimeString('sv-SE');
 
-    // Visa väderikon
-    const iconEl = document.getElementById('icons');
-    iconEl.innerHTML = '';
-    const iconUrl = `https://opendata-download-metfcst.smhi.se/img/icons/Wsymb2_${weatherCode}.png`;
-    const iconDiv = document.createElement('div');
-    iconDiv.classList.add('icon');
-    iconDiv.innerHTML = `<img src="${iconUrl}" alt="Väderikon"><div>${weatherCode}</div>`;
-    iconEl.appendChild(iconDiv);
+    const iconEl = document.getElementById('icons').querySelector('img');
+    iconEl.src = `https://opendata-download-metfcst.smhi.se/img/icons/Wsymb2_${weatherCode}.png`;
+    iconEl.alt = `Väderikon ${weatherCode}`;
 
   } catch(err) {
     console.error('Weather error:', err);
   }
 }
 
-// Initial
+// Init
 updateDateWeek();
 updateWeather();
-
-// Intervall
-setInterval(updateWeather, 5*60*1000); // uppdatera var 5:e minut
+setInterval(updateWeather, 5*60*1000);
 </script>
 
 </body>
