@@ -2,217 +2,138 @@
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Väderstation</title>
-
+<title>Väder SMHI</title>
 <style>
-body {
-  margin:0;
-  font-family: Arial, sans-serif;
-  background:#0f172a;
-  color:#e2e8f0;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  height:100vh;
-}
-
-.container {
-  text-align:center;
-  background:#1e293b;
-  padding:40px;
-  border-radius:20px;
-  box-shadow:0 0 40px rgba(0,0,0,0.5);
-  width:420px;
-}
-
-h1 {
-  margin-bottom:10px;
-  font-weight:600;
-}
-
-.date {
-  font-size:14px;
-  opacity:0.7;
-  margin-bottom:25px;
-}
-
-.temp-main {
-  font-size:64px;
-  font-weight:700;
-  margin:10px 0;
-}
-
-.temp-minmax {
-  font-size:14px;
-  opacity:0.8;
-  margin-bottom:10px;
-}
-
-.trend {
-  font-size:18px;
-  margin-bottom:20px;
-}
-
-.weather-icon {
-  font-size:48px;
-  margin:10px 0;
-}
-
-.grid {
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:15px;
-  margin-top:20px;
-  font-size:14px;
-}
-
-.card {
-  background:#0f172a;
-  padding:15px;
-  border-radius:12px;
-}
-
-.updated {
-  margin-top:20px;
-  font-size:12px;
-  opacity:0.6;
-}
+  body {
+    font-family: Arial, sans-serif;
+    background: #000;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+  }
+  .section {
+    margin: 20px 0;
+    padding: 15px 20px;
+    background: #111;
+    border-radius: 10px;
+    width: 350px;
+  }
+  h2 {
+    margin: 0 0 10px;
+    font-size: 20px;
+    text-align: center;
+  }
+  .value {
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+  }
+  .subtext {
+    font-size: 14px;
+    color: #ccc;
+    text-align: center;
+  }
+  .weather-icons {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 10px;
+  }
+  .icon {
+    text-align: center;
+  }
+  .icon img {
+    width: 40px;
+    height: 40px;
+  }
 </style>
 </head>
-
 <body>
 
-<div class="container">
-  <h1>Väderstation</h1>
-  <div class="date" id="date"></div>
+<div class="section">
+  <h2 id="date-week"></h2>
+</div>
 
-  <div class="temp-main" id="temp">--°</div>
-  <div class="trend" id="trend"></div>
-  <div class="temp-minmax" id="minmax"></div>
-  <div class="weather-icon" id="symbol"></div>
-
-  <div class="grid">
-    <div class="card">Känns som<br><strong id="feels">--°</strong></div>
-    <div class="card">Vind<br><strong id="wind">-- m/s</strong></div>
-    <div class="card">Lufttryck<br><strong id="pressure">-- hPa</strong></div>
-    <div class="card">Fuktighet<br><strong id="humidity">-- %</strong></div>
-  </div>
-
-  <div class="updated" id="updated"></div>
+<div class="section">
+  <h2>Väder (SMHI)</h2>
+  <div class="value" id="temperature">-- °C</div>
+  <div class="subtext" id="feels-like">-- °C (känns som)</div>
+  <div class="subtext" id="temp-min-max">Min: -- | Max: --</div>
+  <div class="subtext" id="wind">Vind: -- m/s</div>
+  <div class="subtext" id="humidity">Fuktighet: -- %</div>
+  <div class="subtext" id="pressure">Lufttryck: -- hPa</div>
+  <div class="weather-icons" id="icons"></div>
+  <div class="subtext" id="updated">Senast uppdaterad: --:--</div>
 </div>
 
 <script>
+const lat = 57.114025; // din latitud
+const lon = 14.168177; // din longitud
 
-let previousTemp = null;
-
-function weekNumber(d){
-  d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
-  let yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-  return Math.ceil((((d - yearStart) / 86400000) + 1)/7);
-}
-
-function updateDate(){
+// Datum och vecka
+function updateDateWeek() {
   const now = new Date();
-  const options = { weekday:'long', year:'numeric', month:'long', day:'numeric' };
-  document.getElementById("date").innerText =
-    now.toLocaleDateString("sv-SE", options) +
-    " | Vecka " + weekNumber(now);
+  const week = Math.ceil((((now - new Date(now.getFullYear(),0,1))/86400000) + new Date(now.getFullYear(),0,1).getDay()+1)/7);
+  document.getElementById('date-week').innerText = now.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + ' | Vecka ' + week;
 }
 
-async function fetchTemperature(){
-  try{
-    const response = await fetch("https://api.allorigins.win/raw?url=https://api.temperatur.nu/tnu_1.17.php?p=karlsbro");
-    const text = await response.text();
-    const match = text.match(/-?\d+(\.\d+)?/);
-    if(match){
-      const currentTemp = parseFloat(match[0]);
-      document.getElementById("temp").innerText = currentTemp.toFixed(1)+"°";
-
-      if(previousTemp !== null){
-        if(currentTemp > previousTemp){
-          document.getElementById("trend").innerText = "↑ Stiger";
-        } else if(currentTemp < previousTemp){
-          document.getElementById("trend").innerText = "↓ Sjunker";
-        } else {
-          document.getElementById("trend").innerText = "→ Oförändrat";
-        }
-      }
-
-      previousTemp = currentTemp;
-    }
-  }catch(err){
-    document.getElementById("temp").innerText="--°";
-  }
-}
-
-function weatherSymbol(code){
-  const symbols = {
-    1:"☀️",2:"⛅",3:"⛅",
-    4:"☁️",5:"☁️",6:"☁️",
-    7:"🌫️",
-    8:"🌧️",9:"🌧️",10:"🌧️",
-    11:"⛈️",
-    12:"🌨️",13:"🌨️",14:"🌨️",
-    15:"🌨️"
-  };
-  return symbols[code] || "";
-}
-
-async function fetchSMHI(){
-  const lat = 59.5;  // din lat
-  const lon = 15.3;  // din lon
-  const url = `https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${lon}/lat/${lat}/data.json`;
-
-  try{
+// SMHI Väder
+async function updateWeather() {
+  try {
+    const url = `https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${lon}/lat/${lat}/data.json`;
     const res = await fetch(url);
     const data = await res.json();
+    const now = new Date();
 
-    const now = data.timeSeries[0];
-    const params = now.parameters;
+    // Hitta närmaste timme
+    const ts = data.timeSeries.find(ts => new Date(ts.validTime) >= now);
+    if(!ts) return;
 
-    const get = name => params.find(p=>p.name===name)?.values[0];
+    const params = ts.parameters;
+    const temp = params.find(p => p.name === 't')?.values[0];
+    const feels = params.find(p => p.name === 't')?.values[0]; // SMHI har ej “feels-like”, vi sätter samma
+    const wind = params.find(p => p.name === 'ws')?.values[0];
+    const windDir = params.find(p => p.name === 'wd')?.values[0];
+    const humidity = params.find(p => p.name === 'r')?.values[0];
+    const pressure = params.find(p => p.name === 'msl')?.values[0];
+    const weatherCode = params.find(p => p.name === 'Wsymb2')?.values[0];
 
-    document.getElementById("feels").innerText = get("apparent_t")+"°";
-    document.getElementById("wind").innerText = get("ws")+" m/s";
-    document.getElementById("pressure").innerText = get("msl")+" hPa";
-    document.getElementById("humidity").innerText = get("r")+" %";
+    // Max och min under dagen
+    const today = now.toISOString().split('T')[0];
+    const todaySeries = data.timeSeries.filter(s => s.validTime.startsWith(today));
+    const temps = todaySeries.map(s => s.parameters.find(p => p.name==='t').values[0]);
+    const minTemp = Math.min(...temps);
+    const maxTemp = Math.max(...temps);
 
-    const symbolCode = get("Wsymb2");
-    document.getElementById("symbol").innerText = weatherSymbol(symbolCode);
+    document.getElementById('temperature').innerText = temp.toFixed(1) + ' °C';
+    document.getElementById('feels-like').innerText = feels.toFixed(1) + ' °C (känns som)';
+    document.getElementById('temp-min-max').innerText = `Min: ${minTemp.toFixed(1)} | Max: ${maxTemp.toFixed(1)}`;
+    document.getElementById('wind').innerText = `Vind: ${wind.toFixed(1)} m/s (${windDir}°)`;
+    document.getElementById('humidity').innerText = `Fuktighet: ${humidity.toFixed(0)} %`;
+    document.getElementById('pressure').innerText = `Lufttryck: ${pressure.toFixed(0)} hPa`;
+    document.getElementById('updated').innerText = 'Senast uppdaterad: ' + now.toLocaleTimeString('sv-SE');
 
-    // Max/min idag
-    const today = new Date().toISOString().split("T")[0];
-    const todayData = data.timeSeries.filter(t => t.validTime.startsWith(today));
+    // Visa väderikon
+    const iconEl = document.getElementById('icons');
+    iconEl.innerHTML = '';
+    const iconUrl = `https://opendata-download-metfcst.smhi.se/img/icons/Wsymb2_${weatherCode}.png`;
+    const iconDiv = document.createElement('div');
+    iconDiv.classList.add('icon');
+    iconDiv.innerHTML = `<img src="${iconUrl}" alt="Väderikon"><div>${weatherCode}</div>`;
+    iconEl.appendChild(iconDiv);
 
-    const temps = todayData.map(t =>
-      t.parameters.find(p=>p.name==="t").values[0]
-    );
-
-    const max = Math.max(...temps).toFixed(1);
-    const min = Math.min(...temps).toFixed(1);
-
-    document.getElementById("minmax").innerText =
-      "Max: "+max+"° | Min: "+min+"°";
-
-    document.getElementById("updated").innerText =
-      "Senast uppdaterad: "+new Date().toLocaleTimeString("sv-SE");
-
-  }catch(err){
-    console.log("SMHI fel",err);
+  } catch(err) {
+    console.error('Weather error:', err);
   }
 }
 
-function updateAll(){
-  updateDate();
-  fetchTemperature();
-  fetchSMHI();
-}
+// Initial
+updateDateWeek();
+updateWeather();
 
-updateAll();
-setInterval(updateAll, 300000);
-
+// Intervall
+setInterval(updateWeather, 5*60*1000); // uppdatera var 5:e minut
 </script>
 
 </body>
