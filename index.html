@@ -21,7 +21,7 @@
     border-radius: 12px;
     width: 380px;
     box-shadow: 0 2px 10px rgba(255,255,255,0.2);
-    text-align: center; /* All text centrerad */
+    text-align: center;
   }
 
   .value {
@@ -41,18 +41,6 @@
     margin: 6px 0;
     line-height: 1.5;
   }
-
-  .trend {
-    font-size: 24px;
-    margin-left: 8px;
-    vertical-align: middle;
-  }
-
-  .legend {
-    font-size: 14px;
-    color: #aaa;
-    margin-top: 8px;
-  }
 </style>
 </head>
 <body>
@@ -69,10 +57,7 @@
   <div class="subtext" id="wind">Vind: -- m/s</div>
   <div class="subtext" id="humidity">Luftfuktighet: -- %</div>
   <div class="subtext" id="pressure">Tryck: -- hPa</div>
-  <div class="subtext" id="precipitation">Nederbörd: -- % <span class="trend" id="trend-arrow">-</span></div>
-  <div class="legend">
-    Pilens färg och riktning visar: ↑ Grön = Nederbörd på väg, → Vit = Ingen nederbörd
-  </div>
+  <div class="subtext" id="precipitation">Nederbörd: -- %</div>
 </div>
 
 <div class="section">
@@ -117,15 +102,7 @@ async function updateWeatherNow() {
     document.getElementById('wind').innerText = `Vind: ${wind.toFixed(1)} m/s`;
     document.getElementById('humidity').innerText = `Luftfuktighet: ${humidity.toFixed(0)} %`;
     document.getElementById('pressure').innerText = `Tryck: ${pressure.toFixed(0)} hPa`;
-
-    const arrow = precipitation > 0 ? '↑' : '→'; 
-    const color = precipitation > 0 ? 'green' : 'white';
-    const trendArrow = document.getElementById('trend-arrow');
-    trendArrow.innerText = arrow;
-    trendArrow.style.color = color;
-
-    document.getElementById('precipitation').innerText = `Nederbörd: ${precipitation.toFixed(0)} % `;
-    document.getElementById('precipitation').appendChild(trendArrow);
+    document.getElementById('precipitation').innerText = `Nederbörd: ${precipitation.toFixed(0)} %`;
 
     document.getElementById('weather-updated').innerText = 'Senast uppdaterad: ' + now.toLocaleTimeString('sv-SE');
   } catch(err) {
