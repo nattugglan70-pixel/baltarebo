@@ -40,11 +40,19 @@
 </div><script>
 const lat = 57.114025;
 const lon = 14.168177;
+const swedishOffset = 1; // CET/CEST hanteras enkelt här (vinter sommar justering)
 
 function updateDateWeek() {
   const now = new Date();
   const week = Math.ceil((((now - new Date(now.getFullYear(),0,1))/86400000) + new Date(now.getFullYear(),0,1).getDay()+1)/7);
   document.getElementById('date-week').innerText = now.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + ' | Vecka ' + week;
+}
+
+function toLocalTimeUTC(dateStr) {
+  const utcDate = new Date(dateStr);
+  // Lägg till svensk tid (CET/CEST)
+  const localTime = new Date(utcDate.getTime() + swedishOffset * 3600000);
+  return localTime;
 }
 
 async function updateWeatherNow() {
@@ -78,15 +86,15 @@ async function updateWeatherNow() {
 async function updateMinMax() {
   try {
     const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
     const yesterday = new Date(today.getTime() - 86400000);
+    const todayStr = today.toISOString().split('T')[0];
     const yesterdayStr = yesterday.toISOString().split('T')[0];
 
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,precipitation_probability&timezone=Europe/Stockholm`;
     const res = await fetch(url);
     const data = await res.json();
 
-    const times = data.hourly.time.map(t => new Date(t));
+    const timesUTC = data.hourly.time;
     const temps = data.hourly.temperature_2m;
     const precs = data.hourly.precipitation;
     const risks = data.hourly.precipitation_probability;
@@ -95,21 +103,21 @@ async function updateMinMax() {
     let minYesterday = Infinity, maxYesterday = -Infinity, minTimeY, maxTimeY;
     let totalPrecip = 0, maxRisk = 0;
 
-    for(let i=0;i<temps.length;i++){
-      const tStr = times[i].toISOString().split('T')[0];
-
+    for(let i=0;i<timesUTC.length;i++){
+      const localTime = toLocalTimeUTC(timesUTC[i]);
+      const dateStr = localTime.toISOString().split('T')[0];
+      
       // Dagens min/max och nederbörd
-      if(tStr === todayStr){
-        if(temps[i] < minToday){ minToday = temps[i]; minTimeToday = times[i]; }
-        if(temps[i] > maxToday){ maxToday = temps[i]; maxTimeToday = times[i]; }
+      if(dateStr === todayStr){
+        if(temps[i] < minToday){ minToday = temps[i]; minTimeToday = localTime; }
+        if(temps[i] > maxToday){ maxToday = temps[i]; maxTimeToday = localTime; }
         totalPrecip += precs[i];
         if(risks[i] > maxRisk){ maxRisk = risks[i]; }
       }
-
       // Gårdagens min/max
-      if(tStr === yesterdayStr){
-        if(temps[i] < minYesterday){ minYesterday = temps[i]; minTimeY = times[i]; }
-        if(temps[i] > maxYesterday){ maxYesterday = temps[i]; maxTimeY = times[i]; }
+      if(dateStr === yesterdayStr){
+        if(temps[i] < minYesterday){ minYesterday = temps[i]; minTimeY = localTime; }
+        if(temps[i] > maxYesterday){ maxYesterday = temps[i]; maxTimeY = localTime; }
       }
     }
 
@@ -129,7 +137,6 @@ async function updateMinMax() {
 updateDateWeek();
 updateWeatherNow();
 updateMinMax();
-
 setInterval(updateWeatherNow, 5*60*1000);
 setInterval(updateMinMax, 15*60*1000);
 </script></body>
