@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
-<title>VÄDER</title>
+<title>Väderdashboard</title>
 <style>
   body {
     font-family: Arial, sans-serif;
@@ -112,7 +112,10 @@ async function updateWeatherNow() {
     document.getElementById('wind').innerText = `Vind: ${wind.toFixed(1)} m/s`;
     document.getElementById('humidity').innerText = `Luftfuktighet: ${humidity.toFixed(0)} %`;
     document.getElementById('pressure').innerText = `Tryck: ${pressure.toFixed(0)} hPa`;
-    document.getElementById('precipitation').innerText = `Nederbörd: ${precip.toFixed(1)} mm | Risk 24h: -- %`;
+
+    // Här fyller vi nederbörd + risk 24h från Open-Meteo
+    await updatePrecipitation();
+
     document.getElementById('weather-updated').innerText = 'Senast uppdaterad: ' + now.toLocaleTimeString('sv-SE');
 
   } catch(err) {
@@ -120,7 +123,7 @@ async function updateWeatherNow() {
   }
 }
 
-// Open-Meteo: Dagens min/max och gårdagens min/max
+// Open-Meteo: Dagens min/max, gårdagens min/max
 async function updateMinMax() {
   try {
     const today = new Date();
@@ -161,6 +164,34 @@ async function updateMinMax() {
 
   } catch(err) {
     console.error('Open-Meteo min/max error:', err);
+  }
+}
+
+// Open-Meteo: Nederbörd + risk 24h
+async function updatePrecipitation() {
+  try {
+    const now = new Date();
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=precipitation&timezone=Europe/Stockholm`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    const hours = data.hourly.time.map(t => new Date(t));
+    const precip = data.hourly.precipitation;
+
+    // Sista timme
+    const currentIndex = hours.findIndex(h => Math.abs(h-now)<3600000); // närmaste timme
+    const currentPrecip = currentIndex>=0 ? precip[currentIndex] : 0;
+
+    // Risk 24h
+    const next24h = hours.filter(h => h>now && h<=new Date(now.getTime()+24*3600*1000));
+    const next24hPrecip = next24h.map(h=>precip[hours.indexOf(h)]);
+    const precipHours = next24hPrecip.filter(p=>p>0).length;
+    const riskPercent = Math.round((precipHours/24)*100);
+
+    document.getElementById('precipitation').innerText = `Nederbörd: ${currentPrecip.toFixed(1)} mm | Risk 24h: ${riskPercent} %`;
+
+  } catch(err) {
+    console.error('Open-Meteo precipitation error:', err);
   }
 }
 
