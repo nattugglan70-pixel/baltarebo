@@ -86,29 +86,46 @@ function updateDateWeek() {
   document.getElementById('date-week').innerText = now.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + ' | Vecka ' + week;
 }
 
-// SMHI: Nuvarande väder
+// SMHI: Nuvarande väder med interpolation
 async function updateWeatherNow() {
   try {
     const url = `https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${lon}/lat/${lat}/data.json`;
     const res = await fetch(url);
     const data = await res.json();
     const now = new Date();
-    const nearest = data.timeSeries.reduce((a,b) => Math.abs(new Date(b.validTime)-now) < Math.abs(new Date(a.validTime)-now) ? b : a);
-    const params = nearest.parameters;
-    const temp = params.find(p => p.name === 't').values[0];
-    const wind = params.find(p => p.name === 'ws').values[0];
-    const humidity = params.find(p => p.name === 'r').values[0];
-    const pressure = params.find(p => p.name === 'msl').values[0];
+    const timeSeries = data.timeSeries.map(ts => ({ 
+      time: new Date(ts.validTime), 
+      temp: ts.parameters.find(p => p.name==='t').values[0],
+      wind: ts.parameters.find(p => p.name==='ws').values[0],
+      humidity: ts.parameters.find(p => p.name==='r').values[0],
+      pressure: ts.parameters.find(p => p.name==='msl').values[0]
+    }));
 
-    // Feels like (vindchill) approx
-    const windChill = 13.12 + 0.6215*temp - 11.37*Math.pow(wind,0.16) + 0.3965*temp*Math.pow(wind,0.16);
+    // Hitta närmaste timmar före och efter
+    let before = timeSeries[0], after = timeSeries[timeSeries.length-1];
+    for(let i=0;i<timeSeries.length-1;i++){
+      if(timeSeries[i].time <= now && timeSeries[i+1].time >= now){
+        before = timeSeries[i];
+        after = timeSeries[i+1];
+        break;
+      }
+    }
 
-    document.getElementById('temp-now').innerText = `${temp.toFixed(1)} °C (${windChill.toFixed(1)} °C)`;
-    document.getElementById('wind').innerText = `Vind: ${wind.toFixed(1)} m/s`;
-    document.getElementById('humidity').innerText = `Luftfuktighet: ${humidity.toFixed(0)} %`;
-    document.getElementById('pressure').innerText = `Tryck: ${pressure.toFixed(0)} hPa`;
+    // Linjär interpolation
+    const tFrac = (now - before.time)/(after.time - before.time);
+    const tempNow = before.temp + tFrac*(after.temp - before.temp);
+    const windNow = before.wind + tFrac*(after.wind - before.wind);
+    const humidityNow = before.humidity + tFrac*(after.humidity - before.humidity);
+    const pressureNow = before.pressure + tFrac*(after.pressure - before.pressure);
+
+    // Vindchill (°C)
+    const windChill = 13.12 + 0.6215*tempNow - 11.37*Math.pow(windNow,0.16) + 0.3965*tempNow*Math.pow(windNow,0.16);
+
+    document.getElementById('temp-now').innerText = `${tempNow.toFixed(1)} °C (${windChill.toFixed(1)} °C)`;
+    document.getElementById('wind').innerText = `Vind: ${windNow.toFixed(1)} m/s`;
+    document.getElementById('humidity').innerText = `Luftfuktighet: ${humidityNow.toFixed(0)} %`;
+    document.getElementById('pressure').innerText = `Tryck: ${pressureNow.toFixed(0)} hPa`;
     document.getElementById('weather-updated').innerText = 'Senast uppdaterad: ' + now.toLocaleTimeString('sv-SE');
-
   } catch(err) {
     console.error('SMHI weather error:', err);
   }
@@ -123,13 +140,10 @@ async function updateMinMax() {
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation_probability,precipitation&timezone=Europe/Stockholm`;
     const res = await fetch(url);
     const data = await res.json();
-    const hoursUTC = data.hourly.time.map(t => new Date(t));
+    const hours = data.hourly.time.map(t => new Date(t));
     const temps = data.hourly.temperature_2m;
     const precProb = data.hourly.precipitation_probability;
     const prec = data.hourly.precipitation;
-
-    // Konvertera timmar till lokal tid
-    const hours = hoursUTC.map(d => new Date(d.toLocaleString("sv-SE", { timeZone: "Europe/Stockholm" })));
 
     // Dagens min/max
     let minTemp = null, maxTemp = null, minTime = null, maxTime = null;
@@ -162,7 +176,6 @@ async function updateMinMax() {
       }
     }
 
-    // Visa
     if(minTemp!==null){
       document.getElementById('temp-minmax').innerHTML =
         `Min: ${minTemp.toFixed(1)} °C kl ${minTime.getHours()}:${String(minTime.getMinutes()).padStart(2,'0')}<br>` +
