@@ -2,103 +2,123 @@
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
-<title>Temperatur Dashboard</title>
+<title>Minimal Dashboard</title>
 <style>
-  /* Bas-stilar */
   body {
-    background-color: black;
+    background: black;
     color: white;
     font-family: Arial, sans-serif;
+    text-align: center;
+    margin: 0;
+    padding: 0;
+    height: 100vh;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    align-items: center;
-    height: 100vh;
-    margin: 0;
   }
-
-  #container {
-    text-align: center;
-  }
-
-  #temp-row {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 15px;
-    margin-bottom: 10px;
-  }
-
-  #temp {
-    font-size: 80px;
-    font-weight: bold;
-  }
-
-  #newtab-btn {
-    font-size: 28px;
-    text-decoration: none;
-    color: white;
-    opacity: 0.7;
-    transition: opacity 0.3s ease;
-  }
-
-  #newtab-btn:hover {
-    opacity: 1;
-  }
-
-  #date, #updated {
-    font-size: 18px;
-    margin: 3px 0;
-  }
+  .temp { font-size: 70px; font-weight: bold; }
+  .feels { font-size: 22px; margin-top: -6px; opacity: 0.8; }
+  .date, .updated, .elprice { font-size: 18px; margin-top: 8px; }
 </style>
 </head>
 <body>
-<div id="container">
-  <div id="temp-row">
-    <span id="temp">--°C</span>
-    <a href="chrome://newtab" id="newtab-btn" title="Öppna Bonjourr">⌂</a>
-  </div>
-  <div id="date"></div>
-  <div id="updated"></div>
-</div>
+
+<div class="temp" id="temp">--°C</div>
+<div class="feels" id="feels">Känns som --°C</div>
+<div class="date" id="date"></div>
+<div class="updated" id="updated"></div>
+<div class="elprice" id="elprice">Elpris: -- kr/kWh</div>
 
 <script>
-// --- Datum ---
-function updateDate() {
+
+// ===== Datum + Veckonummer
+function showDate() {
   const now = new Date();
-  const weekdays = ["Söndag","Måndag","Tisdag","Onsdag","Torsdag","Fredag","Lördag"];
-  const day = weekdays[now.getDay()];
-  const date = now.getDate();
+  const dayNames = ["Söndag","Måndag","Tisdag","Onsdag","Torsdag","Fredag","Lördag"];
+  const day = dayNames[now.getDay()];
   const month = now.toLocaleString('sv-SE', {month:'long'});
-  const year = now.getFullYear();
-  document.getElementById('date').textContent = `${day} ${date} ${month} ${year}`;
+  const week = Math.ceil(((now - new Date(now.getFullYear(),0,1)) / (24*60*60*1000) + new Date(now.getFullYear(),0,1).getDay()+1)/7);
+  document.getElementById("date").textContent = `${day} ${now.getDate()} ${month} ${now.getFullYear()} | Vecka ${week}`;
 }
 
-// --- Temperatur från GitHub / Temperatur.nu ---
-async function updateTemp() {
-  try {
-    const res = await fetch('https://api.temperatur.nu/tnu_1.17.php?p=karlsbro&cli=githubpage');
-    const data = await res.json();
-    const temp = data.stations[0].temp;
-    document.getElementById('temp').textContent = `${temp}°C`;
+// ===== Feels like (wind chill)
+function feelsLike(tempC, windMS) {
+  return Math.round(13.12 + 0.6215*tempC - 11.37*Math.pow(windMS,0.16) + 0.3965*tempC*Math.pow(windMS,0.16));
+}
 
-    // Senast uppdaterad
+// ===== Open-Meteo: temperatur + vind
+async function fetchWeather() {
+  const latitude = 57.114025;
+  const longitude = 14.168177;
+
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&windspeed_unit=ms`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const cw = data.current_weather;
+
+    const t = cw.temperature;
+    const w = cw.windspeed;
+
+    document.getElementById("temp").textContent = `${t.toFixed(1)}°C`;
+    document.getElementById("feels").textContent = `Känns som ${feelsLike(t,w)}°C`;
+
     const now = new Date();
-    const hours = now.getHours().toString().padStart(2,'0');
-    const minutes = now.getMinutes().toString().padStart(2,'0');
-    document.getElementById('updated').textContent = `Senast uppdaterad: ${hours}:${minutes}`;
-  } catch (e) {
-    document.getElementById('temp').textContent = '--°C';
-    document.getElementById('updated').textContent = `Senast uppdaterad: -`;
+    const hh = now.getHours().toString().padStart(2,"0");
+    const mm = now.getMinutes().toString().padStart(2,"0");
+    document.getElementById("updated").textContent = `Senast uppdaterad: ${hh}:${mm}`;
+
+  } catch(e) {
+    document.getElementById("temp").textContent = "--°C";
+    document.getElementById("feels").textContent = "Känns som --°C";
+    document.getElementById("updated").textContent = `Senast uppdaterad: -`;
   }
 }
 
-// --- Init ---
-updateDate();
-updateTemp();
+// ===== Elpris: uppdatera endast vid timbyte
+let lastHour = -1;
+async function fetchElpris() {
+  const now = new Date();
+  const currentHour = now.getHours();
 
-// --- Uppdatera varje 5 minuter ---
-setInterval(updateTemp, 5 * 60 * 1000);
+  // Hämta bara om timmen ändrats
+  if(currentHour === lastHour) return;
+  lastHour = currentHour;
+
+  try {
+    const year  = now.getFullYear();
+    const month = (now.getMonth()+1).toString().padStart(2,"0");
+    const day   = now.getDate().toString().padStart(2,"0");
+
+    const zone = "SE3"; // Södra Sverige
+    const url = `https://www.elprisetjustnu.se/api/v1/prices/${year}/${month}-${day}_${zone}.json`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+
+    const price = data[currentHour]?.price_sek ?? null;
+    if(price !== null) {
+      document.getElementById("elprice").textContent = `Elpris: ${price.toFixed(2)} kr/kWh`;
+    } else {
+      document.getElementById("elprice").textContent = "Elpris: -";
+    }
+
+  } catch(e) {
+    document.getElementById("elprice").textContent = "Elpris: -";
+  }
+}
+
+// Init
+showDate();
+fetchWeather();
+fetchElpris();
+
+// Vädret uppdateras var 5:e minut
+setInterval(fetchWeather, 5*60*1000);
+
+// Elpriset kontrolleras varje minut men hämtas bara vid timbyte
+setInterval(fetchElpris, 60*1000);
+
 </script>
 </body>
 </html>
