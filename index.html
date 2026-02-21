@@ -2,28 +2,35 @@
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
-<title>Dashboard - Väder & Superettan</title>
+<title>INFOBOARD</title>
 <style>
 body {
   font-family: Arial, sans-serif;
   background: #000;
   color: #fff;
   display: flex;
-  justify-content: center;
-  padding: 20px;
+  padding: 15px;
+  gap: 15px;
 }
 
-.column-container {
+/* Spaltlayout */
+.column {
   display: flex;
-  gap: 20px;
+  flex-direction: column;
+  gap: 15px;
+}
+
+/* Väderspalten */
+.weather-column {
+  width: 380px;
 }
 
 .section {
+  padding: 20px;
   background: #111;
   border-radius: 12px;
-  padding: 20px;
-  width: 380px;
   box-shadow: 0 2px 10px rgba(255,255,255,0.2);
+  text-align: center;
 }
 
 .value {
@@ -40,8 +47,8 @@ body {
 
 .minmax {
   font-size: 18px;
-  margin: 6px 0;
   line-height: 1.6;
+  margin: 6px 0;
 }
 
 .yesterday-temp {
@@ -56,18 +63,40 @@ body {
   color: #87cefa;
 }
 
-h2 {
-  text-align: center;
-  margin-bottom: 10px;
+/* Superettan matcher */
+.superettan-column {
+  width: 350px;
 }
 
-.schedule, .table {
-  font-size: 16px;
-  line-height: 1.6;
+.match {
+  padding: 8px;
+  border-bottom: 1px solid #444;
+}
+
+.match span {
+  display: inline-block;
+  width: 45%;
 }
 
 .match-result {
-  color: #87cefa;
+  width: 10%;
+  text-align: center;
+}
+
+/* Tabellställning */
+.table-column {
+  width: 250px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th, .table td {
+  padding: 6px;
+  text-align: left;
+  border-bottom: 1px solid #444;
 }
 
 .highlight {
@@ -78,48 +107,72 @@ h2 {
 </head>
 <body>
 
-<div class="column-container">
-
-  <!-- Vädret -->
+<!-- Väderspalten -->
+<div class="column weather-column">
   <div class="section">
     <div id="date-week"></div>
     <div class="subtext" id="weather-updated">Senast uppdaterad: --:--</div>
+  </div>
 
+  <div class="section">
     <div class="value" id="temp-now">-- °C (-- °C)</div>
+  </div>
+
+  <div class="section">
     <div class="subtext">Igår samma tid:</div>
     <div class="yesterday-temp" id="temp-yesterday">-- °C</div>
+  </div>
 
+  <div class="section">
     <div class="subtext" id="wind">Vind: -- m/s</div>
     <div class="subtext" id="humidity">Luftfuktighet: -- %</div>
     <div class="subtext" id="pressure">Tryck: -- hPa</div>
     <div class="precip" id="precipitation">Nederbörd kommande timme: --</div>
-
-    <div class="minmax" id="temp-minmax">Idag<br>Min: -- °C<br>Max: -- °C</div>
-    <div class="minmax" id="temp-yesterday-minmax">Igår<br>Min: -- °C<br>Max: -- °C</div>
   </div>
 
-  <!-- Superettan Spelschema -->
   <div class="section">
-    <h2>Spelschema</h2>
-    <div id="schedule" class="schedule">
-      Laddar spelschema...
+    <div class="minmax" id="temp-minmax">
+      Idag<br>Min: -- °C<br>Max: -- °C
     </div>
   </div>
 
-  <!-- Superettan Tabell -->
   <div class="section">
-    <h2>Tabellställning</h2>
-    <div id="standings" class="table">
-      Laddar tabell...
+    <div class="minmax" id="temp-yesterday-minmax">
+      Igår<br>Min: -- °C<br>Max: -- °C
     </div>
   </div>
+</div>
 
+<!-- Superettan matcher -->
+<div class="column superettan-column" id="superettan-matches">
+  <div class="section">
+    <h3>IFK Värnamo Matcher</h3>
+    <div id="match-list">
+      <!-- Exempelrader -->
+      <div class="match"><span>02/04</span><span>Mot Norrköping</span><span class="match-result">-</span></div>
+      <div class="match"><span>09/04</span><span>Mot Öster</span><span class="match-result">-</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Superettan tabell -->
+<div class="column table-column" id="superettan-table">
+  <div class="section">
+    <h3>Superettan Tabell</h3>
+    <table class="table">
+      <thead>
+        <tr><th>#</th><th>Lag</th><th>Poäng</th><th>MS</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td class="highlight">IFK Värnamo</td><td>0</td><td>0</td></tr>
+        <tr><td>2</td><td>Öster</td><td>0</td><td>0</td></tr>
+        <tr><td>3</td><td>AIK</td><td>0</td><td>0</td></tr>
+      </tbody>
+    </table>
+  </div>
 </div>
 
 <script>
-/* =========================
-   VÄDER
-========================= */
 const lat = 57.114025;
 const lon = 14.168177;
 
@@ -133,12 +186,8 @@ function updateDateWeek() {
   const week = Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
 
   document.getElementById('date-week').innerText =
-    now.toLocaleDateString('sv-SE', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    }) + ' | Vecka ' + week;
+    now.toLocaleDateString('sv-SE', { weekday:'long', day:'numeric', month:'long', year:'numeric'}) +
+    ' | Vecka ' + week;
 }
 
 // Nuvarande väder från SMHI
@@ -150,166 +199,76 @@ async function updateWeatherNow() {
 
     const now = new Date();
     const nearest = data.timeSeries.reduce((a,b) =>
-      Math.abs(new Date(b.validTime)-now) <
-      Math.abs(new Date(a.validTime)-now) ? b : a
+      Math.abs(new Date(b.validTime)-now) < Math.abs(new Date(a.validTime)-now) ? b : a
     );
 
     const params = nearest.parameters;
-    const temp = params.find(p => p.name === 't').values[0];
-    const wind = params.find(p => p.name === 'ws').values[0];
-    const humidity = params.find(p => p.name === 'r').values[0];
-    const pressure = params.find(p => p.name === 'msl').values[0];
-    const precip = params.find(p => p.name === 'pmean').values[0];
-    const precipType = params.find(p => p.name === 'pcat').values[0];
-
+    const temp = params.find(p=>p.name==='t').values[0];
+    const wind = params.find(p=>p.name==='ws').values[0];
+    const humidity = params.find(p=>p.name==='r').values[0];
+    const pressure = params.find(p=>p.name==='msl').values[0];
+    const precip = params.find(p=>p.name==='pmean').values[0];
+    
     let feelsLike = temp;
-    if (temp <= 10 && wind > 1.3) {
-      const windKmH = wind * 3.6;
-      feelsLike =
-        13.12 +
-        0.6215 * temp -
-        11.37 * Math.pow(windKmH, 0.16) +
-        0.3965 * temp * Math.pow(windKmH, 0.16);
-    }
-    if (temp >= 20) {
-      const T = temp;
-      const R = humidity;
-      feelsLike =
-        -8.784695 +
-        1.61139411 * T +
-        2.338549 * R -
-        0.14611605 * T * R -
-        0.012308094 * T * T -
-        0.016424828 * R * R +
-        0.002211732 * T * T * R +
-        0.00072546 * T * R * R -
-        0.000003582 * T * T * R * R;
-    }
+    if(temp <=10 && wind>1.3){ const windKmH = wind*3.6; feelsLike = 13.12 + 0.6215*temp - 11.37*Math.pow(windKmH,0.16) + 0.3965*temp*Math.pow(windKmH,0.16);}
+    if(temp>=20){ const T=temp,R=humidity; feelsLike=-8.784695+1.61139411*T+2.338549*R-0.14611605*T*R-0.012308094*T*T-0.016424828*R*R+0.002211732*T*T*R+0.00072546*T*R*R-0.000003582*T*T*R*R;}
 
-    let precipText = "--";
-    if (precip > 0) {
-      precipText = `${precip.toFixed(1)} mm`;
-    }
+    document.getElementById('temp-now').innerText = `${temp.toFixed(1)} °C (${feelsLike.toFixed(1)} °C)`;
+    document.getElementById('wind').innerText = `Vind: ${wind.toFixed(1)} m/s`;
+    document.getElementById('humidity').innerText = `Luftfuktighet: ${humidity.toFixed(0)} %`;
+    document.getElementById('pressure').innerText = `Tryck: ${pressure.toFixed(0)} hPa`;
+    document.getElementById('precipitation').innerText = `Nederbörd kommande timme: ${precip>0 ? precip.toFixed(1)+' mm' : '--'}`;
 
-    document.getElementById('temp-now').innerText =
-      `${temp.toFixed(1)} °C (${feelsLike.toFixed(1)} °C)`;
-    document.getElementById('wind').innerText = wind ? `Vind: ${wind.toFixed(1)} m/s` : 'Vind: -- m/s';
-    document.getElementById('humidity').innerText = humidity ? `Luftfuktighet: ${humidity.toFixed(0)} %` : 'Luftfuktighet: -- %';
-    document.getElementById('pressure').innerText = pressure ? `Tryck: ${pressure.toFixed(0)} hPa` : 'Tryck: -- hPa';
-    document.getElementById('precipitation').innerText =
-      `Nederbörd kommande timme: ${precipText}`;
-
-    document.getElementById('weather-updated').innerText =
-      'Senast uppdaterad: ' + now.toLocaleTimeString('sv-SE');
-
-  } catch(err) {
-    console.error("SMHI error:", err);
+    document.getElementById('weather-updated').innerText = 'Senast uppdaterad: ' + now.toLocaleTimeString('sv-SE');
+  } catch(err){
+    console.error("SMHI error:",err);
   }
 }
 
 // Historik och min/max
-async function updateMinMax() {
-  try {
-    const now = new Date();
-    const today = now.toISOString().split('T')[0];
-    const yesterdayDate = new Date(now.getTime() - 86400000);
-    const yesterday = yesterdayDate.toISOString().split('T')[0];
+async function updateMinMax(){
+  try{
+    const now=new Date();
+    const today=now.toISOString().split('T')[0];
+    const yesterdayDate=new Date(now.getTime()-86400000);
+    const yesterday=yesterdayDate.toISOString().split('T')[0];
 
-    const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${yesterday}&end_date=${today}&hourly=temperature_2m&timezone=Europe/Stockholm`;
-    const res = await fetch(url);
-    const data = await res.json();
+    const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${yesterday}&end_date=${today}&hourly=temperature_2m&timezone=Europe/Stockholm`;
+    const res=await fetch(url);
+    const data=await res.json();
 
-    const hours = data.hourly.time.map(t => new Date(t));
-    const temps = data.hourly.temperature_2m;
+    const hours=data.hourly.time.map(t=>new Date(t));
+    const temps=data.hourly.temperature_2m;
 
     let minToday=999,maxToday=-999,minYesterday=999,maxYesterday=-999;
     let tempYesterdaySameTime=null;
 
-    for (let i=0;i<temps.length;i++) {
-      const dateStr = hours[i].toISOString().split('T')[0];
-
-      if (dateStr===today) {
-        if (temps[i]<minToday) minToday=temps[i];
-        if (temps[i]>maxToday) maxToday=temps[i];
-      }
-
-      if (dateStr===yesterday) {
-        if (temps[i]<minYesterday) minYesterday=temps[i];
-        if (temps[i]>maxYesterday) maxYesterday=temps[i];
-        if (hours[i].getHours()===now.getHours()) {
-          tempYesterdaySameTime=temps[i];
-        }
-      }
+    for(let i=0;i<temps.length;i++){
+      const dateStr=hours[i].toISOString().split('T')[0];
+      if(dateStr===today){ if(temps[i]<minToday) minToday=temps[i]; if(temps[i]>maxToday) maxToday=temps[i];}
+      if(dateStr===yesterday){ if(temps[i]<minYesterday) minYesterday=temps[i]; if(temps[i]>maxYesterday) maxYesterday=temps[i];
+        if(hours[i].getHours()===now.getHours()) tempYesterdaySameTime=temps[i]; }
     }
 
-    document.getElementById('temp-minmax').innerHTML =
-      `Idag<br>Min: ${minToday.toFixed(1)} °C<br>Max: ${maxToday.toFixed(1)} °C`;
-    document.getElementById('temp-yesterday-minmax').innerHTML =
-      `Igår<br>Min: ${minYesterday.toFixed(1)} °C<br>Max: ${maxYesterday.toFixed(1)} °C`;
+    document.getElementById('temp-minmax').innerHTML = `Idag<br>Min: ${minToday.toFixed(1)} °C<br>Max: ${maxToday.toFixed(1)} °C`;
+    document.getElementById('temp-yesterday-minmax').innerHTML = `Igår<br>Min: ${minYesterday.toFixed(1)} °C<br>Max: ${maxYesterday.toFixed(1)} °C`;
 
-    if (tempYesterdaySameTime!==null) {
-      document.getElementById('temp-yesterday').innerText =
-        `${tempYesterdaySameTime.toFixed(1)} °C`;
+    if(tempYesterdaySameTime!==null){
+      document.getElementById('temp-yesterday').innerText = `${tempYesterdaySameTime.toFixed(1)} °C`;
     }
-
-  } catch(err) {
-    console.error("Historikfel:", err);
+  } catch(err){
+    console.error("Historikfel:",err);
   }
 }
 
-/* =========================
-   SUPERETTAN
-========================= */
-const matches = [
-  { round: 1, date: '2026-04-02', home: 'IFK Värnamo', away: 'Öster', result: '1–2' },
-  { round: 2, date: '2026-04-09', home: 'Norrby', away: 'IFK Värnamo', result: '–' },
-  { round: 3, date: '2026-04-16', home: 'IFK Värnamo', away: 'AIK', result: '–' },
-];
-
-const standings = [
-  { pos: 1, team: 'Öster', points: 6, gd: '+3' },
-  { pos: 2, team: 'IFK Värnamo', points: 4, gd: '0' },
-  { pos: 3, team: 'AIK', points: 3, gd: '-1' },
-  { pos: 4, team: 'Norrby', points: 1, gd: '-2' },
-];
-
-function renderSchedule() {
-  const container = document.getElementById('schedule');
-  container.innerHTML = '';
-  matches.forEach(m => {
-    const matchLine = document.createElement('div');
-    matchLine.innerHTML = `Omgång ${m.round}: ${m.date} — ${m.home} vs ${m.away} <span class="match-result">${m.result}</span>`;
-    if (m.home === 'IFK Värnamo' || m.away === 'IFK Värnamo') {
-      matchLine.classList.add('highlight');
-    }
-    container.appendChild(matchLine);
-  });
-}
-
-function renderStandings() {
-  const container = document.getElementById('standings');
-  container.innerHTML = '';
-  standings.forEach(s => {
-    const line = document.createElement('div');
-    line.innerHTML = `${s.pos}. ${s.team} — ${s.points}p (${s.gd})`;
-    if (s.team === 'IFK Värnamo') line.classList.add('highlight');
-    container.appendChild(line);
-  });
-}
-
-/* =========================
-   INIT
-========================= */
+// Initial
 updateDateWeek();
 updateWeatherNow();
 updateMinMax();
-renderSchedule();
-renderStandings();
 
-setInterval(updateWeatherNow, 5*60*1000);
-setInterval(updateMinMax, 15*60*1000);
-setInterval(() => { renderSchedule(); renderStandings(); }, 5*60*1000);
-
+// Intervaller
+setInterval(updateWeatherNow,5*60*1000);
+setInterval(updateMinMax,15*60*1000);
 </script>
 </body>
 </html>
