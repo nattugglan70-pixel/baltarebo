@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
-<title>Väderdashboard</title>
+<title>VÄDER</title>
 <style>
 body {
   font-family: Arial, sans-serif;
@@ -47,6 +47,12 @@ body {
   font-size: 22px;
   margin-top: 6px;
 }
+
+.precip {
+  font-size: 18px;
+  margin-top: 8px;
+  color: #87cefa;
+}
 </style>
 </head>
 <body>
@@ -66,6 +72,7 @@ body {
   <div class="subtext" id="wind">Vind: -- m/s</div>
   <div class="subtext" id="humidity">Luftfuktighet: -- %</div>
   <div class="subtext" id="pressure">Tryck: -- hPa</div>
+  <div class="precip" id="precipitation">Nederbörd kommande timme: --</div>
 </div>
 
 <div class="section">
@@ -123,6 +130,8 @@ async function updateWeatherNow() {
     const wind = params.find(p => p.name === 'ws').values[0];
     const humidity = params.find(p => p.name === 'r').values[0];
     const pressure = params.find(p => p.name === 'msl').values[0];
+    const precip = params.find(p => p.name === 'pmean').values[0];
+    const precipType = params.find(p => p.name === 'pcat').values[0];
 
     let feelsLike = temp;
 
@@ -150,12 +159,24 @@ async function updateWeatherNow() {
         0.000003582 * T * T * R * R;
     }
 
+    let precipText = "Ingen nederbörd";
+
+    if (precip > 0) {
+      let typeText = "Regn";
+      if (precipType === 3) typeText = "Snö";
+      if (precipType === 2) typeText = "Blandat";
+      precipText = `${typeText} ${precip.toFixed(1)} mm`;
+    }
+
     document.getElementById('temp-now').innerText =
       `${temp.toFixed(1)} °C (${feelsLike.toFixed(1)} °C)`;
 
     document.getElementById('wind').innerText = `Vind: ${wind.toFixed(1)} m/s`;
     document.getElementById('humidity').innerText = `Luftfuktighet: ${humidity.toFixed(0)} %`;
     document.getElementById('pressure').innerText = `Tryck: ${pressure.toFixed(0)} hPa`;
+    document.getElementById('precipitation').innerText =
+      `Nederbörd kommande timme: ${precipText}`;
+
     document.getElementById('weather-updated').innerText =
       'Senast uppdaterad: ' + now.toLocaleTimeString('sv-SE');
 
@@ -163,6 +184,8 @@ async function updateWeatherNow() {
     console.error("SMHI error:", err);
   }
 }
+
+/* ====== HISTORIKDELEN ORÖRD ====== */
 
 async function updateMinMax() {
   try {
