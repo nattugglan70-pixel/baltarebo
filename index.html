@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
-<title>Väder & Superettan Dashboard</title>
+<title>Dashboard - Väder & Superettan</title>
 <style>
 body {
   font-family: Arial, sans-serif;
@@ -10,25 +10,20 @@ body {
   color: #fff;
   display: flex;
   justify-content: center;
-  padding: 15px;
-  flex-wrap: wrap;
+  padding: 20px;
 }
 
-/* Vänster: väderspalten */
-.weather-column {
+.column-container {
   display: flex;
-  flex-direction: column;
-  width: 380px;
-  margin-right: 20px;
+  gap: 20px;
 }
 
 .section {
-  margin: 10px 0;
-  padding: 25px;
   background: #111;
   border-radius: 12px;
+  padding: 20px;
+  width: 380px;
   box-shadow: 0 2px 10px rgba(255,255,255,0.2);
-  text-align: center;
 }
 
 .value {
@@ -61,80 +56,70 @@ body {
   color: #87cefa;
 }
 
-/* Höger: Superettan-spalten */
-.sport-column {
-  display: flex;
-  flex-direction: column;
-  width: 250px;
-}
-
-.sport-section {
-  margin: 10px 0;
-  padding: 25px;
-  background: #111;
-  border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(255,255,255,0.2);
+h2 {
   text-align: center;
-}
-
-.sport-title {
-  font-size: 20px;
-  font-weight: bold;
   margin-bottom: 10px;
 }
 
-.sport-value {
-  font-size: 18px;
+.schedule, .table {
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.match-result {
   color: #87cefa;
+}
+
+.highlight {
+  color: gold;
+  font-weight: bold;
 }
 </style>
 </head>
 <body>
 
-<div class="weather-column">
+<div class="column-container">
+
+  <!-- Vädret -->
   <div class="section">
     <div id="date-week"></div>
     <div class="subtext" id="weather-updated">Senast uppdaterad: --:--</div>
-  </div>
 
-  <div class="section">
     <div class="value" id="temp-now">-- °C (-- °C)</div>
     <div class="subtext">Igår samma tid:</div>
     <div class="yesterday-temp" id="temp-yesterday">-- °C</div>
-  </div>
 
-  <div class="section">
     <div class="subtext" id="wind">Vind: -- m/s</div>
     <div class="subtext" id="humidity">Luftfuktighet: -- %</div>
     <div class="subtext" id="pressure">Tryck: -- hPa</div>
     <div class="precip" id="precipitation">Nederbörd kommande timme: --</div>
+
+    <div class="minmax" id="temp-minmax">Idag<br>Min: -- °C<br>Max: -- °C</div>
+    <div class="minmax" id="temp-yesterday-minmax">Igår<br>Min: -- °C<br>Max: -- °C</div>
   </div>
 
+  <!-- Superettan Spelschema -->
   <div class="section">
-    <div class="minmax" id="temp-minmax">
-      Idag<br>
-      Min: -- °C<br>
-      Max: -- °C
+    <h2>Spelschema</h2>
+    <div id="schedule" class="schedule">
+      Laddar spelschema...
     </div>
   </div>
 
+  <!-- Superettan Tabell -->
   <div class="section">
-    <div class="minmax" id="temp-yesterday-minmax">
-      Igår<br>
-      Min: -- °C<br>
-      Max: -- °C
+    <h2>Tabellställning</h2>
+    <div id="standings" class="table">
+      Laddar tabell...
     </div>
   </div>
-</div>
 
-<div class="sport-column">
-  <div class="sport-section">
-    <div class="sport-title">IFK Värnamo - Superettan</div>
-    <div class="sport-value" id="superettan-status">Serie ej startad</div>
-  </div>
 </div>
 
 <script>
+/* =========================
+   VÄDER
+========================= */
 const lat = 57.114025;
 const lon = 14.168177;
 
@@ -170,7 +155,6 @@ async function updateWeatherNow() {
     );
 
     const params = nearest.parameters;
-
     const temp = params.find(p => p.name === 't').values[0];
     const wind = params.find(p => p.name === 'ws').values[0];
     const humidity = params.find(p => p.name === 'r').values[0];
@@ -203,18 +187,8 @@ async function updateWeatherNow() {
     }
 
     let precipText = "--";
-    let icon = "";
     if (precip > 0) {
       precipText = `${precip.toFixed(1)} mm`;
-      if (precipType === 1) icon = "🌧"; // Regn
-      if (precipType === 2) icon = "🌨"; // Blandat
-      if (precipType === 3) icon = "❄️"; // Snö
-    } else {
-      // Molnigt eller sol
-      const weatherCode = params.find(p => p.name === 'Wsymb2').values[0];
-      if ([1,2,3].includes(weatherCode)) icon = "☀️"; // Sol
-      else if ([4,5,6].includes(weatherCode)) icon = "⛅"; // Delvis moln
-      else icon = "☁️"; // Molnigt
     }
 
     document.getElementById('temp-now').innerText =
@@ -223,7 +197,7 @@ async function updateWeatherNow() {
     document.getElementById('humidity').innerText = humidity ? `Luftfuktighet: ${humidity.toFixed(0)} %` : 'Luftfuktighet: -- %';
     document.getElementById('pressure').innerText = pressure ? `Tryck: ${pressure.toFixed(0)} hPa` : 'Tryck: -- hPa';
     document.getElementById('precipitation').innerText =
-      `Nederbörd kommande timme: ${precipText} ${icon}`;
+      `Nederbörd kommande timme: ${precipText}`;
 
     document.getElementById('weather-updated').innerText =
       'Senast uppdaterad: ' + now.toLocaleTimeString('sv-SE');
@@ -283,30 +257,59 @@ async function updateMinMax() {
   }
 }
 
-// Superettan IFK Värnamo
-async function updateSuperettan() {
-  try {
-    // Här kan du byta till ett verkligt Superettan API
-    // Placeholder demo:
-    document.getElementById('superettan-status').innerText = "Serie ej startad";
-    // När serien startar, hämta och visa matchstatus/mål etc.
-  } catch(err) {
-    console.error("Superettan error:", err);
-  }
+/* =========================
+   SUPERETTAN
+========================= */
+const matches = [
+  { round: 1, date: '2026-04-02', home: 'IFK Värnamo', away: 'Öster', result: '1–2' },
+  { round: 2, date: '2026-04-09', home: 'Norrby', away: 'IFK Värnamo', result: '–' },
+  { round: 3, date: '2026-04-16', home: 'IFK Värnamo', away: 'AIK', result: '–' },
+];
+
+const standings = [
+  { pos: 1, team: 'Öster', points: 6, gd: '+3' },
+  { pos: 2, team: 'IFK Värnamo', points: 4, gd: '0' },
+  { pos: 3, team: 'AIK', points: 3, gd: '-1' },
+  { pos: 4, team: 'Norrby', points: 1, gd: '-2' },
+];
+
+function renderSchedule() {
+  const container = document.getElementById('schedule');
+  container.innerHTML = '';
+  matches.forEach(m => {
+    const matchLine = document.createElement('div');
+    matchLine.innerHTML = `Omgång ${m.round}: ${m.date} — ${m.home} vs ${m.away} <span class="match-result">${m.result}</span>`;
+    if (m.home === 'IFK Värnamo' || m.away === 'IFK Värnamo') {
+      matchLine.classList.add('highlight');
+    }
+    container.appendChild(matchLine);
+  });
 }
 
-// Initiala anrop
+function renderStandings() {
+  const container = document.getElementById('standings');
+  container.innerHTML = '';
+  standings.forEach(s => {
+    const line = document.createElement('div');
+    line.innerHTML = `${s.pos}. ${s.team} — ${s.points}p (${s.gd})`;
+    if (s.team === 'IFK Värnamo') line.classList.add('highlight');
+    container.appendChild(line);
+  });
+}
+
+/* =========================
+   INIT
+========================= */
 updateDateWeek();
 updateWeatherNow();
 updateMinMax();
-updateSuperettan();
+renderSchedule();
+renderStandings();
 
-// Intervaller
 setInterval(updateWeatherNow, 5*60*1000);
 setInterval(updateMinMax, 15*60*1000);
-// Superettan kan kolla var 10e minut om du vill, men behöver inte 5-minutersintervallet
-setInterval(updateSuperettan, 10*60*1000);
-</script>
+setInterval(() => { renderSchedule(); renderStandings(); }, 5*60*1000);
 
+</script>
 </body>
 </html>
