@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
-<title>INFOBOARD - Mockup Trafik</title>
+<title>INFOBOARD - Mockup Trafik med radie</title>
 <style>
 body {
   font-family: Arial, sans-serif;
@@ -28,7 +28,7 @@ body {
 
 .road {
   font-size: 18px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .status {
@@ -45,27 +45,43 @@ body {
 </head>
 <body>
 
+<!-- Vänsterspalt: Väder -->
+<div class="column">
+  <div class="section">
+    <div id="weather-now">Temp nu: 12°C (känns som 10°C)</div>
+    <div style="margin-top:10px;">Igår samma tid: 8°C</div>
+    <div style="margin-top:10px;">Vind: 3 m/s</div>
+    <div>Luftfuktighet: 72%</div>
+    <div>Tryck: 1012 hPa</div>
+    <div>Nederbörd: 0 mm</div>
+    <div style="margin-top:10px;">Idag: Min 9°C / Max 14°C</div>
+    <div>Igår: Min 6°C / Max 12°C</div>
+  </div>
+</div>
+
+<!-- Mitten-spalt: Trafikstatus med radie 80 km -->
 <div class="column">
   <div class="section">
     <div class="road">E4 norr mot Jönköping: <span class="status" style="color:lime">🟢</span></div>
     <div class="road">E4 söder mot Helsingborg: <span class="status" style="color:yellow">🟡</span></div>
     <div class="road">R27 mot Växjö: <span class="status" style="color:red">🔴</span></div>
-    <div class="incident">Olycka Brostugan (160 km, kl 14:23)</div>
+    <div class="incident">Olycka Brostugan (62 km, kl 14:23)</div>
     <div class="road">R27 mot Smålandsstenar: <span class="status" style="color:lime">🟢</span></div>
+    <div class="incident">Vägbygge Alvesta (45 km, kl 09:00–16:00)</div>
   </div>
 </div>
 
+<!-- Högerspalt: exempel på annat -->
 <div class="column">
   <div class="section">
     <div>INFOBOARD mockup</div>
-    <div style="margin-top: 10px; color:#ccc;">Här kan väderspalten ligga</div>
+    <div style="margin-top: 10px; color:#ccc;">Här kan du ha tabell, sport eller annat</div>
   </div>
 </div>
 
 <script>
-// Här kan man tänka sig dynamisk uppdatering från API
-// Exempel:
-// setInterval(fetchTrafficData, 15*60*1000);
+// Här kan du hämta data från Waze/Trafikverket API och uppdatera:
+// t.ex. setInterval(fetchTrafficData, 15*60*1000);
 </script>
 
 </body>
