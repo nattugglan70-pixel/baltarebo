@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
-<title>* VÄDER *</title>
+<title>Väderdashboard</title>
 <style>
 body {
   font-family: Arial, sans-serif;
@@ -53,6 +53,11 @@ body {
   margin-top: 8px;
   color: #87cefa;
 }
+
+.icon {
+  font-size: 22px;
+  margin-left: 6px;
+}
 </style>
 </head>
 <body>
@@ -72,7 +77,7 @@ body {
   <div class="subtext" id="wind">Vind: -- m/s</div>
   <div class="subtext" id="humidity">Luftfuktighet: -- %</div>
   <div class="subtext" id="pressure">Tryck: -- hPa</div>
-  <div class="precip" id="precipitation">Nederbörd kommande timme: --</div>
+  <div class="precip" id="precipitation">Nederbörd kommande timme: -- <span class="icon" id="precip-icon"></span></div>
 </div>
 
 <div class="section">
@@ -159,13 +164,15 @@ async function updateWeatherNow() {
         0.000003582 * T * T * R * R;
     }
 
+    // Nederbörd med ikon
     let precipText = "Ingen nederbörd";
+    let icon = "";
 
     if (precip > 0) {
-      let typeText = "Regn";
-      if (precipType === 3) typeText = "Snö";
-      if (precipType === 2) typeText = "Blandat";
-      precipText = `${typeText} ${precip.toFixed(1)} mm`;
+      if (precipType === 1) { icon = "☂️"; precipText="Regn"; }
+      else if (precipType === 2) { icon = "⛅"; precipText="Blandat"; }
+      else if (precipType === 3) { icon = "❄️"; precipText="Snö"; }
+      precipText += ` ${precip.toFixed(1)} mm`;
     }
 
     document.getElementById('temp-now').innerText =
@@ -174,8 +181,8 @@ async function updateWeatherNow() {
     document.getElementById('wind').innerText = `Vind: ${wind.toFixed(1)} m/s`;
     document.getElementById('humidity').innerText = `Luftfuktighet: ${humidity.toFixed(0)} %`;
     document.getElementById('pressure').innerText = `Tryck: ${pressure.toFixed(0)} hPa`;
-    document.getElementById('precipitation').innerText =
-      `Nederbörd kommande timme: ${precipText}`;
+    document.getElementById('precipitation').innerHTML =
+      `Nederbörd kommande timme: ${precipText} <span class="icon">${icon}</span>`;
 
     document.getElementById('weather-updated').innerText =
       'Senast uppdaterad: ' + now.toLocaleTimeString('sv-SE');
@@ -184,8 +191,6 @@ async function updateWeatherNow() {
     console.error("SMHI error:", err);
   }
 }
-
-/* ====== HISTORIKDELEN ORÖRD ====== */
 
 async function updateMinMax() {
   try {
