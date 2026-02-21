@@ -2,45 +2,51 @@
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
-<title>INFOBOARD - Mockup Trafik med radie</title>
+<title>INFOBOARD</title>
 <style>
 body {
   font-family: Arial, sans-serif;
   background: #000;
   color: #fff;
   display: flex;
+  justify-content: flex-start;
   padding: 15px;
 }
 
 .column {
   display: flex;
   flex-direction: column;
-  margin-right: 20px;
+  background: #111;
+  border-radius: 12px;
+  padding: 15px;
+  margin-right: 15px;
+  width: 380px;
+  box-shadow: 0 2px 10px rgba(255,255,255,0.2);
 }
 
 .section {
-  background: #111;
-  padding: 15px;
-  border-radius: 10px;
   margin-bottom: 15px;
-  width: 300px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #222;
 }
 
-.road {
-  font-size: 18px;
-  margin-bottom: 6px;
-}
-
-.status {
+.value {
+  font-size: 28px;
   font-weight: bold;
-  margin-left: 8px;
+  margin: 6px 0;
 }
 
-.incident {
+.subtext {
   font-size: 14px;
-  color: #ffcc00;
-  margin-left: 20px;
+  color: #ccc;
 }
+
+.traffic-green { color: #0f0; }
+.traffic-yellow { color: #ff0; }
+.traffic-red { color: #f00; }
+.traffic-event { color: #fff; margin-left: 20px; }
+
 </style>
 </head>
 <body>
@@ -48,41 +54,55 @@ body {
 <!-- Vänsterspalt: Väder -->
 <div class="column">
   <div class="section">
-    <div id="weather-now">Temp nu: 12°C (känns som 10°C)</div>
-    <div style="margin-top:10px;">Igår samma tid: 8°C</div>
-    <div style="margin-top:10px;">Vind: 3 m/s</div>
-    <div>Luftfuktighet: 72%</div>
-    <div>Tryck: 1012 hPa</div>
-    <div>Nederbörd: 0 mm</div>
-    <div style="margin-top:10px;">Idag: Min 9°C / Max 14°C</div>
-    <div>Igår: Min 6°C / Max 12°C</div>
+    <div class="subtext">tis 20/2/2026 | Vecka 8</div>
+    <div class="subtext">Senast uppdaterad: 22:14</div>
+  </div>
+
+  <div class="section">
+    <div class="value">5.6 °C (Feels like: 4.2 °C)</div>
+  </div>
+
+  <div class="section">
+    <div class="subtext">Igår samma tid: 3.4 °C</div>
+  </div>
+
+  <div class="section">
+    <div class="subtext">Vind: 3.2 m/s</div>
+    <div class="subtext">Luftfuktighet: 78%</div>
+    <div class="subtext">Tryck: 1012 hPa</div>
+    <div class="subtext">Nederbörd kommande timme: 0.0 mm</div>
+  </div>
+
+  <div class="section">
+    <div class="subtext">Dagens Min/Max: 2.0 °C / 7.1 °C</div>
+    <div class="subtext">Gårdagens Min/Max: 1.5 °C / 5.3 °C</div>
   </div>
 </div>
 
-<!-- Mitten-spalt: Trafikstatus med radie 80 km -->
+<!-- Högerspalt: Trafik -->
 <div class="column">
   <div class="section">
-    <div class="road">E4 norr mot Jönköping: <span class="status" style="color:lime">🟢</span></div>
-    <div class="road">E4 söder mot Helsingborg: <span class="status" style="color:yellow">🟡</span></div>
-    <div class="road">R27 mot Växjö: <span class="status" style="color:red">🔴</span></div>
-    <div class="incident">Olycka Brostugan (62 km, kl 14:23)</div>
-    <div class="road">R27 mot Smålandsstenar: <span class="status" style="color:lime">🟢</span></div>
-    <div class="incident">Vägbygge Alvesta (45 km, kl 09:00–16:00)</div>
+    <div class="traffic-green">E4 norr mot Jönköping</div>
   </div>
-</div>
 
-<!-- Högerspalt: exempel på annat -->
-<div class="column">
   <div class="section">
-    <div>INFOBOARD mockup</div>
-    <div style="margin-top: 10px; color:#ccc;">Här kan du ha tabell, sport eller annat</div>
+    <div class="traffic-yellow">E4 söder mot Helsingborg</div>
+  </div>
+
+  <div class="section">
+    <div class="traffic-red">R27 mot Växjö</div>
+    <div class="traffic-event">🚓 Brostugan (62 km, kl 14:23)</div>
+  </div>
+
+  <div class="section">
+    <div class="traffic-green">R27 mot Smålandsstenar</div>
+    <div class="traffic-event">🚓 Alvesta (45 km, kl 15:00)</div>
+  </div>
+
+  <div class="section">
+    <div class="traffic-green">E4 norr mot Linköping</div>
   </div>
 </div>
-
-<script>
-// Här kan du hämta data från Waze/Trafikverket API och uppdatera:
-// t.ex. setInterval(fetchTrafficData, 15*60*1000);
-</script>
 
 </body>
 </html>
