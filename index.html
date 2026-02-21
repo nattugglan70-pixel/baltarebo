@@ -13,12 +13,14 @@ body {
   padding: 15px;
 }
 
+/* Gemensamma kolumner */
 .column {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
+/* Sektioner */
 .section {
   background: #111;
   border-radius: 12px;
@@ -28,51 +30,32 @@ body {
   min-width: 300px;
 }
 
-.value {
-  font-size: 32px;
-  font-weight: bold;
-  margin: 8px 0;
-}
+/* Väder */
+.value { font-size: 32px; font-weight: bold; margin: 8px 0; }
+.subtext { font-size: 16px; color: #ccc; margin: 5px 0; }
+.minmax { font-size: 18px; margin: 6px 0; line-height: 1.6; }
+.yesterday-temp { color: gold; font-size: 22px; margin-top: 6px; }
+.precip { font-size: 18px; margin-top: 8px; color: #87cefa; }
 
-.subtext {
-  font-size: 16px;
-  color: #ccc;
-  margin: 5px 0;
-}
-
-.minmax {
-  font-size: 18px;
-  margin: 6px 0;
-  line-height: 1.6;
-}
-
-.yesterday-temp {
-  color: gold;
-  font-size: 22px;
-  margin-top: 6px;
-}
-
-.precip {
-  font-size: 18px;
-  margin-top: 8px;
-  color: #87cefa;
+/* Trafik */
+.traffic-section {
+  background:#111; 
+  padding:15px; 
+  border-radius:10px; 
+  margin-bottom:10px;
 }
 
 .traffic-red { color: red; font-weight: bold; font-size: 18px; }
 .traffic-yellow { color: yellow; font-weight: bold; font-size: 18px; }
 .traffic-green { color: lime; font-weight: bold; font-size: 18px; }
+.traffic-event { color: #fff; font-size: 16px; margin-left: 15px; margin-top: 4px; }
 
-.traffic-event { 
-  color: #fff; 
-  font-size: 16px; 
-  margin-left: 15px; 
-}
 </style>
 </head>
 <body>
 
+<!-- VÄDERSPALT -->
 <div class="column">
-  <!-- VÄDERSPALT -->
   <div class="section">
     <div id="date-week"></div>
     <div class="subtext" id="weather-updated">Senast uppdaterad: --:--</div>
@@ -102,25 +85,33 @@ body {
   </div>
 </div>
 
+<!-- TRAFIKSPALT -->
 <div class="column">
-  <!-- TRAFIKSPALT -->
   <div class="section">
     <div class="value">Trafikstatus</div>
+
     <div id="traffic-container">
-      <!-- Exempelrader -->
-      <div class="traffic-red">R27 mot Växjö</div>
-      <div class="traffic-event">Brostugan (62 km, kl 14:23) – Trafikkontroll</div>
+      <!-- Exempel för block-layout -->
+      <div class="traffic-section">
+        <div class="traffic-red">R27 mot Växjö</div>
+        <div class="traffic-event">Brostugan (62 km, kl 14:23) – Trafikkontroll</div>
+      </div>
 
-      <div class="traffic-green">R27 mot Växjö</div>
-      <div class="traffic-event">Brostugan (78 km, kl 15:10) – Olycka</div>
+      <div class="traffic-section">
+        <div class="traffic-green">R27 mot Växjö</div>
+        <div class="traffic-event">Brostugan (78 km, kl 15:10) – Olycka</div>
+      </div>
 
-      <div class="traffic-yellow">E4 mot Malmö</div>
-      <div class="traffic-event">Lilla Råby (25 km, kl 13:55) – Trafikolycka</div>
+      <div class="traffic-section">
+        <div class="traffic-yellow">E4 mot Malmö</div>
+        <div class="traffic-event">Lilla Råby (25 km, kl 13:55) – Trafikolycka</div>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
+// LAT/LON för Bor
 const lat = 57.114025;
 const lon = 14.168177;
 
