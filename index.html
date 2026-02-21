@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
-<title>INFOBOARD</title>
+<title>INFOBOARD - Mockup Trafik</title>
 <style>
 body {
   font-family: Arial, sans-serif;
@@ -10,234 +10,63 @@ body {
   color: #fff;
   display: flex;
   padding: 15px;
-  gap: 20px;
 }
 
 .column {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  margin-right: 20px;
 }
 
-/* Vänsterspalt - väder */
-.weather-section {
+.section {
   background: #111;
   padding: 15px;
-  border-radius: 12px;
-  width: 380px;
-  box-shadow: 0 2px 10px rgba(255,255,255,0.2);
-}
-
-.section-title {
-  font-weight: bold;
-  margin-bottom: 8px;
-}
-
-.value {
-  font-size: 32px;
-  font-weight: bold;
-}
-
-.subtext {
-  font-size: 16px;
-  color: #ccc;
-  margin: 5px 0;
-}
-
-.minmax {
-  font-size: 18px;
-  line-height: 1.6;
-}
-
-.yesterday-temp {
-  color: gold;
-  font-size: 22px;
-  margin-top: 6px;
-}
-
-.precip {
-  font-size: 18px;
-  margin-top: 8px;
-  color: #87cefa;
-}
-
-/* Högerspalt - trafik */
-.traffic-section {
-  background: #111;
-  padding: 15px;
-  border-radius: 12px;
+  border-radius: 10px;
+  margin-bottom: 15px;
   width: 300px;
-  box-shadow: 0 2px 10px rgba(255,255,255,0.2);
 }
 
-.traffic-line {
+.road {
   font-size: 18px;
-  margin: 5px 0;
+  margin-bottom: 8px;
 }
 
-.traffic-red { color: #ff3333; }
-.traffic-yellow { color: #ffff66; }
-.traffic-green { color: #33ff33; }
-
-.section-title {
+.status {
   font-weight: bold;
-  margin-bottom: 8px;
+  margin-left: 8px;
+}
+
+.incident {
+  font-size: 14px;
+  color: #ffcc00;
+  margin-left: 20px;
 }
 </style>
 </head>
 <body>
 
 <div class="column">
-  <!-- Vänsterspalt: väder -->
-  <div class="weather-section">
-    <div id="date-week" class="section-title"></div>
-    <div class="subtext" id="weather-updated">Senast uppdaterad: --:--</div>
-
-    <div class="value" id="temp-now">-- °C (-- °C)</div>
-    <div class="subtext">Igår samma tid:</div>
-    <div class="yesterday-temp" id="temp-yesterday">-- °C</div>
-
-    <div class="subtext" id="wind">Vind: -- m/s</div>
-    <div class="subtext" id="humidity">Luftfuktighet: -- %</div>
-    <div class="subtext" id="pressure">Tryck: -- hPa</div>
-    <div class="precip" id="precipitation">Nederbörd kommande timme: --</div>
-
-    <div class="minmax" id="temp-minmax">Idag<br>Min: -- °C<br>Max: -- °C</div>
-    <div class="minmax" id="temp-yesterday-minmax">Igår<br>Min: -- °C<br>Max: -- °C</div>
+  <div class="section">
+    <div class="road">E4 norr mot Jönköping: <span class="status" style="color:lime">🟢</span></div>
+    <div class="road">E4 söder mot Helsingborg: <span class="status" style="color:yellow">🟡</span></div>
+    <div class="road">R27 mot Växjö: <span class="status" style="color:red">🔴</span></div>
+    <div class="incident">Olycka Brostugan (160 km, kl 14:23)</div>
+    <div class="road">R27 mot Smålandsstenar: <span class="status" style="color:lime">🟢</span></div>
   </div>
 </div>
 
 <div class="column">
-  <!-- Högerspalt: trafik -->
-  <div class="traffic-section">
-    <div class="section-title">Trafikstatus</div>
-    <div class="traffic-line" id="e4-north">E4 norr mot Jönköping: <span class="traffic-green">🟢</span></div>
-    <div class="traffic-line" id="e4-south">E4 söder mot Helsingborg: <span class="traffic-yellow">🟡</span></div>
-    <div class="traffic-line" id="r27-west">Riksväg 27 mot Växjö: <span class="traffic-red">🔴</span> Olycka Alvesta (160 km, kl 14:23)</div>
-    <div class="traffic-line" id="r27-east">Riksväg 27 mot Smålandsstenar: <span class="traffic-green">🟢</span></div>
+  <div class="section">
+    <div>INFOBOARD mockup</div>
+    <div style="margin-top: 10px; color:#ccc;">Här kan väderspalten ligga</div>
   </div>
 </div>
 
 <script>
-// Väderinställningar
-const lat = 57.114025;
-const lon = 14.168177;
-
-function updateDateWeek() {
-  const now = new Date();
-  const date = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
-  const dayNum = date.getUTCDay() || 7;
-  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-  const week = Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
-  document.getElementById('date-week').innerText =
-    now.toLocaleDateString('sv-SE', {
-      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
-    }) + ' | Vecka ' + week;
-}
-
-// SMHI Nuvarande väder
-async function updateWeatherNow() {
-  try {
-    const url = `https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${lon}/lat/${lat}/data.json`;
-    const res = await fetch(url);
-    const data = await res.json();
-
-    const now = new Date();
-    const nearest = data.timeSeries.reduce((a,b) =>
-      Math.abs(new Date(b.validTime)-now) <
-      Math.abs(new Date(a.validTime)-now) ? b : a
-    );
-
-    const params = nearest.parameters;
-    const temp = params.find(p => p.name === 't').values[0];
-    const wind = params.find(p => p.name === 'ws').values[0];
-    const humidity = params.find(p => p.name === 'r').values[0];
-    const pressure = params.find(p => p.name === 'msl').values[0];
-    const precip = params.find(p => p.name === 'pmean').values[0];
-
-    // Feels like
-    let feelsLike = temp;
-    if (temp <= 10 && wind > 1.3) {
-      const windKmH = wind * 3.6;
-      feelsLike = 13.12 + 0.6215 * temp - 11.37 * Math.pow(windKmH, 0.16) + 0.3965 * temp * Math.pow(windKmH, 0.16);
-    }
-    if (temp >= 20) {
-      const T = temp; const R = humidity;
-      feelsLike = -8.784695 + 1.61139411 * T + 2.338549 * R - 0.14611605 * T * R -
-                  0.012308094 * T*T - 0.016424828 * R*R + 0.002211732 * T*T*R + 0.00072546*T*R*R - 0.000003582*T*T*R*R;
-    }
-
-    let precipText = "--";
-    if (precip > 0) precipText = `${precip.toFixed(1)} mm`;
-
-    document.getElementById('temp-now').innerText = `${temp.toFixed(1)} °C (${feelsLike.toFixed(1)} °C)`;
-    document.getElementById('wind').innerText = `Vind: ${wind.toFixed(1)} m/s`;
-    document.getElementById('humidity').innerText = `Luftfuktighet: ${humidity.toFixed(0)} %`;
-    document.getElementById('pressure').innerText = `Tryck: ${pressure.toFixed(0)} hPa`;
-    document.getElementById('precipitation').innerText = `Nederbörd kommande timme: ${precipText}`;
-    document.getElementById('weather-updated').innerText = 'Senast uppdaterad: ' + now.toLocaleTimeString('sv-SE');
-
-  } catch(err) { console.error("SMHI error:", err); }
-}
-
-// Historik min/max
-async function updateMinMax() {
-  try {
-    const now = new Date();
-    const today = now.toISOString().split('T')[0];
-    const yesterdayDate = new Date(now.getTime() - 86400000);
-    const yesterday = yesterdayDate.toISOString().split('T')[0];
-
-    const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${yesterday}&end_date=${today}&hourly=temperature_2m&timezone=Europe/Stockholm`;
-    const res = await fetch(url);
-    const data = await res.json();
-
-    const hours = data.hourly.time.map(t => new Date(t));
-    const temps = data.hourly.temperature_2m;
-
-    let minToday=999,maxToday=-999,minYesterday=999,maxYesterday=-999;
-    let tempYesterdaySameTime=null;
-
-    for (let i=0;i<temps.length;i++) {
-      const dateStr = hours[i].toISOString().split('T')[0];
-      if (dateStr===today) { if(temps[i]<minToday) minToday=temps[i]; if(temps[i]>maxToday) maxToday=temps[i]; }
-      if (dateStr===yesterday) {
-        if(temps[i]<minYesterday) minYesterday=temps[i]; if(temps[i]>maxYesterday) maxYesterday=temps[i];
-        if(hours[i].getHours()===now.getHours()) tempYesterdaySameTime=temps[i];
-      }
-    }
-
-    document.getElementById('temp-minmax').innerHTML = `Idag<br>Min: ${minToday.toFixed(1)} °C<br>Max: ${maxToday.toFixed(1)} °C`;
-    document.getElementById('temp-yesterday-minmax').innerHTML = `Igår<br>Min: ${minYesterday.toFixed(1)} °C<br>Max: ${maxYesterday.toFixed(1)} °C`;
-    if(tempYesterdaySameTime!==null) document.getElementById('temp-yesterday').innerText = `${tempYesterdaySameTime.toFixed(1)} °C`;
-
-  } catch(err){ console.error("Historikfel:", err); }
-}
-
-// Init
-updateDateWeek();
-updateWeatherNow();
-updateMinMax();
-
-// Intervaller
-setInterval(updateWeatherNow, 5*60*1000);
-setInterval(updateMinMax, 15*60*1000);
-
-// --- TRAFIKUPPDATERING (exempel statiskt) ---
-// Senare kan detta hämtas från Waze/Google Traffic API
-function updateTraffic() {
-  // Här kan man ersätta statiska exempel med API-anrop
-  document.getElementById('e4-north').innerHTML = 'E4 norr mot Jönköping: <span class="traffic-green">🟢</span>';
-  document.getElementById('e4-south').innerHTML = 'E4 söder mot Helsingborg: <span class="traffic-yellow">🟡</span>';
-  document.getElementById('r27-west').innerHTML = 'Riksväg 27 mot Växjö: <span class="traffic-red">🔴</span> Olycka Alvesta (160 km, kl 14:23)';
-  document.getElementById('r27-east').innerHTML = 'Riksväg 27 mot Smålandsstenar: <span class="traffic-green">🟢</span>';
-}
-
-// Uppdatera trafik var 15:e minut
-updateTraffic();
-setInterval(updateTraffic, 15*60*1000);
-
+// Här kan man tänka sig dynamisk uppdatering från API
+// Exempel:
+// setInterval(fetchTrafficData, 15*60*1000);
 </script>
+
 </body>
 </html>
