@@ -2,167 +2,168 @@
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
-<title>Väderdashboard</title>
+<title>Väder Hagshult</title>
 <style>
-  body {
-    font-family: Arial, sans-serif;
-    background: #000;
-    color: #fff;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 15px;
-  }
-
-  .section {
-    margin: 10px 0;
-    padding: 25px;
-    background: #111;
-    border-radius: 12px;
-    width: 380px;
-    box-shadow: 0 2px 10px rgba(255,255,255,0.2);
-    text-align: center;
-  }
-
-  .value {
-    font-size: 32px;
-    font-weight: bold;
-    margin: 8px 0;
-  }
-
-  .subtext {
-    font-size: 16px;
-    color: #ccc;
-    margin: 5px 0;
-  }
-
-  .minmax {
-    font-size: 20px;
-    margin: 6px 0;
-    line-height: 1.5;
-  }
-
-  .yesterday-temp {
-    color: gold;
-    font-size: 24px;
-    margin-top: 4px;
-  }
-
-  .icon {
-    font-size: 24px;
-    margin-left: 8px;
-  }
+  body { font-family: Arial, sans-serif; background: #f0f0f0; padding: 20px; }
+  .weather-box { background: #fff; border-radius: 10px; padding: 20px; max-width: 400px; margin: auto; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+  .section { margin-bottom: 15px; }
+  .label { font-weight: bold; }
+  .yellow { color: goldenrod; }
+  .icon { font-size: 24px; margin-left: 5px; vertical-align: middle; }
+  .minmax-box { display: flex; justify-content: space-between; margin-top: 10px; }
+  .minmax-box div { background: #f8f8f8; padding: 10px; border-radius: 6px; width: 48%; text-align: center; }
 </style>
 </head>
 <body>
-
-<div class="section">
-  <div id="date-week"></div>
-  <div class="subtext" id="weather-updated">Senast uppdaterad: --:--</div>
-</div>
-
-<div class="section">
-  <div class="value" id="currentTemp">-- °C</div>
-  <div class="yesterday-temp" id="temp-yesterday">-- °C</div>
-</div>
-
-<div class="section">
-  <div class="subtext" id="wind">Vind: -- m/s</div>
-  <div class="subtext" id="humidity">Luftfuktighet: -- %</div>
-  <div class="subtext" id="pressure">Tryck: -- hPa</div>
-  <div class="subtext" id="precipitation">Nederbörd: -- mm | Risk 24h: -- % <span class="icon" id="precip-icon"></span></div>
-</div>
-
-<div class="section">
-  <div class="minmax" id="temp-minmax">
-    Min: -- °C kl --:--<br>
-    Max: -- °C kl --:--
+<div class="weather-box">
+  <div class="section" id="header">
+    <span id="date"></span> | <span id="update-time"></span>
   </div>
-</div>
 
-<div class="section">
-  <div class="minmax" id="temp-yesterday-minmax">
-    Min: --<br>
-    Max: --
+  <div class="section" id="temperature">
+    Temperatur: <span id="temp-now"></span> (<span id="temp-feels"></span>)<br>
+    <span class="yellow"><span id="temp-yesterday"></span></span>
+  </div>
+
+  <div class="section" id="conditions">
+    Vind: <span id="wind"></span> m/s<br>
+    Luftfuktighet: <span id="humidity"></span> %<br>
+    Tryck: <span id="pressure"></span> hPa<br>
+    Nederbörd senaste 24h: <span id="precip"></span> mm <span id="precip-icon" class="icon"></span>
+  </div>
+
+  <div class="minmax-box">
+    <div>
+      <span class="label">Dagens min</span><br>
+      <span id="min-today">--</span> kl <span id="min-today-time">--</span>
+    </div>
+    <div>
+      <span class="label">Dagens max</span><br>
+      <span id="max-today">--</span> kl <span id="max-today-time">--</span>
+    </div>
+  </div>
+
+  <div class="minmax-box">
+    <div>
+      <span class="label">Gårdagens min</span><br>
+      <span id="min-yesterday">--</span> kl <span id="min-yesterday-time">--</span>
+    </div>
+    <div>
+      <span class="label">Gårdagens max</span><br>
+      <span id="max-yesterday">--</span> kl <span id="max-yesterday-time">--</span>
+    </div>
   </div>
 </div>
 
 <script>
-const lat = 57.114025;
-const lon = 14.168177;
-const apiKey = "edba13104e1d46b293b234713262002"; // <-- KListra in din WeatherAPI-nyckel här
+const stationId = 74180;
+const parameters = { temp: 1, wind: 17, humidity: 10, pressure: 9, precip: 8 };
 
-// Datum och veckonummer
-function updateDateWeek() {
+function toLocalTime(utcString) {
+  const date = new Date(utcString + "Z");
+  return new Date(date.getTime() + 3600*1000); // +1h CET
+}
+
+function formatDate(date) {
+  const day = date.getDate().toString().padStart(2,'0');
+  const month = (date.getMonth()+1).toString().padStart(2,'0');
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
+function formatTime(date) {
+  return date.getHours().toString().padStart(2,'0') + ':' + date.getMinutes().toString().padStart(2,'0');
+}
+
+async function fetchObs(param) {
+  const url = `https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/${param}/station/${stationId}/period/latest-day/data.json`;
+  const resp = await fetch(url);
+  const data = await resp.json();
+  return data.value;
+}
+
+function calcMinMax(values, timestamps) {
+  let min = Infinity, max = -Infinity, minTime='', maxTime='';
+  for (let i=0;i<values.length;i++){
+    if(values[i]<min){ min=values[i]; minTime=timestamps[i]; }
+    if(values[i]>max){ max=values[i]; maxTime=timestamps[i]; }
+  }
+  return {min,max,minTime,maxTime};
+}
+
+function getPrecipIcon(mm){
+  if(mm>0 && mm<=0.5) return '☂️';
+  if(mm>0.5) return '❄️';
+  return '☀️';
+}
+
+async function updateWeather(){
   const now = new Date();
-  const week = Math.ceil((((now - new Date(now.getFullYear(),0,1))/86400000) + new Date(now.getFullYear(),0,1).getDay()+1)/7);
-  document.getElementById('date-week').innerText = now.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + ' | Vecka ' + week;
+  document.getElementById('date').textContent = formatDate(now);
+  document.getElementById('update-time').textContent = 'Senast uppdaterad: ' + formatTime(now);
+
+  const tempData = await fetchObs(parameters.temp);
+  const windData = await fetchObs(parameters.wind);
+  const humidityData = await fetchObs(parameters.humidity);
+  const pressureData = await fetchObs(parameters.pressure);
+  const precipData = await fetchObs(parameters.precip);
+
+  const timestamps = tempData.map(x=>toLocalTime(x.date));
+  const values = tempData.map(x=>x.value);
+
+  const tempNow = values[values.length-1].toFixed(1);
+  const windNow = windData[windData.length-1].value.toFixed(1);
+  const tempFeels = (tempNow - windNow*0.7).toFixed(1); // enkel wind chill approx
+  const humidityNow = humidityData[humidityData.length-1].value.toFixed(0);
+  const pressureNow = pressureData[pressureData.length-1].value.toFixed(0);
+
+  document.getElementById('temp-now').textContent = tempNow + ' °C';
+  document.getElementById('temp-feels').textContent = tempFeels + ' °C';
+  document.getElementById('wind').textContent = windNow;
+  document.getElementById('humidity').textContent = humidityNow;
+  document.getElementById('pressure').textContent = pressureNow;
+
+  let precipSum = 0;
+  for (let i=0;i<precipData.length;i++) precipSum += precipData[i].value;
+  document.getElementById('precip').textContent = precipSum.toFixed(1);
+  document.getElementById('precip-icon').textContent = getPrecipIcon(precipSum);
+
+  // Dagens min/max
+  const todayVals = values.filter((v,i)=>timestamps[i].getDate()===now.getDate());
+  const todayTimes = timestamps.filter(t=>t.getDate()===now.getDate());
+  if(todayVals.length>0){
+    const minMaxToday = calcMinMax(todayVals,todayTimes);
+    document.getElementById('min-today').textContent = minMaxToday.min.toFixed(1)+' °C';
+    document.getElementById('min-today-time').textContent = formatTime(minMaxToday.minTime);
+    document.getElementById('max-today').textContent = minMaxToday.max.toFixed(1)+' °C';
+    document.getElementById('max-today-time').textContent = formatTime(minMaxToday.maxTime);
+  }
+
+  // Gårdagens min/max och temp samma tid
+  const yesterdayVals = values.filter((v,i)=>timestamps[i].getDate()===(now.getDate()-1));
+  const yesterdayTimes = timestamps.filter(t=>t.getDate()===(now.getDate()-1));
+
+  if(yesterdayVals.length>0){
+    const minMaxY = calcMinMax(yesterdayVals,yesterdayTimes);
+    document.getElementById('min-yesterday').textContent = minMaxY.min.toFixed(1)+' °C';
+    document.getElementById('min-yesterday-time').textContent = formatTime(minMaxY.minTime);
+    document.getElementById('max-yesterday').textContent = minMaxY.max.toFixed(1)+' °C';
+    document.getElementById('max-yesterday-time').textContent = formatTime(minMaxY.maxTime);
+
+    const hourNow = now.getHours();
+    const index = yesterdayTimes.findIndex(t=>t.getHours()===hourNow);
+    if(index>=0) document.getElementById('temp-yesterday').textContent = yesterdayVals[index].toFixed(1)+' °C';
+    else document.getElementById('temp-yesterday').textContent = '--';
+  } else {
+    document.getElementById('min-yesterday').textContent = '--';
+    document.getElementById('max-yesterday').textContent = '--';
+    document.getElementById('min-yesterday-time').textContent = '--';
+    document.getElementById('max-yesterday-time').textContent = '--';
+    document.getElementById('temp-yesterday').textContent = '--';
+  }
 }
 
-// Hämta väder från WeatherAPI
-async function updateWeather() {
-    try {
-        const res = await fetch(`https://api.weatherapi.com/v1/forecast.json?key=${apiKey}&q=${lat},${lon}&days=2&lang=sv`);
-        const data = await res.json();
-        const now = new Date();
-
-        // Aktuell temperatur
-        const currentTemp = data.current.temp_c;
-        document.getElementById('currentTemp').innerText = currentTemp.toFixed(1) + " °C";
-
-        // Gårdagens temperatur samma tid (gul text)
-        const yesterdayHour = now.getHours();
-        const yesterdayData = data.forecast.forecastday[0]; // gårdagens data
-        const yesterdayTemp = yesterdayData.hour[yesterdayHour].temp_c;
-        document.getElementById('temp-yesterday').innerText = yesterdayTemp.toFixed(1) + " °C";
-
-        // Vind, luftfuktighet, tryck
-        document.getElementById('wind').innerText = "Vind: " + data.current.wind_m_s.toFixed(1) + " m/s";
-        document.getElementById('humidity').innerText = "Luftfuktighet: " + data.current.humidity.toFixed(0) + " %";
-        document.getElementById('pressure').innerText = "Tryck: " + data.current.pressure_mb.toFixed(0) + " hPa";
-
-        // Nederbörd och risk
-        const todayPrecip = data.forecast.forecastday[1].day.totalprecip_mm;
-        const risk = Math.round(Math.min(100, todayPrecip * 10));
-        let icon = "☂️"; // default paraply
-        if(todayPrecip > 0.2) icon = "❄️"; // snöexempel
-        document.getElementById('precipitation').innerHTML = `Nederbörd: ${todayPrecip.toFixed(1)} mm | Risk 24h: ${risk}% <span class="icon">${icon}</span>`;
-
-        // Dagens min/max
-        const todayTemps = data.forecast.forecastday[1].hour.map(h => h.temp_c);
-        const minTemp = Math.min(...todayTemps);
-        const maxTemp = Math.max(...todayTemps);
-        const minIndex = todayTemps.indexOf(minTemp);
-        const maxIndex = todayTemps.indexOf(maxTemp);
-        const hours = data.forecast.forecastday[1].hour.map(h => new Date(h.time));
-        document.getElementById('temp-minmax').innerHTML = 
-            `Min: ${minTemp.toFixed(1)} °C kl ${hours[minIndex].getHours()}:00<br>` +
-            `Max: ${maxTemp.toFixed(1)} °C kl ${hours[maxIndex].getHours()}:00`;
-
-        // Gårdagens min/max
-        const yesterdayTemps = data.forecast.forecastday[0].hour.map(h => h.temp_c);
-        const minY = Math.min(...yesterdayTemps);
-        const maxY = Math.max(...yesterdayTemps);
-        const minYIndex = yesterdayTemps.indexOf(minY);
-        const maxYIndex = yesterdayTemps.indexOf(maxY);
-        const yHours = data.forecast.forecastday[0].hour.map(h => new Date(h.time));
-        document.getElementById('temp-yesterday-minmax').innerHTML =
-            `Min: ${minY.toFixed(1)} °C kl ${yHours[minYIndex].getHours()}:00<br>` +
-            `Max: ${maxY.toFixed(1)} °C kl ${yHours[maxYIndex].getHours()}:00`;
-
-        document.getElementById('weather-updated').innerText = 'Senast uppdaterad: ' + now.toLocaleTimeString('sv-SE');
-
-    } catch(err) {
-        console.error("WeatherAPI fel:", err);
-    }
-}
-
-// Init
-updateDateWeek();
 updateWeather();
-
-// Intervaller
-setInterval(updateWeather, 10*60*1000);
 </script>
 </body>
 </html>
