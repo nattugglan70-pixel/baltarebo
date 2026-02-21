@@ -108,6 +108,11 @@ function updateDateWeek() {
     }) + ' | Vecka ' + week;
 }
 
+function isNight() {
+  const hour = new Date().getHours();
+  return hour < 6 || hour >= 21;
+}
+
 async function updateWeatherNow() {
   try {
     const url = `https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${lon}/lat/${lat}/data.json`;
@@ -115,20 +120,23 @@ async function updateWeatherNow() {
     const data = await res.json();
 
     const now = new Date();
-    const nearest = data.timeSeries.reduce((a,b) =>
-      Math.abs(new Date(b.validTime)-now) <
-      Math.abs(new Date(a.validTime)-now) ? b : a
-    );
 
-    const params = nearest.parameters;
+    const validSeries = data.timeSeries
+      .map(ts => ({ ...ts, time: new Date(ts.validTime) }))
+      .filter(ts => ts.time <= now)
+      .sort((a, b) => b.time - a.time);
+
+    const current = validSeries[0];
+    if (!current) return;
+
+    const params = current.parameters;
 
     const temp = params.find(p => p.name === 't')?.values[0];
     const wind = params.find(p => p.name === 'ws')?.values[0];
     const humidity = params.find(p => p.name === 'r')?.values[0];
     const pressure = params.find(p => p.name === 'msl')?.values[0];
-    const precip = params.find(p => p.name === 'pmean')?.values[0];
-    const precipType = params.find(p => p.name === 'pcat')?.values[0];
-    const cloud = params.find(p => p.name === 'tcc_mean')?.values[0];
+    const precip = params.find(p => p.name === 'pmean')?.values[0] || 0;
+    const symbol = params.find(p => p.name === 'Wsymb2')?.values[0];
 
     let feelsLike = temp;
 
@@ -156,17 +164,16 @@ async function updateWeatherNow() {
         0.000003582 * T * T * R * R;
     }
 
-    let icon = "☀️";
+    let icon = "☁️";
 
-    if (precip !== undefined && precip > 0.1 && precipType !== undefined) {
-      if (precipType === 3) icon = "❄️";
-      else if (precipType === 2) icon = "🌧️";
-      else icon = "🌦️";
-    }
-    else if (cloud !== undefined) {
-      if (cloud > 80) icon = "☁️";
-      else if (cloud > 40) icon = "🌥️";
-    }
+    if (symbol === 1) icon = isNight() ? "🌙" : "☀️";
+    else if (symbol === 2) icon = isNight() ? "🌙☁️" : "🌤️";
+    else if (symbol === 3) icon = "⛅";
+    else if (symbol === 4) icon = "☁️";
+    else if (symbol === 5 || symbol === 6) icon = "🌧️";
+    else if (symbol === 7 || symbol === 8) icon = "🌨️";
+    else if (symbol === 9) icon = "⛈️";
+    else if (symbol >= 10) icon = "🌧️";
 
     document.getElementById('temp-now').innerHTML =
       `${icon} ${temp?.toFixed(1) ?? "--"} °C (${feelsLike?.toFixed(1) ?? "--"} °C)`;
@@ -181,12 +188,14 @@ async function updateWeatherNow() {
       pressure !== undefined ? `Tryck: ${pressure.toFixed(0)} hPa` : 'Tryck: -- hPa';
 
     document.getElementById('precipitation').innerText =
-      `Nederbörd kommande timme: ${precip > 0 ? precip.toFixed(1) + " mm" : "0 mm"}`;
+      precip > 0
+        ? `Nederbörd kommande timme: ${precip.toFixed(1)} mm`
+        : `Nederbörd kommande timme: 0 mm`;
 
     document.getElementById('weather-updated').innerText =
       'Senast uppdaterad: ' + now.toLocaleTimeString('sv-SE');
 
-  } catch(err) {
+  } catch (err) {
     console.error("SMHI error:", err);
   }
 }
