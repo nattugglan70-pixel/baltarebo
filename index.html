@@ -60,13 +60,12 @@ body {
   justify-content: flex-start; /* vänstercentrerad */
   gap: 15px;
   text-align: center;
-  font-family: Arial, sans-serif;
   flex-wrap: nowrap;
   margin-top: 10px;
 }
 
 .forecast-day {
-  flex: 0 0 50px; /* samma slotbredd för alla kolumner */
+  flex: 0 0 60px; /* lika breda kolumner */
   text-align: center;
 }
 
@@ -81,7 +80,6 @@ body {
 .forecast-day .icon {
   font-size: 1.2em;
 }
-
 </style>
 </head>
 <body>
@@ -287,7 +285,7 @@ async function updateMinMax() {
 
 async function updateForecast7Days() {
   try {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,weathercode&timezone=Europe/Stockholm&forecast_days=7`;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,weathercode&timezone=Europe/Stockholm&forecast_days=8`;
     const res = await fetch(url);
     const data = await res.json();
 
@@ -301,7 +299,8 @@ async function updateForecast7Days() {
       95: "⚡", 96: "⚡", 99: "⚡⚡"
     };
 
-    for (let i=0;i<data.daily.time.length;i++) {
+    // Starta från index 1 → morgondagen
+    for (let i=1;i<data.daily.time.length;i++) {
       const day = new Date(data.daily.time[i]).toLocaleDateString('sv-SE',{weekday:'short'});
       const temp = data.daily.temperature_2m_max[i].toFixed(1);
       const code = data.daily.weathercode[i];
