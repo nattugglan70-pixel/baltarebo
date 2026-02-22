@@ -2,150 +2,325 @@
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
-<title>Dashboard Väder + Tech-nyheter</title>
+<title>INFOBOARD</title>
 <style>
-  body {
-    font-family: Arial, sans-serif;
-    background: #f2f2f2;
-    margin: 20px;
-    display: flex;
-    gap: 20px;
-  }
+body {
+  font-family: Arial, sans-serif;
+  background: #000;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 15px;
+}
 
-  /* --- Väderpanel --- */
-  .weather-panel {
-    flex: 1;
-    max-width: 300px;
-    background: #fff;
-    padding: 15px;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
+.section {
+  margin: 10px 0;
+  padding: 20px;
+  background: #111;
+  border-radius: 12px;
+  width: 380px;
+  box-shadow: 0 2px 10px rgba(255,255,255,0.2);
+  text-align: center;
+}
 
-  /* Här placerar du din befintliga vädermodul kod med ikoner, temperaturer etc. */
+.value {
+  font-size: 32px;
+  font-weight: bold;
+  margin: 8px 0;
+}
 
-  /* --- Nyheter-panel --- */
-  .news-panel {
-    flex: 1;
-    max-width: 400px;
-    background: #fff;
-    padding: 15px;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    overflow-y: auto;
-    max-height: 600px;
-  }
+.subtext {
+  font-size: 16px;
+  color: #ccc;
+  margin: 5px 0;
+}
 
-  .news-item {
-    background: #f9f9f9;
-    padding: 12px;
-    border-radius: 6px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    transition: transform 0.2s, background 0.2s;
-    cursor: pointer;
-  }
+.minmax {
+  font-size: 18px;
+  margin: 6px 0;
+  line-height: 1.6;
+}
 
-  .news-item:hover {
-    background: #ffeb3b; /* gul hover */
-    transform: translateY(-2px);
-  }
+.yesterday-temp {
+  color: gold;
+  font-size: 22px;
+  margin-top: 6px;
+}
 
-  .news-title {
-    font-weight: bold;
-    margin-bottom: 4px;
-  }
+.precip {
+  font-size: 18px;
+  margin-top: 8px;
+  color: #87cefa;
+}
 
-  .news-source {
-    font-size: 0.8em;
-    color: #555;
-  }
+/* Tooltip för dagens min/max */
+.tooltip {
+  position: relative;
+  display: inline-block;
+  cursor: default;
+}
 
-  .news-date {
-    font-size: 0.75em;
-    color: #777;
-  }
+.tooltip .tooltiptext {
+  visibility: hidden;
+  width: max-content;
+  background-color: gold;
+  color: black;
+  text-align: center;
+  border-radius: 6px;
+  padding: 4px 8px;
+  position: absolute;
+  z-index: 1;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+}
+
+/* 5-dagars prognos */
+.forecast-row {
+  display: flex;
+  justify-content: flex-start;
+  gap: 10px;
+  text-align: center;
+  flex-wrap: nowrap;
+  margin-top: 10px;
+  overflow-x: hidden;
+}
+
+.forecast-day {
+  flex: 1 1 60px;
+  min-width: 60px;
+  text-align: center;
+}
+
+.forecast-day .day {
+  font-weight: bold;
+}
+
+.forecast-day .temp {
+  margin: 3px 0;
+}
+
+.forecast-day .icon {
+  font-size: 1.2em;
+}
 </style>
 </head>
 <body>
 
-<!-- ------------------ Väderpanelen ------------------ -->
-<div class="weather-panel" id="weatherPanel">
-  <!-- Här ersätter du detta med din faktiska vädermodul -->
-  <h2>Väder</h2>
-  <p>Din befintliga väderruta med ikoner, temperaturer och feels-like ligger här.</p>
+<div class="section">
+  <div id="date-week"></div>
+  <div class="subtext" id="weather-updated">Senast uppdaterad: --:--</div>
 </div>
 
-<!-- ------------------ Nyhetsstapeln ------------------ -->
-<div class="news-panel" id="newsPanel">
-  <h2>Senaste Android/Tech-nyheterna</h2>
+<div class="section">
+  <div class="value" id="temp-now">-- °C (-- °C)</div>
+  <div class="yesterday-temp" id="temp-yesterday">-- °C</div>
+</div>
+
+<div class="section">
+  <div class="subtext" id="wind">Vind: -- m/s</div>
+  <div class="subtext" id="humidity">Luftfuktighet: -- %</div>
+  <div class="subtext" id="pressure">Tryck: -- hPa</div>
+  <div class="precip" id="precipitation">Nederbörd kommande timme: --</div>
+</div>
+
+<!-- Dagens min/max med gul tooltip för igår -->
+<div class="section">
+  <div class="tooltip minmax" id="temp-minmax">
+    Idag<br>Min: -- °C<br>Max: -- °C
+    <span class="tooltiptext" id="yesterday-minmax-tooltip"></span>
+  </div>
+</div>
+
+<!-- 5-dagars prognos -->
+<div class="section">
+  <div class="subtext">Prognos 5 dagar:</div>
+  <div class="forecast-row" id="forecast-5days"></div>
 </div>
 
 <script>
-// ------------------ RSS-källor ------------------
-const rssFeeds = [
-  { url: 'https://www.breakit.se/feed', source: 'Breakit' },
-  { url: 'https://www.m3.idg.se/rss', source: 'M3' },
-  { url: 'https://www.idg.se/rss', source: 'IDG Techworld' },
-  { url: 'https://www.androidauthority.com/feed/', source: 'Android Authority' },
-  { url: 'https://www.xda-developers.com/feed/', source: 'XDA Developers' },
-  { url: 'https://www.theverge.com/rss/index.xml', source: 'The Verge' }
-];
+const lat = 57.114025;
+const lon = 14.168177;
 
-// ------------------ Funktion för att hämta nyheter ------------------
-function fetchNews() {
-  const panel = document.getElementById('newsPanel');
-  panel.innerHTML = '<h2>Senaste Android/Tech-nyheterna</h2>'; // reset
+function updateDateWeek() {
+  const now = new Date();
+  const date = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  const week = Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
 
-  rssFeeds.forEach(feed => {
-    const rssUrl = encodeURIComponent(feed.url);
-    const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${rssUrl}`;
-
-    fetch(apiUrl)
-      .then(res => res.json())
-      .then(data => {
-        const items = data.items.slice(0, 3); // 3 senaste från varje källa
-
-        items.forEach(item => {
-          const div = document.createElement('div');
-          div.className = 'news-item';
-          div.title = item.description || 'Ingen ingress'; // hover-text
-          div.onclick = () => window.open(item.link, '_blank'); // klickbar länk
-
-          const title = document.createElement('div');
-          title.className = 'news-title';
-          title.textContent = item.title;
-
-          const source = document.createElement('div');
-          source.className = 'news-source';
-          source.textContent = feed.source;
-
-          const date = document.createElement('div');
-          date.className = 'news-date';
-          date.textContent = new Date(item.pubDate).toLocaleString('sv-SE', {
-            weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit'
-          });
-
-          div.appendChild(title);
-          div.appendChild(source);
-          div.appendChild(date);
-          panel.appendChild(div);
-        });
-      })
-      .catch(err => console.error('Kunde inte hämta nyheter från', feed.source, err));
-  });
+  document.getElementById('date-week').innerText =
+    now.toLocaleDateString('sv-SE', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    }) + ' | Vecka ' + week;
 }
 
-// Hämta nyheter direkt vid sidladdning
-fetchNews();
+function isNight() {
+  const hour = new Date().getHours();
+  return hour < 6 || hour >= 21;
+}
 
-// Uppdatera automatiskt var 10:e minut
-setInterval(fetchNews, 10 * 60 * 1000);
+async function updateWeatherNow() {
+  try {
+    const url = `https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${lon}/lat/${lat}/data.json`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    const now = new Date();
+    const validSeries = data.timeSeries
+      .map(ts => ({ ...ts, time: new Date(ts.validTime) }))
+      .filter(ts => ts.time <= now)
+      .sort((a, b) => b.time - a.time);
+    const current = validSeries[0];
+    if (!current) return;
+    const params = current.parameters;
+
+    const temp = params.find(p => p.name === 't')?.values[0];
+    const wind = params.find(p => p.name === 'ws')?.values[0];
+    const humidity = params.find(p => p.name === 'r')?.values[0];
+    const pressure = params.find(p => p.name === 'msl')?.values[0];
+    const precip = params.find(p => p.name === 'pmean')?.values[0] || 0;
+    const symbol = params.find(p => p.name === 'Wsymb2')?.values[0];
+
+    let feelsLike = temp;
+    if (temp !== undefined && wind !== undefined && temp <= 10 && wind > 1.3) {
+      const windKmH = wind * 3.6;
+      feelsLike = 13.12 + 0.6215*temp - 11.37*Math.pow(windKmH,0.16) + 0.3965*temp*Math.pow(windKmH,0.16);
+    }
+    if (temp !== undefined && humidity !== undefined && temp >= 20) {
+      const T = temp, R = humidity;
+      feelsLike = -8.784695 + 1.61139411*T + 2.338549*R - 0.14611605*T*R
+                  -0.012308094*T*T - 0.016424828*R*R + 0.002211732*T*T*R
+                  + 0.00072546*T*R*R - 0.000003582*T*T*R*R;
+    }
+
+    let icon = "☁️";
+    if(symbol===1) icon = isNight() ? "🌙" : "☀️";
+    else if(symbol===2) icon = isNight() ? "🌙☁️" : "🌤️";
+    else if(symbol===3) icon = "⛅";
+    else if(symbol===4) icon = "☁️";
+    else if(symbol===5||symbol===6) icon = "🌧️";
+    else if(symbol===7||symbol===8) icon = "🌨️";
+    else if(symbol===9) icon = "⛈️";
+    else if(symbol>=10) icon = "🌧️";
+
+    document.getElementById('temp-now').innerHTML = `${icon} ${temp?.toFixed(1)??"--"} °C (${feelsLike?.toFixed(1)??"--"} °C)`;
+    document.getElementById('wind').innerText = wind!==undefined?`Vind: ${wind.toFixed(1)} m/s`:'Vind: -- m/s';
+    document.getElementById('humidity').innerText = humidity!==undefined?`Luftfuktighet: ${humidity.toFixed(0)} %`:'Luftfuktighet: -- %';
+    document.getElementById('pressure').innerText = pressure!==undefined?`Tryck: ${pressure.toFixed(0)} hPa`:'Tryck: -- hPa';
+    document.getElementById('precipitation').innerText = precip>0?`Nederbörd kommande timme: ${precip.toFixed(1)} mm`:'Nederbörd kommande timme: 0 mm';
+    document.getElementById('weather-updated').innerText = 'Senast uppdaterad: ' + now.toLocaleTimeString('sv-SE');
+
+  } catch(err) {
+    console.error("SMHI error:", err);
+  }
+}
+
+async function updateMinMax() {
+  try {
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    const yesterdayDate = new Date(now.getTime()-86400000);
+    const yesterday = yesterdayDate.toISOString().split('T')[0];
+
+    const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${yesterday}&end_date=${today}&hourly=temperature_2m&timezone=Europe/Stockholm`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    const hours = data.hourly.time.map(t=>new Date(t));
+    const temps = data.hourly.temperature_2m;
+
+    let minToday=999,maxToday=-999,minYesterday=999,maxYesterday=-999,tempYesterdaySameTime=null;
+
+    for(let i=0;i<temps.length;i++){
+      const dateStr = hours[i].toISOString().split('T')[0];
+      if(dateStr===today){
+        if(temps[i]<minToday) minToday=temps[i];
+        if(temps[i]>maxToday) maxToday=temps[i];
+      }
+      if(dateStr===yesterday){
+        if(temps[i]<minYesterday) minYesterday=temps[i];
+        if(temps[i]>maxYesterday) maxYesterday=temps[i];
+        if(hours[i].getHours()===now.getHours()) tempYesterdaySameTime=temps[i];
+      }
+    }
+
+    const minMaxDiv = document.getElementById('temp-minmax');
+    const tooltipSpan = document.getElementById('yesterday-minmax-tooltip');
+    tooltipSpan.innerText = `Igår – Min: ${minYesterday.toFixed(1)} °C | Max: ${maxYesterday.toFixed(1)} °C`;
+    minMaxDiv.innerHTML = `Idag<br>Min: ${minToday.toFixed(1)} °C<br>Max: ${maxToday.toFixed(1)} °C
+      <span class="tooltiptext" id="yesterday-minmax-tooltip">Igår – Min: ${minYesterday.toFixed(1)} °C | Max: ${maxYesterday.toFixed(1)} °C</span>`;
+
+    if(tempYesterdaySameTime!==null){
+      const yesterdayDiv = document.getElementById('temp-yesterday');
+      yesterdayDiv.innerText = `${tempYesterdaySameTime.toFixed(1)} °C`;
+      yesterdayDiv.style.color='gold';
+    }
+
+  } catch(err){
+    console.error("Historikfel:", err);
+  }
+}
+
+async function updateForecast5Days() {
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,weathercode&timezone=Europe/Stockholm&forecast_days=6`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    const container = document.getElementById('forecast-5days');
+    container.innerHTML = '';
+
+    const iconsMap = {
+      0: "☀️",1:"🌤️",2:"⛅",3:"☁️",
+      61:"🌧️",63:"🌧️",65:"🌧️⚡",
+      71:"🌨️",73:"🌨️",75:"🌨️",
+      95:"⚡",96:"⚡",99:"⚡⚡"
+    };
+    const iconTextMap = {
+      0:"Sol",1:"Lite sol",2:"Delvis moln",3:"Molnigt",
+      61:"Regn",63:"Regn",65:"Regn med åska",
+      71:"Snö",73:"Snö",75:"Snö",
+      95:"Åska",96:"Åska",99:"Kraftig åska"
+    };
+
+    for(let i=1;i<=5;i++){
+      const day = new Date(data.daily.time[i]).toLocaleDateString('sv-SE',{weekday:'short'});
+      const temp = data.daily.temperature_2m_max[i].toFixed(1);
+      const code = data.daily.weathercode[i];
+      const icon = iconsMap[code]||"☁️";
+
+      const div = document.createElement('div');
+      div.className='forecast-day';
+      div.innerHTML=`<div class="day">${day}</div><div class="temp">${temp}°</div>
+        <div class="icon" title="${iconTextMap[code]||'Moln'}">${icon}</div>`;
+      container.appendChild(div);
+    }
+
+  } catch(err){
+    console.error("5-dagars prognosfel:", err);
+  }
+}
+
+updateDateWeek();
+updateWeatherNow();
+updateMinMax();
+updateForecast5Days();
+
+setInterval(updateWeatherNow,5*60*1000);
+setInterval(updateMinMax,15*60*1000);
+setInterval(updateForecast5Days,60*60*1000);
 </script>
 
 </body>
