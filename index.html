@@ -54,19 +54,47 @@ body {
   color: #87cefa;
 }
 
+/* Tooltip för dagens min/max */
+.tooltip {
+  position: relative;
+  display: inline-block;
+  cursor: default;
+}
+
+.tooltip .tooltiptext {
+  visibility: hidden;
+  width: max-content;
+  background-color: gold;
+  color: black;
+  text-align: center;
+  border-radius: 6px;
+  padding: 4px 8px;
+  position: absolute;
+  z-index: 1;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+}
+
 /* 5-dagars prognos */
 .forecast-row {
   display: flex;
-  justify-content: flex-start; /* vänstercentrerad */
+  justify-content: flex-start;
   gap: 10px;
   text-align: center;
   flex-wrap: nowrap;
   margin-top: 10px;
-  overflow-x: hidden; /* inga scrollbars */
+  overflow-x: hidden;
 }
 
 .forecast-day {
-  flex: 1 1 60px;  /* kan växa, minst 60px */
+  flex: 1 1 60px;
   min-width: 60px;
   text-align: center;
 }
@@ -103,17 +131,18 @@ body {
   <div class="precip" id="precipitation">Nederbörd kommande timme: --</div>
 </div>
 
+<!-- Dagens min/max med gul tooltip för igår -->
 <div class="section">
-  <div class="minmax" id="temp-minmax">
+  <div class="tooltip minmax" id="temp-minmax">
     Idag<br>Min: -- °C<br>Max: -- °C
+    <span class="tooltiptext" id="yesterday-minmax-tooltip"></span>
   </div>
 </div>
 
+<!-- 5-dagars prognos -->
 <div class="section">
   <div class="subtext">Prognos 5 dagar:</div>
-  <div class="forecast-row" id="forecast-5days">
-    <!-- JS fyller i dag/temperatur/ikon -->
-  </div>
+  <div class="forecast-row" id="forecast-5days"></div>
 </div>
 
 <script>
@@ -149,15 +178,12 @@ async function updateWeatherNow() {
     const data = await res.json();
 
     const now = new Date();
-
     const validSeries = data.timeSeries
       .map(ts => ({ ...ts, time: new Date(ts.validTime) }))
       .filter(ts => ts.time <= now)
       .sort((a, b) => b.time - a.time);
-
     const current = validSeries[0];
     if (!current) return;
-
     const params = current.parameters;
 
     const temp = params.find(p => p.name === 't')?.values[0];
@@ -168,62 +194,35 @@ async function updateWeatherNow() {
     const symbol = params.find(p => p.name === 'Wsymb2')?.values[0];
 
     let feelsLike = temp;
-
     if (temp !== undefined && wind !== undefined && temp <= 10 && wind > 1.3) {
       const windKmH = wind * 3.6;
-      feelsLike =
-        13.12 +
-        0.6215 * temp -
-        11.37 * Math.pow(windKmH, 0.16) +
-        0.3965 * temp * Math.pow(windKmH, 0.16);
+      feelsLike = 13.12 + 0.6215*temp - 11.37*Math.pow(windKmH,0.16) + 0.3965*temp*Math.pow(windKmH,0.16);
     }
-
     if (temp !== undefined && humidity !== undefined && temp >= 20) {
-      const T = temp;
-      const R = humidity;
-      feelsLike =
-        -8.784695 +
-        1.61139411 * T +
-        2.338549 * R -
-        0.14611605 * T * R -
-        0.012308094 * T * T -
-        0.016424828 * R * R +
-        0.002211732 * T * T * R +
-        0.00072546 * T * R * R -
-        0.000003582 * T * T * R * R;
+      const T = temp, R = humidity;
+      feelsLike = -8.784695 + 1.61139411*T + 2.338549*R - 0.14611605*T*R
+                  -0.012308094*T*T - 0.016424828*R*R + 0.002211732*T*T*R
+                  + 0.00072546*T*R*R - 0.000003582*T*T*R*R;
     }
 
     let icon = "☁️";
-    if (symbol === 1) icon = isNight() ? "🌙" : "☀️";
-    else if (symbol === 2) icon = isNight() ? "🌙☁️" : "🌤️";
-    else if (symbol === 3) icon = "⛅";
-    else if (symbol === 4) icon = "☁️";
-    else if (symbol === 5 || symbol === 6) icon = "🌧️";
-    else if (symbol === 7 || symbol === 8) icon = "🌨️";
-    else if (symbol === 9) icon = "⛈️";
-    else if (symbol >= 10) icon = "🌧️";
+    if(symbol===1) icon = isNight() ? "🌙" : "☀️";
+    else if(symbol===2) icon = isNight() ? "🌙☁️" : "🌤️";
+    else if(symbol===3) icon = "⛅";
+    else if(symbol===4) icon = "☁️";
+    else if(symbol===5||symbol===6) icon = "🌧️";
+    else if(symbol===7||symbol===8) icon = "🌨️";
+    else if(symbol===9) icon = "⛈️";
+    else if(symbol>=10) icon = "🌧️";
 
-    document.getElementById('temp-now').innerHTML =
-      `${icon} ${temp?.toFixed(1) ?? "--"} °C (${feelsLike?.toFixed(1) ?? "--"} °C)`;
+    document.getElementById('temp-now').innerHTML = `${icon} ${temp?.toFixed(1)??"--"} °C (${feelsLike?.toFixed(1)??"--"} °C)`;
+    document.getElementById('wind').innerText = wind!==undefined?`Vind: ${wind.toFixed(1)} m/s`:'Vind: -- m/s';
+    document.getElementById('humidity').innerText = humidity!==undefined?`Luftfuktighet: ${humidity.toFixed(0)} %`:'Luftfuktighet: -- %';
+    document.getElementById('pressure').innerText = pressure!==undefined?`Tryck: ${pressure.toFixed(0)} hPa`:'Tryck: -- hPa';
+    document.getElementById('precipitation').innerText = precip>0?`Nederbörd kommande timme: ${precip.toFixed(1)} mm`:'Nederbörd kommande timme: 0 mm';
+    document.getElementById('weather-updated').innerText = 'Senast uppdaterad: ' + now.toLocaleTimeString('sv-SE');
 
-    document.getElementById('wind').innerText =
-      wind !== undefined ? `Vind: ${wind.toFixed(1)} m/s` : 'Vind: -- m/s';
-
-    document.getElementById('humidity').innerText =
-      humidity !== undefined ? `Luftfuktighet: ${humidity.toFixed(0)} %` : 'Luftfuktighet: -- %';
-
-    document.getElementById('pressure').innerText =
-      pressure !== undefined ? `Tryck: ${pressure.toFixed(0)} hPa` : 'Tryck: -- hPa';
-
-    document.getElementById('precipitation').innerText =
-      precip > 0
-        ? `Nederbörd kommande timme: ${precip.toFixed(1)} mm`
-        : `Nederbörd kommande timme: 0 mm`;
-
-    document.getElementById('weather-updated').innerText =
-      'Senast uppdaterad: ' + now.toLocaleTimeString('sv-SE');
-
-  } catch (err) {
+  } catch(err) {
     console.error("SMHI error:", err);
   }
 }
@@ -232,47 +231,44 @@ async function updateMinMax() {
   try {
     const now = new Date();
     const today = now.toISOString().split('T')[0];
-    const yesterdayDate = new Date(now.getTime() - 86400000);
+    const yesterdayDate = new Date(now.getTime()-86400000);
     const yesterday = yesterdayDate.toISOString().split('T')[0];
 
     const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${yesterday}&end_date=${today}&hourly=temperature_2m&timezone=Europe/Stockholm`;
     const res = await fetch(url);
     const data = await res.json();
 
-    const hours = data.hourly.time.map(t => new Date(t));
+    const hours = data.hourly.time.map(t=>new Date(t));
     const temps = data.hourly.temperature_2m;
 
-    let minToday=999,maxToday=-999,minYesterday=999,maxYesterday=-999;
-    let tempYesterdaySameTime=null;
+    let minToday=999,maxToday=-999,minYesterday=999,maxYesterday=-999,tempYesterdaySameTime=null;
 
-    for (let i=0;i<temps.length;i++) {
+    for(let i=0;i<temps.length;i++){
       const dateStr = hours[i].toISOString().split('T')[0];
-
-      if (dateStr===today) {
-        if (temps[i]<minToday) minToday=temps[i];
-        if (temps[i]>maxToday) maxToday=temps[i];
+      if(dateStr===today){
+        if(temps[i]<minToday) minToday=temps[i];
+        if(temps[i]>maxToday) maxToday=temps[i];
       }
-
-      if (dateStr===yesterday) {
-        if (temps[i]<minYesterday) minYesterday=temps[i];
-        if (temps[i]>maxYesterday) maxYesterday=temps[i];
-        if (hours[i].getHours()===now.getHours()) {
-          tempYesterdaySameTime=temps[i];
-        }
+      if(dateStr===yesterday){
+        if(temps[i]<minYesterday) minYesterday=temps[i];
+        if(temps[i]>maxYesterday) maxYesterday=temps[i];
+        if(hours[i].getHours()===now.getHours()) tempYesterdaySameTime=temps[i];
       }
     }
 
     const minMaxDiv = document.getElementById('temp-minmax');
-    minMaxDiv.innerHTML = `Idag<br>Min: ${minToday.toFixed(1)} °C<br>Max: ${maxToday.toFixed(1)} °C`;
-    minMaxDiv.title = `Igår<br>Min: ${minYesterday.toFixed(1)} °C | Max: ${maxYesterday.toFixed(1)} °C`;
+    const tooltipSpan = document.getElementById('yesterday-minmax-tooltip');
+    tooltipSpan.innerText = `Igår – Min: ${minYesterday.toFixed(1)} °C | Max: ${maxYesterday.toFixed(1)} °C`;
+    minMaxDiv.innerHTML = `Idag<br>Min: ${minToday.toFixed(1)} °C<br>Max: ${maxToday.toFixed(1)} °C
+      <span class="tooltiptext" id="yesterday-minmax-tooltip">Igår – Min: ${minYesterday.toFixed(1)} °C | Max: ${maxYesterday.toFixed(1)} °C</span>`;
 
-    if (tempYesterdaySameTime!==null) {
+    if(tempYesterdaySameTime!==null){
       const yesterdayDiv = document.getElementById('temp-yesterday');
       yesterdayDiv.innerText = `${tempYesterdaySameTime.toFixed(1)} °C`;
-      yesterdayDiv.style.color = 'gold';
+      yesterdayDiv.style.color='gold';
     }
 
-  } catch(err) {
+  } catch(err){
     console.error("Historikfel:", err);
   }
 }
@@ -287,41 +283,32 @@ async function updateForecast5Days() {
     container.innerHTML = '';
 
     const iconsMap = {
-      0: "☀️", 1: "🌤️", 2: "⛅", 3: "☁️",
-      61: "🌧️", 63: "🌧️", 65: "🌧️⚡",
-      71: "🌨️", 73: "🌨️", 75: "🌨️",
-      95: "⚡", 96: "⚡", 99: "⚡⚡"
+      0: "☀️",1:"🌤️",2:"⛅",3:"☁️",
+      61:"🌧️",63:"🌧️",65:"🌧️⚡",
+      71:"🌨️",73:"🌨️",75:"🌨️",
+      95:"⚡",96:"⚡",99:"⚡⚡"
     };
-
     const iconTextMap = {
-      0: "Sol",
-      1: "Lite sol",
-      2: "Delvis moln",
-      3: "Molnigt",
-      61: "Regn",
-      63: "Regn",
-      65: "Regn med åska",
-      71: "Snö",
-      73: "Snö",
-      75: "Snö",
-      95: "Åska",
-      96: "Åska",
-      99: "Kraftig åska"
+      0:"Sol",1:"Lite sol",2:"Delvis moln",3:"Molnigt",
+      61:"Regn",63:"Regn",65:"Regn med åska",
+      71:"Snö",73:"Snö",75:"Snö",
+      95:"Åska",96:"Åska",99:"Kraftig åska"
     };
 
-    for (let i=1; i<=5; i++) { // morgondagen + 4 dagar
+    for(let i=1;i<=5;i++){
       const day = new Date(data.daily.time[i]).toLocaleDateString('sv-SE',{weekday:'short'});
       const temp = data.daily.temperature_2m_max[i].toFixed(1);
       const code = data.daily.weathercode[i];
-      const icon = iconsMap[code] || "☁️";
+      const icon = iconsMap[code]||"☁️";
 
       const div = document.createElement('div');
-      div.className = 'forecast-day';
-      div.innerHTML = `<div class="day">${day}</div><div class="temp">${temp}°</div><div class="icon" title="${iconTextMap[code] || 'Moln'}">${icon}</div>`;
+      div.className='forecast-day';
+      div.innerHTML=`<div class="day">${day}</div><div class="temp">${temp}°</div>
+        <div class="icon" title="${iconTextMap[code]||'Moln'}">${icon}</div>`;
       container.appendChild(div);
     }
 
-  } catch(err) {
+  } catch(err){
     console.error("5-dagars prognosfel:", err);
   }
 }
@@ -331,9 +318,9 @@ updateWeatherNow();
 updateMinMax();
 updateForecast5Days();
 
-setInterval(updateWeatherNow, 5*60*1000);
-setInterval(updateMinMax, 15*60*1000);
-setInterval(updateForecast5Days, 60*60*1000);
+setInterval(updateWeatherNow,5*60*1000);
+setInterval(updateMinMax,15*60*1000);
+setInterval(updateForecast5Days,60*60*1000);
 </script>
 
 </body>
