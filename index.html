@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
-<title>INFOBOARD</title>
+<title>Väderdashboard</title>
 <style>
 body {
   font-family: Arial, sans-serif;
@@ -112,6 +112,17 @@ body {
 .forecast-day .icon {
   font-size: 1.2em;
 }
+
+/* Fade + glide animation för temp-now */
+@keyframes glideIn {
+  0% { opacity: 0; transform: translateY(-10px); }
+  50% { opacity: 0.5; transform: translateY(2px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.animate-update {
+  animation: glideIn 0.5s ease-in-out;
+}
 </style>
 </head>
 <body>
@@ -150,6 +161,12 @@ body {
 <script>
 const lat = 57.114025;
 const lon = 14.168177;
+
+function animateUpdate(element) {
+  element.classList.remove('animate-update'); 
+  void element.offsetWidth; // trigger reflow
+  element.classList.add('animate-update'); 
+}
 
 function updateDateWeek() {
   const now = new Date();
@@ -220,10 +237,12 @@ async function updateWeatherNow() {
     const tempNowDiv = document.getElementById('temp-now');
     tempNowDiv.innerHTML = `${icon} ${temp?.toFixed(1)??"--"} °C (${feelsLike?.toFixed(1)??"--"} °C)`;
     
-    // Färgkod: kallt/blå, lagom/gul, varmt/rött
+    // Färgkod
     if(temp <= 10) tempNowDiv.style.color='#00bfff';
     else if(temp <= 20) tempNowDiv.style.color='#ffff00';
     else tempNowDiv.style.color='#ff4500';
+
+    animateUpdate(tempNowDiv);
 
     document.getElementById('wind').innerText = wind!==undefined?`Vind: ${wind.toFixed(1)} m/s`:'Vind: -- m/s';
     document.getElementById('humidity').innerText = humidity!==undefined?`Luftfuktighet: ${humidity.toFixed(0)} %`:'Luftfuktighet: -- %';
@@ -267,11 +286,9 @@ async function updateMinMax() {
       }
     }
 
-    // Uppdatera tooltip med gårdagens min/max
     const tooltipSpan = document.getElementById('yesterday-minmax-tooltip');
     tooltipSpan.innerText = `Igår – Min: ${minYesterday.toFixed(1)} °C | Max: ${maxYesterday.toFixed(1)} °C`;
 
-    // Uppdatera dagens min/max separat
     const todayDiv = document.getElementById('today-minmax');
     todayDiv.innerHTML = `Idag<br>Min: ${minToday.toFixed(1)} °C<br>Max: ${maxToday.toFixed(1)} °C`;
 
