@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
-<title>Väderdashboard</title>
+<title>INFOBOARD</title>
 <style>
 body {
   font-family: Arial, sans-serif;
@@ -133,10 +133,10 @@ body {
   <div class="precip" id="precipitation">Nederbörd kommande timme: --</div>
 </div>
 
-<!-- Dagens min/max med gul tooltip för igår -->
+<!-- Dagens min/max med tooltip -->
 <div class="section">
   <div class="tooltip minmax" id="temp-minmax">
-    Idag<br>Min: -- °C<br>Max: -- °C
+    <div id="today-minmax">Idag<br>Min: -- °C<br>Max: -- °C</div>
     <span class="tooltiptext" id="yesterday-minmax-tooltip">Igår – Min: -- °C | Max: -- °C</span>
   </div>
 </div>
@@ -217,13 +217,19 @@ async function updateWeatherNow() {
     else if(symbol===9) icon = "⛈️";
     else if(symbol>=10) icon = "🌧️";
 
-    document.getElementById('temp-now').innerHTML = `${icon} ${temp?.toFixed(1)??"--"} °C (${feelsLike?.toFixed(1)??"--"} °C)`;
+    const tempNowDiv = document.getElementById('temp-now');
+    tempNowDiv.innerHTML = `${icon} ${temp?.toFixed(1)??"--"} °C (${feelsLike?.toFixed(1)??"--"} °C)`;
+    
+    // Färgkod: kallt/blå, lagom/gul, varmt/rött
+    if(temp <= 10) tempNowDiv.style.color='#00bfff';
+    else if(temp <= 20) tempNowDiv.style.color='#ffff00';
+    else tempNowDiv.style.color='#ff4500';
+
     document.getElementById('wind').innerText = wind!==undefined?`Vind: ${wind.toFixed(1)} m/s`:'Vind: -- m/s';
     document.getElementById('humidity').innerText = humidity!==undefined?`Luftfuktighet: ${humidity.toFixed(0)} %`:'Luftfuktighet: -- %';
     document.getElementById('pressure').innerText = pressure!==undefined?`Tryck: ${pressure.toFixed(0)} hPa`:'Tryck: -- hPa';
     document.getElementById('precipitation').innerText = precip>0?`Nederbörd kommande timme: ${precip.toFixed(1)} mm`:'Nederbörd kommande timme: 0 mm';
 
-    // Bara timmar och minuter
     document.getElementById('weather-updated').innerText = 'Senast uppdaterad: ' + 
       now.toLocaleTimeString('sv-SE', {hour: '2-digit', minute: '2-digit'});
 
@@ -261,14 +267,13 @@ async function updateMinMax() {
       }
     }
 
-    const minMaxDiv = document.getElementById('temp-minmax');
-    const tooltipSpan = document.getElementById('yesterday-minmax-tooltip');
-
     // Uppdatera tooltip med gårdagens min/max
+    const tooltipSpan = document.getElementById('yesterday-minmax-tooltip');
     tooltipSpan.innerText = `Igår – Min: ${minYesterday.toFixed(1)} °C | Max: ${maxYesterday.toFixed(1)} °C`;
 
-    // Uppdatera texten för idag, behåll tooltip intakt
-    minMaxDiv.firstChild.nodeValue = `Idag\nMin: ${minToday.toFixed(1)} °C\nMax: ${maxToday.toFixed(1)} °C\n`;
+    // Uppdatera dagens min/max separat
+    const todayDiv = document.getElementById('today-minmax');
+    todayDiv.innerHTML = `Idag<br>Min: ${minToday.toFixed(1)} °C<br>Max: ${maxToday.toFixed(1)} °C`;
 
     if(tempYesterdaySameTime!==null){
       const yesterdayDiv = document.getElementById('temp-yesterday');
