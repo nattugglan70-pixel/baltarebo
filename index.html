@@ -54,7 +54,7 @@ body {
   color: #87cefa;
 }
 
-/* 7-dagars prognos */
+/* 5-dagars prognos */
 .forecast-row {
   display: flex;
   justify-content: flex-start; /* vänstercentrerad */
@@ -62,11 +62,12 @@ body {
   text-align: center;
   flex-wrap: nowrap;
   margin-top: 10px;
+  overflow-x: hidden; /* inga scrollbars */
 }
 
 .forecast-day {
-  flex: 1 1 70px;  /* kan växa, minst 70px */
-  min-width: 70px;  /* säkerställer att kolumnen inte blir för liten */
+  flex: 1 1 60px;  /* kan växa, minst 60px */
+  min-width: 60px;
   text-align: center;
 }
 
@@ -116,8 +117,8 @@ body {
 </div>
 
 <div class="section">
-  <div class="subtext">Prognos 7 dagar:</div>
-  <div class="forecast-row" id="forecast-7days">
+  <div class="subtext">Prognos 5 dagar:</div>
+  <div class="forecast-row" id="forecast-5days">
     <!-- JS fyller i dag/temperatur/ikon -->
   </div>
 </div>
@@ -284,13 +285,13 @@ async function updateMinMax() {
   }
 }
 
-async function updateForecast7Days() {
+async function updateForecast5Days() {
   try {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,weathercode&timezone=Europe/Stockholm&forecast_days=8`;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,weathercode&timezone=Europe/Stockholm&forecast_days=6`;
     const res = await fetch(url);
     const data = await res.json();
 
-    const container = document.getElementById('forecast-7days');
+    const container = document.getElementById('forecast-5days');
     container.innerHTML = '';
 
     const iconsMap = {
@@ -300,8 +301,7 @@ async function updateForecast7Days() {
       95: "⚡", 96: "⚡", 99: "⚡⚡"
     };
 
-    // Starta från index 1 → morgondagen
-    for (let i=1;i<data.daily.time.length;i++) {
+    for (let i=1; i<=5; i++) { // morgondagen + 4 dagar
       const day = new Date(data.daily.time[i]).toLocaleDateString('sv-SE',{weekday:'short'});
       const temp = data.daily.temperature_2m_max[i].toFixed(1);
       const code = data.daily.weathercode[i];
@@ -314,18 +314,18 @@ async function updateForecast7Days() {
     }
 
   } catch(err) {
-    console.error("7-dagars prognosfel:", err);
+    console.error("5-dagars prognosfel:", err);
   }
 }
 
 updateDateWeek();
 updateWeatherNow();
 updateMinMax();
-updateForecast7Days();
+updateForecast5Days();
 
 setInterval(updateWeatherNow, 5*60*1000);
 setInterval(updateMinMax, 15*60*1000);
-setInterval(updateForecast7Days, 60*60*1000);
+setInterval(updateForecast5Days, 60*60*1000);
 </script>
 
 </body>
