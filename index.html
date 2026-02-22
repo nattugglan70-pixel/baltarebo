@@ -58,14 +58,15 @@ body {
 .forecast-row {
   display: flex;
   justify-content: flex-start; /* vänstercentrerad */
-  gap: 15px;
+  gap: 10px;
   text-align: center;
   flex-wrap: nowrap;
   margin-top: 10px;
 }
 
 .forecast-day {
-  flex: 0 0 60px; /* lika breda kolumner */
+  flex: 1 1 70px;  /* kan växa, minst 70px */
+  min-width: 70px;  /* säkerställer att kolumnen inte blir för liten */
   text-align: center;
 }
 
