@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
-<title>VÄDER</title>
+<title>Väderdashboard</title>
 <style>
 body {
   font-family: Arial, sans-serif;
@@ -263,9 +263,12 @@ async function updateMinMax() {
 
     const minMaxDiv = document.getElementById('temp-minmax');
     const tooltipSpan = document.getElementById('yesterday-minmax-tooltip');
+
+    // Uppdatera tooltip med gårdagens min/max
     tooltipSpan.innerText = `Igår – Min: ${minYesterday.toFixed(1)} °C | Max: ${maxYesterday.toFixed(1)} °C`;
-    minMaxDiv.innerHTML = `Idag<br>Min: ${minToday.toFixed(1)} °C<br>Max: ${maxToday.toFixed(1)} °C
-      <span class="tooltiptext" id="yesterday-minmax-tooltip">${tooltipSpan.innerText}</span>`;
+
+    // Uppdatera texten för idag, behåll tooltip intakt
+    minMaxDiv.firstChild.nodeValue = `Idag\nMin: ${minToday.toFixed(1)} °C\nMax: ${maxToday.toFixed(1)} °C\n`;
 
     if(tempYesterdaySameTime!==null){
       const yesterdayDiv = document.getElementById('temp-yesterday');
