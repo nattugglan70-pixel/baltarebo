@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
-<title>INFOBOARD</title>
+<title>VÄDER</title>
 <style>
 body {
   font-family: Arial, sans-serif;
@@ -19,7 +19,8 @@ body {
   padding: 20px;
   background: #111;
   border-radius: 12px;
-  width: 380px;
+  width: 100%;
+  max-width: 380px;
   box-shadow: 0 2px 10px rgba(255,255,255,0.2);
   text-align: center;
 }
@@ -90,7 +91,8 @@ body {
   text-align: center;
   flex-wrap: nowrap;
   margin-top: 10px;
-  overflow-x: hidden;
+  overflow-x: auto;
+  padding-bottom: 5px;
 }
 
 .forecast-day {
@@ -135,7 +137,7 @@ body {
 <div class="section">
   <div class="tooltip minmax" id="temp-minmax">
     Idag<br>Min: -- °C<br>Max: -- °C
-    <span class="tooltiptext" id="yesterday-minmax-tooltip"></span>
+    <span class="tooltiptext" id="yesterday-minmax-tooltip">Igår – Min: -- °C | Max: -- °C</span>
   </div>
 </div>
 
@@ -220,7 +222,10 @@ async function updateWeatherNow() {
     document.getElementById('humidity').innerText = humidity!==undefined?`Luftfuktighet: ${humidity.toFixed(0)} %`:'Luftfuktighet: -- %';
     document.getElementById('pressure').innerText = pressure!==undefined?`Tryck: ${pressure.toFixed(0)} hPa`:'Tryck: -- hPa';
     document.getElementById('precipitation').innerText = precip>0?`Nederbörd kommande timme: ${precip.toFixed(1)} mm`:'Nederbörd kommande timme: 0 mm';
-    document.getElementById('weather-updated').innerText = 'Senast uppdaterad: ' + now.toLocaleTimeString('sv-SE');
+
+    // Bara timmar och minuter
+    document.getElementById('weather-updated').innerText = 'Senast uppdaterad: ' + 
+      now.toLocaleTimeString('sv-SE', {hour: '2-digit', minute: '2-digit'});
 
   } catch(err) {
     console.error("SMHI error:", err);
@@ -260,7 +265,7 @@ async function updateMinMax() {
     const tooltipSpan = document.getElementById('yesterday-minmax-tooltip');
     tooltipSpan.innerText = `Igår – Min: ${minYesterday.toFixed(1)} °C | Max: ${maxYesterday.toFixed(1)} °C`;
     minMaxDiv.innerHTML = `Idag<br>Min: ${minToday.toFixed(1)} °C<br>Max: ${maxToday.toFixed(1)} °C
-      <span class="tooltiptext" id="yesterday-minmax-tooltip">Igår – Min: ${minYesterday.toFixed(1)} °C | Max: ${maxYesterday.toFixed(1)} °C</span>`;
+      <span class="tooltiptext" id="yesterday-minmax-tooltip">${tooltipSpan.innerText}</span>`;
 
     if(tempYesterdaySameTime!==null){
       const yesterdayDiv = document.getElementById('temp-yesterday');
