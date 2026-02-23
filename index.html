@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
-<title>VÄDER</title>
+<title>Väderdashboard</title>
 <style>
 body {
   font-family: Arial, sans-serif;
@@ -14,36 +14,72 @@ body {
   padding: 15px;
 }
 
-.section {
-  margin: 10px 0;
-  padding: 20px;
+/* Huvudblock för dagens temperatur */
+.main-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   background: #111;
   border-radius: 12px;
-  width: 380px;
+  width: 480px;
+  padding: 20px;
   box-shadow: 0 2px 10px rgba(255,255,255,0.2);
+  position: relative;
+  gap: 10px;
   text-align: center;
 }
 
-.value {
-  font-size: 32px;
+/* Datum och veckonummer */
+#date-week {
+  font-size: 20px;
   font-weight: bold;
-  margin: 8px 0;
+  margin-bottom: 5px;
+}
+
+/* Senast uppdaterad */
+#weather-updated {
+  font-size: 18px;
+  color: #ccc;
+  margin-bottom: 15px;
+}
+
+/* Väderikon och temperatur */
+.weather-row {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 15px;
 }
 
-.subtext {
-  font-size: 18px; /* större text för första blocket */
+#weather-icon {
+  font-size: 48px;
+}
+
+#temp-now {
+  font-size: 36px;
+  font-weight: bold;
+}
+
+#feels-like {
+  font-size: 24px;
   color: #ccc;
-  margin: 5px 0;
 }
 
-.minmax {
+/* Vindpil */
+.wind-icon {
+  width: 28px;
+  height: 28px;
+  display: inline-block;
+  transform: rotate(0deg);
+  transition: transform 0.5s ease;
+}
+
+/* Min/max + gårdagens temp */
+.minmax-block {
+  margin-top: 10px;
+  text-align: center;
   font-size: 18px;
-  margin: 6px 0;
-  line-height: 1.6;
+  color: #fff;
 }
 
 .yesterday-temp {
@@ -52,13 +88,7 @@ body {
   margin-top: 6px;
 }
 
-.precip {
-  font-size: 18px;
-  margin-top: 8px;
-  color: #87cefa;
-}
-
-/* Tooltip för dagens min/max */
+/* Tooltip för dagens min/max + SMHI data */
 .tooltip {
   position: relative;
   display: inline-block;
@@ -67,17 +97,16 @@ body {
 
 .tooltip .tooltiptext {
   visibility: hidden;
-  width: max-content;
+  width: 280px;
   background-color: black;
   color: white;
   text-align: left;
   border-radius: 6px;
-  padding: 6px 10px;
+  padding: 8px 12px;
   position: absolute;
   z-index: 10;
   top: 100%;
   left: 0;
-  white-space: nowrap;
   font-size: 14px;
 }
 
@@ -85,17 +114,12 @@ body {
   visibility: visible;
 }
 
-/* Vindikon */
-.wind-icon {
-  width: 24px;
-  height: 24px;
-  display: inline-block;
-  transform: rotate(0deg);
-  transition: transform 0.5s ease;
-  margin-left: 5px;
+/* Femdygnsprognos */
+.forecast-section {
+  margin-top: 20px;
+  width: 480px;
 }
 
-/* 5-dagars prognos */
 .forecast-row {
   display: flex;
   justify-content: flex-start;
@@ -127,31 +151,25 @@ body {
 </head>
 <body>
 
-<!-- Datum och veckonummer -->
-<div class="section">
-  <div id="date-week"></div>
-  <div class="subtext" id="weather-updated">Senast uppdaterad: --:--</div>
-</div>
-
-<!-- Dagens temperatur och feels-like med vindpilen -->
-<div class="section value">
-  <div id="weather-icon">☀️</div>
-  <div id="temp-now">-- °C</div>
-  <div id="feels-like">Känns som -- °C</div>
-  <img id="wind-icon" class="wind-icon" src="arrow.png" title="Vind: -- m/s">
-</div>
-
-<!-- Dagens min/max och gårdagens temperatur -->
-<div class="section">
-  <div class="tooltip minmax" id="temp-minmax">
-    Idag<br>Min: -- °C<br>Max: -- °C
+<!-- Huvudblock -->
+<div class="main-block">
+  <div id="date-week">--</div>
+  <div id="weather-updated">Senast uppdaterad: --:--</div>
+  <div class="weather-row">
+    <div id="weather-icon">☀️</div>
+    <div id="temp-now">-- °C</div>
+    <div id="feels-like">Känns som -- °C</div>
+    <img id="wind-icon" class="wind-icon" src="arrow.png" title="Vind: -- m/s">
+  </div>
+  <div class="minmax-block tooltip" id="temp-minmax">
+    Idag<br>Min: -- °C | Max: -- °C
     <span class="tooltiptext" id="hover-data">Laddar...</span>
   </div>
   <div class="yesterday-temp" id="temp-yesterday">-- °C</div>
 </div>
 
-<!-- 5-dagars prognos -->
-<div class="section">
+<!-- Femdygnsprognos -->
+<div class="forecast-section">
   <div class="subtext">Prognos 5 dagar:</div>
   <div class="forecast-row" id="forecast-5days"></div>
 </div>
@@ -160,7 +178,7 @@ body {
 const lat = 57.114025;
 const lon = 14.168177;
 
-// Datum och veckonummer
+// Datum + veckonummer
 function updateDateWeek() {
   const now = new Date();
   const dayNum = now.getDay() || 7;
@@ -178,10 +196,9 @@ function isNight() {
   return hour < 6 || hour >= 21;
 }
 
-// Uppdatera dagens temperatur, feels-like och väderikon
+// Hämta dagens temperatur och feels-like
 async function updateWeatherNow() {
   try {
-    // Open-Meteo aktuell temperatur
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`;
     const res = await fetch(url);
     const data = await res.json();
@@ -191,7 +208,6 @@ async function updateWeatherNow() {
     const windDir = data.current_weather.winddirection;
     const symbol = data.current_weather.weathercode;
 
-    // Feels-like beräkning (vind + temperatur)
     let feelsLike = temp;
     if(temp<=10 && wind>1.3){
       const windKmH = wind*3.6;
@@ -214,23 +230,23 @@ async function updateWeatherNow() {
 
     document.getElementById('weather-icon').innerText = icon;
 
-    // Vindikon
+    // Vindpil
     const windIcon = document.getElementById("wind-icon");
     windIcon.style.transform = `rotate(${windDir}deg)`;
     windIcon.title = `Vind: ${wind} m/s, ${windDir}°`;
 
-    // Uppdaterad tid
-    document.getElementById('weather-updated').innerText = 'Senast uppdaterad: ' + new Date().toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'});
+    // Uppdaterad tid utan sekunder
+    document.getElementById('weather-updated').innerText = 'Senast uppdaterad: ' +
+      new Date().toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'});
 
     // SMHI-data för hover
     const smhiUrl = `https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${lon}/lat/${lat}/data.json`;
     const smhiRes = await fetch(smhiUrl);
     const smhiData = await smhiRes.json();
 
-    // Ta senaste observation som är <= nu
-    const now = new Date();
+    const nowTime = new Date();
     const validSeries = smhiData.timeSeries.map(ts => ({...ts, time: new Date(ts.validTime)}))
-      .filter(ts => ts.time<=now)
+      .filter(ts => ts.time<=nowTime)
       .sort((a,b)=>b.time-b.time)[0];
 
     const params = validSeries.parameters;
@@ -248,7 +264,7 @@ async function updateWeatherNow() {
   }
 }
 
-// Min/max för idag och gårdagens temperatur
+// Min/max idag + gårdagens temperatur
 async function updateMinMax() {
   try {
     const now = new Date();
@@ -281,7 +297,7 @@ async function updateMinMax() {
     const minMaxDiv = document.getElementById('temp-minmax');
     const tooltipSpan = document.getElementById('hover-data');
     tooltipSpan.innerText = `Igår – Min: ${minYesterday.toFixed(1)} °C | Max: ${maxYesterday.toFixed(1)} °C`;
-    minMaxDiv.innerHTML = `Idag<br>Min: ${minToday.toFixed(1)} °C<br>Max: ${maxToday.toFixed(1)} °C
+    minMaxDiv.innerHTML = `Idag<br>Min: ${minToday.toFixed(1)} °C | Max: ${maxToday.toFixed(1)} °C
       <span class="tooltiptext" id="hover-data">Igår – Min: ${minYesterday.toFixed(1)} °C | Max: ${maxYesterday.toFixed(1)} °C</span>`;
 
     if(tempYesterdaySameTime!==null){
@@ -336,17 +352,16 @@ async function updateForecast5Days() {
   }
 }
 
-// Kör initialt
+// Initialt
 updateDateWeek();
 updateWeatherNow();
 updateMinMax();
 updateForecast5Days();
 
-// Uppdateringsintervall
+// Intervall
 setInterval(updateWeatherNow,5*60*1000);
 setInterval(updateMinMax,15*60*1000);
 setInterval(updateForecast5Days,60*60*1000);
 </script>
-
 </body>
 </html>
