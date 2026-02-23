@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VÄDER</title>
+<title>Väderdashboard</title>
 <style>
 body {
   font-family: Arial, sans-serif;
@@ -28,18 +28,25 @@ body {
   position: relative;
 }
 
-/* HUVUDBLOCK */
+/* HUVUDBLOCK: TRE KOLUMNER */
 .current-weather {
   display: flex;
+  justify-content: space-between;
   gap: 20px;
+  align-items: center;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+.current-weather:hover {
+  transform: translateY(-3px);
 }
 
-/* VÄDERLEFT (ikon + temp + feels like + vindpil) */
+/* VÄDERLEFT */
 .weather-left {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 10px;
+  align-items: flex-start;
+  gap: 6px;
 }
 .weather-main {
   display: flex;
@@ -56,30 +63,31 @@ body {
 .feels-like {
   opacity: 0.8;
 }
-/* Vindpil */
 .wind-direction {
-  font-size: 35px;
+  font-size: 35px; /* STOR VINDPIL */
+  transform: rotate(0deg); /* rotation sätts via JS */
 }
 
-/* MITTSEKTION (vind, fukt, tryck, nederbörd, igår) */
+/* MITTSEKTION */
 .weather-middle {
   display: flex;
   flex-direction: column;
   gap: 6px;
   justify-content: center;
   font-size: 14px;
+  text-align: left;
 }
 
-/* HÖGERINFO (datum + uppdatering) */
+/* HÖGERINFO */
 .weather-info {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 14px;
+  justify-content: center;
 }
 .date-week {
-  font-size: 14px;
+  font-size: 16px; /* större text för datum */
   opacity: 0.8;
 }
 
@@ -176,38 +184,42 @@ async function getWeather(lat, lon) {
   updateDateWeek();
   const now = new Date();
 
-  const urlCurrent = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m,surface_pressure,precipitation,wind_direction_10m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=Europe/Stockholm&forecast_days=6`;
+  const urlCurrent = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,relative_humidity_2m,surface_pressure,precipitation&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=Europe/Stockholm&forecast_days=6`;
   const res = await fetch(urlCurrent);
   const data = await res.json();
 
   const c = data.current_weather || data.current;
 
-  // ===== KORREKT "KÄNNS SOM" BERÄKNING =====
-  function calcFeelsLike(T, v) {
-    // T i °C, v i m/s
-    const v_kmh = v * 3.6;
-    return 13.12 + 0.6215*T - 11.37*Math.pow(v_kmh,0.16) + 0.3965*T*Math.pow(v_kmh,0.16);
+  // ===== KORREKT "FEELS LIKE" BASERAD PÅ WIND CHILL =====
+  function calculateFeelsLike(temp, wind) {
+    // temp i °C, wind i m/s
+    const v = wind * 3.6; // m/s -> km/h
+    if(temp <= 10 && v > 4.8){
+      // Wind chill formula (Swedish style)
+      return Math.round(13.12 + 0.6215*temp - 11.37*Math.pow(v,0.16) + 0.3965*temp*Math.pow(v,0.16));
+    } else {
+      return Math.round(temp);
+    }
   }
-  const feels = Math.round(calcFeelsLike(c.temperature_2m, c.wind_speed_10m));
+
+  const feels = calculateFeelsLike(c.temperature_2m, c.wind_speed_10m);
 
   temperature.textContent = Math.round(c.temperature_2m) + "°";
   feelsLike.textContent = "Känns som " + feels + "°";
-
-  // Vind + pil
   wind.textContent = c.wind_speed_10m + " m/s";
-  const deg = c.wind_direction_10m;
-  const arrow = "↑"; // grundpil uppåt
-  const windArrow = document.getElementById("windDirection");
-  windArrow.style.transform = `rotate(${deg}deg)`;
-  windArrow.textContent = arrow;
-
   humidity.textContent = c.relative_humidity_2m + " %";
   pressure.textContent = c.surface_pressure + " hPa";
   precip.textContent = (c.precipitation || 0) + " mm";
-
+  weatherDescription.textContent = weatherCodeToText(c.weather_code);
   weatherIcon.src = weatherCodeToIcon(c.weather_code);
 
-  // Femdygnsprognos
+  // ===== VINDRIKTNING PIL =====
+  const windDir = c.wind_direction_10m;
+  const arrow = document.getElementById("windDirection");
+  arrow.style.transform = `rotate(${windDir}deg)`; // rotera pilen
+  arrow.title = "Vindriktning: " + windDir + "°";
+
+  // ===== FEMDYGN =====
   forecast.innerHTML = "";
   for(let i=1;i<=5;i++){
     const date = new Date(data.daily.time[i]);
@@ -223,10 +235,11 @@ async function getWeather(lat, lon) {
     forecast.appendChild(card);
   }
 
-  // ===== HISTORISKT: IGÅR =====
+  // ===== HISTORISKT IGÅR =====
   const yesterdayDate = new Date(now.getTime() - 86400000);
   const start = yesterdayDate.toISOString().split('T')[0];
-  const urlHistory = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${start}&end_date=${start}&hourly=temperature_2m&timezone=Europe/Stockholm`;
+  const end = start;
+  const urlHistory = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${start}&end_date=${end}&hourly=temperature_2m&timezone=Europe/Stockholm`;
   const resH = await fetch(urlHistory);
   const dataH = await resH.json();
   let temps = dataH.hourly.temperature_2m;
@@ -243,7 +256,6 @@ async function getWeather(lat, lon) {
   yesterdayMin.textContent = Math.round(minY);
   yesterdayMax.textContent = Math.round(maxY);
 
-  // Uppdaterad tid
   updatedTime.textContent = now.toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'});
 }
 
@@ -257,7 +269,11 @@ if(navigator.geolocation){
   getWeather(fallback.lat,fallback.lon);
 }
 
-// ===== WEATHER CODE ICON =====
+// ===== WEATHER CODE =====
+function weatherCodeToText(code){
+  const map = {0:"Klart",1:"Mestadels klart",2:"Halvklart",3:"Mulet",61:"Regn",71:"Snö",80:"Regnskurar",85:"Snöbyar"};
+  return map[code]||"Okänt väder";
+}
 function weatherCodeToIcon(code){
   if(code===0)return "https://cdn-icons-png.flaticon.com/512/869/869869.png";
   if([1,2].includes(code))return "https://cdn-icons-png.flaticon.com/512/1163/1163624.png";
