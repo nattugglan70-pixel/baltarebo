@@ -3,182 +3,116 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VÄDER</title>
+<title>Väderdashboard</title>
+
 <style>
-body {
+body{
   font-family: Arial, sans-serif;
-  background: linear-gradient(to right, #141e30, #243b55);
-  color: white;
-  margin: 0;
-  padding: 30px;
+  background: linear-gradient(to right,#141e30,#243b55);
+  color:white;
+  margin:0;
+  padding:30px;
 }
-.container {
-  max-width: 900px;
-  margin: auto;
+.container{max-width:900px;margin:auto;}
+
+.card{
+  background:rgba(255,255,255,0.08);
+  backdrop-filter:blur(12px);
+  border-radius:20px;
+  padding:20px;
+  box-shadow:0 10px 25px rgba(0,0,0,0.3);
+  margin-bottom:25px;
 }
 
-/* ===== DAGENS VÄDERBLOCK ===== */
-.card {
-  background: rgba(255,255,255,0.08);
-  backdrop-filter: blur(12px);
-  border-radius: 20px;
-  padding: 20px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-  margin-bottom: 25px;
-  position: relative;
+.current{
+  display:flex;
+  gap:25px;
+  align-items:center;
 }
 
-/* HUVUDBLOCK */
-.current-weather {
-  display: flex;
-  gap: 20px;
-  cursor: pointer;
-  transition: transform 0.2s ease;
+.left{
+  flex:1.5;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
 }
-.current-weather:hover {
-  transform: translateY(-3px);
+.left-top{
+  display:flex;
+  align-items:center;
+  gap:15px;
 }
-
-/* VÄDERMAIN: vänsterdel med ikon, temp, känns som + vindpil */
-.weather-main {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 10px;
-  flex: 1.5;
-}
-.weather-main-top {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-.weather-main img {
-  width: 80px;
-}
-.temp {
-  font-size: 52px;
-  font-weight: bold;
-}
-.feels-wind {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 18px;
-}
-.wind-arrow {
-  display: inline-block;
-  transform: rotate(0deg); /* dynamisk ändring via JS */
-  font-size: 32px; /* större pil */
+.left img{width:80px;}
+.temp{font-size:52px;font-weight:bold;}
+.feels{display:flex;align-items:center;gap:10px;}
+.wind-arrow{
+  font-size:32px;
+  display:inline-block;
 }
 
-/* MITTENDEL: vind, luftfuktighet, tryck, nederbörd, igår info */
-.weather-middle {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 14px;
-  justify-content: center;
+.middle{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  font-size:14px;
 }
 
-/* HÖGERDEL: datum och uppdaterad */
-.weather-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  font-size: 14px;
-  justify-content: center;
+.right{
+  flex:1;
+  font-size:14px;
 }
 
-/* HOVER-OVERLAY */
-.weather-tooltip {
-  position: absolute;
-  inset: 0;
-  background: gold;
-  color: black;
-  border-radius: 20px;
-  padding: 20px;
-  display: none;
-  flex-direction: column;
-  justify-content: center;
-  gap: 8px;
-  z-index: 10;
+.forecast{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:15px;
 }
-.current-weather:hover .weather-tooltip {
-  display: flex;
+.day-card{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  background:rgba(255,255,255,0.06);
+  padding:15px;
+  border-radius:16px;
+  text-align:center;
 }
-
-/* ===== 5 DAGARS PROGNOS ===== */
-.forecast {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr); /* fem horisontella dagar */
-  gap: 15px;
-}
-.day-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center; /* centrera ikon och text */
-  justify-content: center;
-  background: rgba(255,255,255,0.06);
-  padding: 15px;
-  border-radius: 16px;
-  text-align: center;
-  transition: transform 0.2s ease;
-}
-.day-card:hover {
-  transform: translateY(-4px);
-}
-.day-card img {
-  width: 45px;
-}
-.day-name {
-  font-weight: bold;
-  margin-bottom: 5px;
-}
-.temp-range {
-  font-size: 14px;
-}
-
-/* DATUM/VECKA + SENAST UPPDATERAD */
-.date-week {
-  font-size: 14px;
-  opacity: 0.8;
-  margin-bottom: 5px;
-}
+.day-card img{width:45px;}
+.day-name{font-weight:bold;margin-bottom:5px;}
+.temp-range{font-size:14px;}
 </style>
 </head>
-<body>
 
+<body>
 <div class="container">
 
-<!-- DAGENS VÄDER -->
-<div class="card current-weather">
-  <div class="weather-main">
-    <div class="weather-main-top">
-      <img id="weatherIcon" src="">
-      <div class="temp" id="temperature">--°</div>
+<div class="card current">
+  <div class="left">
+    <div class="left-top">
+      <img id="icon">
+      <div class="temp" id="temp">--°</div>
     </div>
-    <div class="feels-wind">
-      <div class="feels-like" id="feelsLike">Känns som --°</div>
+    <div class="feels">
+      <div id="feels">Känns som --°</div>
       <div class="wind-arrow" id="windArrow">↑</div>
     </div>
   </div>
-  <div class="weather-middle">
-    <div>Vind: <span id="wind">-- m/s</span></div>
-    <div>Luftfuktighet: <span id="humidity">-- %</span></div>
-    <div>Tryck: <span id="pressure">-- hPa</span></div>
-    <div>Nederbörd (1h): <span id="precip">-- mm</span></div>
-    <div>Igår samma tid: <span id="tempYesterday">--°</span></div>
-    <div>Igår – Min: <span id="yesterdayMin">--°</span> / Max: <span id="yesterdayMax">--°</span></div>
+
+  <div class="middle">
+    <div>Vind: <span id="wind">--</span></div>
+    <div>Luftfuktighet: <span id="humidity">--</span></div>
+    <div>Tryck: <span id="pressure">--</span></div>
+    <div>Nederbörd (1h): <span id="precip">--</span></div>
+    <div>Igår samma tid: <span id="ySame">--</span></div>
+    <div>Igår Min/Max: <span id="yMin">--</span> / <span id="yMax">--</span></div>
   </div>
-  <div class="weather-info">
-    <div class="date-week" id="dateWeek">--</div>
-    <div>Senast uppdaterad: <span id="updatedTime">--:--</span></div>
+
+  <div class="right">
+    <div id="date"></div>
+    <div>Uppdaterad: <span id="updated"></span></div>
   </div>
 </div>
 
-<!-- 5-DYGN -->
 <div class="card">
   <h3>5-dygnsprognos</h3>
   <div class="forecast" id="forecast"></div>
@@ -187,96 +121,123 @@ body {
 </div>
 
 <script>
-// ===== CONFIG / FALLBACK =====
-const fallback = { lat: 57.173, lon: 14.040, name: "Bor" };
+const lat = 57.173;
+const lon = 14.040;
+const station = 2556;
 
-// ===== DATUM + VECKA =====
-function updateDateWeek() {
-  const now = new Date();
-  const dayNum = now.getDay() || 7;
-  const date = new Date(now);
-  const yearStart = new Date(date.getFullYear(),0,1);
-  const week = Math.ceil((((date - yearStart)/86400000 + 1)/7));
-  document.getElementById("dateWeek").innerText =
-    now.toLocaleDateString('sv-SE', { weekday:'long', day:'numeric', month:'long', year:'numeric'}) + " | Vecka " + week;
+// ---------- FEELS LIKE ----------
+function feelsLike(t, ws){
+  const kmh = ws*3.6;
+  if(t<=10 && kmh>4.8){
+    return Math.round(
+      13.12 + 0.6215*t - 11.37*Math.pow(kmh,0.16)
+      + 0.3965*t*Math.pow(kmh,0.16)
+    );
+  }
+  return Math.round(t);
 }
 
-// ===== WEATHER FETCH (SMHI) =====
-async function getWeather(lat, lon) {
-
-  updateDateWeek();
-  const now = new Date();
-
-  // Aktuellt
-  const urlCurrent = `https://opendata-download-metobs.smhi.se/api/version/latest/parameter/1/station/75110/period/latest-month/data.json`; // Ex Hagsult
-  const res = await fetch(urlCurrent);
+// ---------- HÄMTA PROGNOS (NU + 5 DYGN) ----------
+async function loadForecast(){
+  const url = `https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${lon}/lat/${lat}/data.json`;
+  const res = await fetch(url);
   const data = await res.json();
-  const obs = data.value;
+  const series = data.timeSeries;
 
-  // Hitta senaste observation
-  const lastObs = obs[obs.length-1];
-  const temp = lastObs.value;
-  temperature.textContent = Math.round(temp)+"°";
+  // närmaste framtida tid
+  const now = new Date();
+  const current = series.find(ts => new Date(ts.validTime) >= now) || series[0];
 
-  // Räkna feels like baserat på vind (omvandlar m/s -> km/h)
-  const windMS = 4.7; // här kan dynamiskt användas c.wind_speed
-  const windKMH = windMS * 3.6;
-  const feels = 13.12 + 0.6215*temp - 11.37*Math.pow(windKMH,0.16) + 0.3965*temp*Math.pow(windKMH,0.16);
-  feelsLike.textContent = "Känns som "+Math.round(feels)+"°";
+  const params = {};
+  current.parameters.forEach(p=>params[p.name]=p.values[0]);
 
-  // Dynamisk vindpil
-  const windDir = 225; // ex sydväst
-  windArrow.style.transform = `rotate(${windDir}deg)`;
+  const t = params.t;
+  const ws = params.ws;
+  const wd = params.wd;
 
-  // Mittensektion
-  wind.textContent = windMS+" m/s";
-  humidity.textContent = "-- %"; // SMHI kan kompletteras
-  pressure.textContent = "-- hPa";
-  precip.textContent = "-- mm";
+  temp.textContent = Math.round(t)+"°";
+  feels.textContent = "Känns som "+feelsLike(t,ws)+"°";
+  wind.textContent = ws.toFixed(1)+" m/s";
+  humidity.textContent = params.r+" %";
+  pressure.textContent = params.msl+" hPa";
+  precip.textContent = params.pmean+" mm";
+  windArrow.style.transform=`rotate(${wd}deg)`;
 
-  // ===== FALLBACK IGÅR SAME/HIGH/LOW =====
-  const yesterday = new Date(now.getTime() - 86400000);
-  let yesterdayObs = obs.find(o=>{
-    const obsDate = new Date(o.date);
-    return obsDate.getDate() === yesterday.getDate();
+  // ikon
+  icon.src="https://cdn-icons-png.flaticon.com/512/414/414825.png";
+
+  // ---- DAGLIG SUMMERING ----
+  const daily = {};
+  series.forEach(ts=>{
+    const d = ts.validTime.split("T")[0];
+    if(!daily[d]) daily[d]=[];
+    daily[d].push(ts);
   });
-  if(yesterdayObs){
-    tempYesterday.textContent = Math.round(yesterdayObs.value)+"°";
-    yesterdayMin.textContent = Math.round(Math.min(...obs.map(o=>o.value)))+"°";
-    yesterdayMax.textContent = Math.round(Math.max(...obs.map(o=>o.value)))+"°";
-  } else {
-    tempYesterday.textContent = "--";
-    yesterdayMin.textContent = "--";
-    yesterdayMax.textContent = "--";
-  }
 
-  // Femdygnsprognos (SMHI daglig)
-  forecast.innerHTML = "";
-  for(let i=0;i<5;i++){
-    const day = new Date();
-    day.setDate(day.getDate()+i);
-    const dayName = day.toLocaleDateString("sv-SE",{weekday:'short'});
-    const card = document.createElement("div");
-    card.className = "day-card";
-    card.innerHTML = `
-      <div class="day-name">${dayName}</div>
+  forecast.innerHTML="";
+  Object.keys(daily).slice(0,5).forEach(d=>{
+    const arr=daily[d];
+    const temps=arr.map(x=>{
+      const p={};x.parameters.forEach(a=>p[a.name]=a.values[0]);
+      return p.t;
+    });
+    const max=Math.max(...temps);
+    const min=Math.min(...temps);
+
+    const card=document.createElement("div");
+    card.className="day-card";
+    card.innerHTML=`
+      <div class="day-name">
+        ${new Date(d).toLocaleDateString("sv-SE",{weekday:"short"})}
+      </div>
       <img src="https://cdn-icons-png.flaticon.com/512/414/414825.png">
-      <div class="temp-range">--° / --°</div>`;
+      <div class="temp-range">${Math.round(max)}° / ${Math.round(min)}°</div>
+    `;
     forecast.appendChild(card);
+  });
+}
+
+// ---------- HÄMTA IGÅR ----------
+async function loadYesterday(){
+  const url=`https://opendata-download-metobs.smhi.se/api/version/latest/parameter/1/station/${station}/period/latest-month/data.json`;
+  const res=await fetch(url);
+  const data=await res.json();
+  const values=data.value;
+
+  const now=new Date();
+  const yesterday=new Date(now.getTime()-86400000);
+
+  const yVals=values.filter(v=>{
+    const d=new Date(v.date);
+    return d.getDate()===yesterday.getDate() &&
+           d.getMonth()===yesterday.getMonth();
+  });
+
+  if(yVals.length){
+    const temps=yVals.map(v=>v.value);
+    yMin.textContent=Math.round(Math.min(...temps))+"°";
+    yMax.textContent=Math.round(Math.max(...temps))+"°";
+
+    const same=yVals.reduce((prev,curr)=>{
+      const h=new Date(curr.date).getHours();
+      return Math.abs(h-now.getHours())<
+             Math.abs(new Date(prev.date).getHours()-now.getHours())
+             ?curr:prev;
+    });
+    ySame.textContent=Math.round(same.value)+"°";
   }
-
-  updatedTime.textContent = now.toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'});
 }
 
-// ===== GPS =====
-if(navigator.geolocation){
-  navigator.geolocation.getCurrentPosition(
-    pos => getWeather(pos.coords.latitude,pos.coords.longitude),
-    () => getWeather(fallback.lat,fallback.lon)
-  );
-} else {
-  getWeather(fallback.lat,fallback.lon);
+// ---------- INIT ----------
+function init(){
+  const now=new Date();
+  date.textContent=now.toLocaleDateString("sv-SE",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  updated.textContent=now.toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"});
+  loadForecast();
+  loadYesterday();
 }
+init();
 </script>
+
 </body>
 </html>
