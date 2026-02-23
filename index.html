@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Väderdashboard</title>
+<title>VÄDER</title>
 <style>
 body {
   font-family: Arial, sans-serif;
@@ -179,19 +179,27 @@ async function getWeather(lat, lon) {
   const now = new Date();
 
   // Aktuellt
-  const urlCurrent = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m,surface_pressure,precipitation&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=Europe/Stockholm&forecast_days=6`;
+  const urlCurrent = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=Europe/Stockholm&forecast_days=6`;
   const res = await fetch(urlCurrent);
   const data = await res.json();
 
-  const c = data.current_weather || data.current;
-  temperature.textContent = Math.round(c.temperature_2m) + "°";
-  feelsLike.textContent = "Känns som " + Math.round(c.apparent_temperature) + "°";
-  wind.textContent = c.wind_speed_10m + " m/s";
-  humidity.textContent = c.relative_humidity_2m + " %";
-  pressure.textContent = c.surface_pressure + " hPa";
+  const c = data.current_weather;
+  temperature.textContent = Math.round(c.temperature) + "°";
+
+  // ===== NY korrekt “feels like” enligt NOAA/WMO =====
+  const temp = c.temperature;
+  const wind = c.windspeed; // m/s
+  const windKmH = wind * 3.6;
+  const feels = 13.12 + 0.6215*temp - 11.37*Math.pow(windKmH,0.16) + 0.3965*temp*Math.pow(windKmH,0.16);
+  feelsLike.textContent = "Känns som " + Math.round(feels) + "°";
+
+  wind.textContent = c.windspeed + " m/s";
+  humidity.textContent = c.relativehumidity + " %";
+  pressure.textContent = c.pressure + " hPa";
   precip.textContent = (c.precipitation || 0) + " mm";
-  weatherDescription.textContent = weatherCodeToText(c.weather_code);
-  weatherIcon.src = weatherCodeToIcon(c.weather_code);
+
+  weatherDescription.textContent = weatherCodeToText(c.weathercode);
+  weatherIcon.src = weatherCodeToIcon(c.weathercode);
 
   // Femdygnsprognos
   forecast.innerHTML = "";
@@ -257,7 +265,6 @@ function weatherCodeToIcon(code){
   if([71,85].includes(code))return "https://cdn-icons-png.flaticon.com/512/642/642102.png";
   return "https://cdn-icons-png.flaticon.com/512/1163/1163661.png";
 }
-
 </script>
 </body>
 </html>
