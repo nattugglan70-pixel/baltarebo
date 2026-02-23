@@ -3,92 +3,104 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Väderpanel</title>
+<title>VÄDER</title>
 
 <style>
 body {
   font-family: Arial, sans-serif;
-  background: linear-gradient(to right, #203a43, #2c5364);
+  background: linear-gradient(to right, #141e30, #243b55);
   color: white;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  margin: 0;
   padding: 30px;
+}
+
+/* WRAPPER */
+.container {
+  max-width: 900px;
+  margin: auto;
+}
+
+/* ===== BLOCK-STIL ===== */
+
+.card {
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(12px);
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+  margin-bottom: 25px;
 }
 
 /* ===== NUVARANDE VÄDER ===== */
 
 .current-weather {
   position: relative;
-  background: linear-gradient(145deg, #1e3c72, #2a5298);
-  padding: 20px;
-  border-radius: 18px;
-  width: 320px;
   cursor: pointer;
   transition: transform 0.2s ease;
-  margin-bottom: 30px;
 }
 
 .current-weather:hover {
-  transform: scale(1.03);
+  transform: translateY(-3px);
 }
 
 .weather-main {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 20px;
 }
 
 .weather-main img {
-  width: 70px;
+  width: 80px;
 }
 
 .temp {
-  font-size: 48px;
+  font-size: 52px;
   font-weight: bold;
 }
 
 .feels-like {
-  font-size: 16px;
   opacity: 0.8;
 }
 
+/* Hover overlay */
 .weather-tooltip {
   position: absolute;
   inset: 0;
-  background: rgba(0,0,0,0.92);
-  border-radius: 18px;
+  background: rgba(0,0,0,0.9);
+  border-radius: 20px;
   padding: 20px;
   display: none;
   flex-direction: column;
   justify-content: center;
   gap: 8px;
-  font-size: 14px;
 }
 
 .current-weather:hover .weather-tooltip {
   display: flex;
 }
 
-/* ===== 5 DAGARS PROGNOS ===== */
+/* ===== PROGNOS ===== */
 
 .forecast {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 15px;
-  flex-wrap: wrap;
 }
 
-.day {
-  background: rgba(255,255,255,0.1);
+.day-card {
+  background: rgba(255,255,255,0.06);
   padding: 15px;
-  border-radius: 14px;
+  border-radius: 16px;
   text-align: center;
-  width: 90px;
-  backdrop-filter: blur(5px);
+  transition: transform 0.2s ease;
 }
 
-.day img {
-  width: 40px;
+.day-card:hover {
+  transform: translateY(-4px);
+}
+
+.day-card img {
+  width: 45px;
 }
 
 .day-name {
@@ -103,9 +115,11 @@ body {
 </head>
 <body>
 
+<div class="container">
+
 <h2 id="locationTitle">Hämtar position...</h2>
 
-<div class="current-weather">
+<div class="card current-weather">
   <div class="weather-main">
     <img id="weatherIcon" src="">
     <div>
@@ -123,16 +137,16 @@ body {
   </div>
 </div>
 
-<h3>5-dygnsprognos</h3>
-<div class="forecast" id="forecast"></div>
+<div class="card">
+  <h3>5-dygnsprognos</h3>
+  <div class="forecast" id="forecast"></div>
+</div>
+
+</div>
 
 <script>
 
-const fallback = {
-  lat: 57.173,
-  lon: 14.040,
-  name: "Bor"
-};
+const fallback = { lat: 57.173, lon: 14.040, name: "Bor" };
 
 function getWeather(lat, lon, name="Din plats") {
 
@@ -143,37 +157,29 @@ function getWeather(lat, lon, name="Din plats") {
   .then(res => res.json())
   .then(data => {
 
-    const current = data.current;
+    const c = data.current;
 
-    temperature.textContent =
-      Math.round(current.temperature_2m) + "°";
+    temperature.textContent = Math.round(c.temperature_2m) + "°";
+    feelsLike.textContent = "Känns som " + Math.round(c.apparent_temperature) + "°";
+    wind.textContent = c.wind_speed_10m + " m/s";
+    humidity.textContent = c.relative_humidity_2m + " %";
+    pressure.textContent = c.surface_pressure + " hPa";
+    precip.textContent = (c.precipitation || 0) + " mm";
 
-    feelsLike.textContent =
-      "Känns som " + Math.round(current.apparent_temperature) + "°";
+    weatherDescription.textContent = weatherCodeToText(c.weather_code);
+    weatherIcon.src = weatherCodeToIcon(c.weather_code);
 
-    wind.textContent = current.wind_speed_10m + " m/s";
-    humidity.textContent = current.relative_humidity_2m + " %";
-    pressure.textContent = current.surface_pressure + " hPa";
-    precip.textContent = (current.precipitation || 0) + " mm";
-
-    weatherDescription.textContent =
-      weatherCodeToText(current.weather_code);
-
-    weatherIcon.src =
-      weatherCodeToIcon(current.weather_code);
-
-    const forecastEl = document.getElementById("forecast");
-    forecastEl.innerHTML = "";
+    forecast.innerHTML = "";
 
     for (let i = 1; i <= 5; i++) {
 
       const date = new Date(data.daily.time[i]);
       const dayName = date.toLocaleDateString("sv-SE", { weekday: "short" });
 
-      const day = document.createElement("div");
-      day.className = "day";
+      const card = document.createElement("div");
+      card.className = "day-card";
 
-      day.innerHTML = `
+      card.innerHTML = `
         <div class="day-name">${dayName}</div>
         <img src="${weatherCodeToIcon(data.daily.weather_code[i])}">
         <div class="temp-range">
@@ -182,32 +188,24 @@ function getWeather(lat, lon, name="Din plats") {
         </div>
       `;
 
-      forecastEl.appendChild(day);
+      forecast.appendChild(card);
     }
 
   });
 }
 
-/* ===== GPS ===== */
+/* GPS */
 
 if (navigator.geolocation) {
   navigator.geolocation.getCurrentPosition(
-    position => {
-      getWeather(
-        position.coords.latitude,
-        position.coords.longitude,
-        "Din plats"
-      );
-    },
-    () => {
-      getWeather(fallback.lat, fallback.lon, fallback.name);
-    }
+    pos => getWeather(pos.coords.latitude, pos.coords.longitude),
+    () => getWeather(fallback.lat, fallback.lon, fallback.name)
   );
 } else {
   getWeather(fallback.lat, fallback.lon, fallback.name);
 }
 
-/* ===== WEATHER CODE ===== */
+/* Weather code */
 
 function weatherCodeToText(code) {
   const map = {
@@ -215,7 +213,6 @@ function weatherCodeToText(code) {
     1: "Mestadels klart",
     2: "Halvklart",
     3: "Mulet",
-    45: "Dimma",
     61: "Regn",
     71: "Snö",
     80: "Regnskurar",
