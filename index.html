@@ -2,7 +2,8 @@
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
-<title>Väderdashboard</title>
+<title>INFOBOARD</title>
+
 <style>
 body {
   font-family: Arial, sans-serif;
@@ -34,86 +35,55 @@ body {
 .subtext {
   font-size: 16px;
   color: #ccc;
-  margin: 5px 0;
-}
-
-.minmax {
-  font-size: 18px;
-  margin: 6px 0;
-  line-height: 1.6;
 }
 
 .yesterday-temp {
   color: gold;
-  font-size: 22px;
+  font-size: 20px;
   margin-top: 6px;
 }
 
-.precip {
-  font-size: 18px;
-  margin-top: 8px;
-  color: #87cefa;
-}
+/* ===== Tooltip ===== */
 
-/* Tooltip för dagens min/max */
 .tooltip {
   position: relative;
   display: inline-block;
   cursor: default;
 }
 
-.tooltip .tooltiptext {
+/* Fade + slide animation */
+@keyframes tooltipFade {
+  0% { opacity: 0; transform: translate(-50%, -10px); }
+  100% { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.big-tooltip {
   visibility: hidden;
-  width: max-content;
-  background-color: gold;
-  color: black;
-  text-align: center;
-  border-radius: 6px;
-  padding: 4px 8px;
+  opacity: 0;
+  background: rgba(0,0,0,0.95);
+  color: #fff;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.6;
+  min-width: 220px;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.6);
   position: absolute;
-  z-index: 1;
   bottom: 125%;
   left: 50%;
   transform: translateX(-50%);
-  white-space: nowrap;
-  font-size: 14px;
+  z-index: 20;
+  transition: opacity 0.3s ease;
 }
 
-.tooltip:hover .tooltiptext {
+.tooltip:hover .big-tooltip {
   visibility: visible;
+  opacity: 1;
+  animation: tooltipFade 0.3s ease forwards;
 }
 
-/* 5-dagars prognos */
-.forecast-row {
-  display: flex;
-  justify-content: flex-start;
-  gap: 10px;
-  text-align: center;
-  flex-wrap: nowrap;
-  margin-top: 10px;
-  overflow-x: auto;
-  padding-bottom: 5px;
-}
+/* ===== Glide animation for temperature ===== */
 
-.forecast-day {
-  flex: 1 1 60px;
-  min-width: 60px;
-  text-align: center;
-}
-
-.forecast-day .day {
-  font-weight: bold;
-}
-
-.forecast-day .temp {
-  margin: 3px 0;
-}
-
-.forecast-day .icon {
-  font-size: 1.2em;
-}
-
-/* Fade + glide animation för temp-now */
 @keyframes glideIn {
   0% { opacity: 0; transform: translateY(-10px); }
   50% { opacity: 0.5; transform: translateY(2px); }
@@ -123,8 +93,49 @@ body {
 .animate-update {
   animation: glideIn 0.5s ease-in-out;
 }
+
+/* ===== Min/max tooltip ===== */
+
+.tooltiptext {
+  visibility: hidden;
+  background: gold;
+  color: black;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+  position: absolute;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+}
+
+.minmax {
+  font-size: 18px;
+  line-height: 1.6;
+  margin-top: 5px;
+}
+
+/* ===== Forecast ===== */
+
+.forecast-row {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  margin-top: 10px;
+}
+
+.forecast-day {
+  min-width: 60px;
+  text-align: center;
+}
 </style>
 </head>
+
 <body>
 
 <div class="section">
@@ -133,28 +144,26 @@ body {
 </div>
 
 <div class="section">
-  <div class="value" id="temp-now">-- °C (-- °C)</div>
+  <div class="tooltip value">
+    <div id="temp-now">-- °C (-- °C)</div>
+    <div class="big-tooltip" id="weather-tooltip">
+      Laddar väderdata...
+    </div>
+  </div>
   <div class="yesterday-temp" id="temp-yesterday">-- °C</div>
 </div>
 
 <div class="section">
-  <div class="subtext" id="wind">Vind: -- m/s</div>
-  <div class="subtext" id="humidity">Luftfuktighet: -- %</div>
-  <div class="subtext" id="pressure">Tryck: -- hPa</div>
-  <div class="precip" id="precipitation">Nederbörd kommande timme: --</div>
-</div>
-
-<!-- Dagens min/max med tooltip -->
-<div class="section">
-  <div class="tooltip minmax" id="temp-minmax">
+  <div class="tooltip minmax">
     <div id="today-minmax">Idag<br>Min: -- °C<br>Max: -- °C</div>
-    <span class="tooltiptext" id="yesterday-minmax-tooltip">Igår – Min: -- °C | Max: -- °C</span>
+    <div class="tooltiptext" id="yesterday-minmax-tooltip">
+      Igår – Min: -- °C | Max: -- °C
+    </div>
   </div>
 </div>
 
-<!-- 5-dagars prognos -->
 <div class="section">
-  <div class="subtext">Prognos 5 dagar:</div>
+  <div>Prognos 5 dagar:</div>
   <div class="forecast-row" id="forecast-5days"></div>
 </div>
 
@@ -163,31 +172,20 @@ const lat = 57.114025;
 const lon = 14.168177;
 
 function animateUpdate(element) {
-  element.classList.remove('animate-update'); 
-  void element.offsetWidth; // trigger reflow
-  element.classList.add('animate-update'); 
+  element.classList.remove('animate-update');
+  void element.offsetWidth;
+  element.classList.add('animate-update');
 }
 
 function updateDateWeek() {
   const now = new Date();
-  const date = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
-  const dayNum = date.getUTCDay() || 7;
-  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-  const week = Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
-
   document.getElementById('date-week').innerText =
     now.toLocaleDateString('sv-SE', {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
       year: 'numeric'
-    }) + ' | Vecka ' + week;
-}
-
-function isNight() {
-  const hour = new Date().getHours();
-  return hour < 6 || hour >= 21;
+    });
 }
 
 async function updateWeatherNow() {
@@ -197,160 +195,69 @@ async function updateWeatherNow() {
     const data = await res.json();
 
     const now = new Date();
-    const validSeries = data.timeSeries
-      .map(ts => ({ ...ts, time: new Date(ts.validTime) }))
+    const current = data.timeSeries
+      .map(ts => ({...ts, time:new Date(ts.validTime)}))
       .filter(ts => ts.time <= now)
-      .sort((a, b) => b.time - a.time);
-    const current = validSeries[0];
-    if (!current) return;
+      .sort((a,b)=>b.time-a.time)[0];
+
+    if(!current) return;
+
     const params = current.parameters;
 
-    const temp = params.find(p => p.name === 't')?.values[0];
-    const wind = params.find(p => p.name === 'ws')?.values[0];
-    const humidity = params.find(p => p.name === 'r')?.values[0];
-    const pressure = params.find(p => p.name === 'msl')?.values[0];
-    const precip = params.find(p => p.name === 'pmean')?.values[0] || 0;
-    const symbol = params.find(p => p.name === 'Wsymb2')?.values[0];
+    const temp = params.find(p=>p.name==="t")?.values[0];
+    const wind = params.find(p=>p.name==="ws")?.values[0];
+    const humidity = params.find(p=>p.name==="r")?.values[0];
+    const pressure = params.find(p=>p.name==="msl")?.values[0];
+    const precip = params.find(p=>p.name==="pmean")?.values[0] || 0;
+    const symbol = params.find(p=>p.name==="Wsymb2")?.values[0];
 
     let feelsLike = temp;
-    if (temp !== undefined && wind !== undefined && temp <= 10 && wind > 1.3) {
+
+    if (temp <= 10 && wind > 1.3) {
       const windKmH = wind * 3.6;
       feelsLike = 13.12 + 0.6215*temp - 11.37*Math.pow(windKmH,0.16) + 0.3965*temp*Math.pow(windKmH,0.16);
     }
-    if (temp !== undefined && humidity !== undefined && temp >= 20) {
-      const T = temp, R = humidity;
-      feelsLike = -8.784695 + 1.61139411*T + 2.338549*R - 0.14611605*T*R
-                  -0.012308094*T*T - 0.016424828*R*R + 0.002211732*T*T*R
-                  + 0.00072546*T*R*R - 0.000003582*T*T*R*R;
-    }
 
-    let icon = "☁️";
-    if(symbol===1) icon = isNight() ? "🌙" : "☀️";
-    else if(symbol===2) icon = isNight() ? "🌙☁️" : "🌤️";
-    else if(symbol===3) icon = "⛅";
-    else if(symbol===4) icon = "☁️";
-    else if(symbol===5||symbol===6) icon = "🌧️";
-    else if(symbol===7||symbol===8) icon = "🌨️";
-    else if(symbol===9) icon = "⛈️";
-    else if(symbol>=10) icon = "🌧️";
+    let icon="☁️", weatherText="Molnigt";
+
+    if(symbol===1){ icon="☀️"; weatherText="Klart väder"; }
+    else if(symbol===2){ icon="🌤️"; weatherText="Lätt molnighet"; }
+    else if(symbol===3){ icon="⛅"; weatherText="Växlande molnighet"; }
+    else if(symbol===4){ icon="☁️"; weatherText="Mulet"; }
+    else if(symbol===5){ icon="🌦️"; weatherText="Snöblandat regn"; }
+    else if(symbol===6){ icon="🌧️"; weatherText="Regn"; }
+    else if(symbol===7||symbol===8){ icon="🌨️"; weatherText="Snö"; }
+    else if(symbol===9){ icon="⛈️"; weatherText="Åska"; }
 
     const tempNowDiv = document.getElementById('temp-now');
-    tempNowDiv.innerHTML = `${icon} ${temp?.toFixed(1)??"--"} °C (${feelsLike?.toFixed(1)??"--"} °C)`;
-    
-    // Färgkod
+    tempNowDiv.innerHTML = `${icon} ${temp?.toFixed(1)} °C (${feelsLike?.toFixed(1)} °C)`;
+
     if(temp <= 10) tempNowDiv.style.color='#00bfff';
     else if(temp <= 20) tempNowDiv.style.color='#ffff00';
     else tempNowDiv.style.color='#ff4500';
 
     animateUpdate(tempNowDiv);
 
-    document.getElementById('wind').innerText = wind!==undefined?`Vind: ${wind.toFixed(1)} m/s`:'Vind: -- m/s';
-    document.getElementById('humidity').innerText = humidity!==undefined?`Luftfuktighet: ${humidity.toFixed(0)} %`:'Luftfuktighet: -- %';
-    document.getElementById('pressure').innerText = pressure!==undefined?`Tryck: ${pressure.toFixed(0)} hPa`:'Tryck: -- hPa';
-    document.getElementById('precipitation').innerText = precip>0?`Nederbörd kommande timme: ${precip.toFixed(1)} mm`:'Nederbörd kommande timme: 0 mm';
+    document.getElementById('weather-tooltip').innerHTML = `
+      <strong>${weatherText}</strong><br>
+      🌡️ Temperatur: ${temp?.toFixed(1)} °C<br>
+      🤔 Känns som: ${feelsLike?.toFixed(1)} °C<br>
+      🌬️ Vind: ${wind?.toFixed(1)} m/s<br>
+      💧 Luftfuktighet: ${humidity?.toFixed(0)} %<br>
+      📈 Tryck: ${pressure?.toFixed(0)} hPa<br>
+      🌧️ Nederbörd kommande timme: ${precip?.toFixed(1)} mm
+    `;
 
-    document.getElementById('weather-updated').innerText = 'Senast uppdaterad: ' + 
-      now.toLocaleTimeString('sv-SE', {hour: '2-digit', minute: '2-digit'});
+    document.getElementById('weather-updated').innerText =
+      "Senast uppdaterad: " +
+      now.toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'});
 
-  } catch(err) {
-    console.error("SMHI error:", err);
-  }
-}
-
-async function updateMinMax() {
-  try {
-    const now = new Date();
-    const today = now.toISOString().split('T')[0];
-    const yesterdayDate = new Date(now.getTime()-86400000);
-    const yesterday = yesterdayDate.toISOString().split('T')[0];
-
-    const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${yesterday}&end_date=${today}&hourly=temperature_2m&timezone=Europe/Stockholm`;
-    const res = await fetch(url);
-    const data = await res.json();
-
-    const hours = data.hourly.time.map(t=>new Date(t));
-    const temps = data.hourly.temperature_2m;
-
-    let minToday=999,maxToday=-999,minYesterday=999,maxYesterday=-999,tempYesterdaySameTime=null;
-
-    for(let i=0;i<temps.length;i++){
-      const dateStr = hours[i].toISOString().split('T')[0];
-      if(dateStr===today){
-        if(temps[i]<minToday) minToday=temps[i];
-        if(temps[i]>maxToday) maxToday=temps[i];
-      }
-      if(dateStr===yesterday){
-        if(temps[i]<minYesterday) minYesterday=temps[i];
-        if(temps[i]>maxYesterday) maxYesterday=temps[i];
-        if(hours[i].getHours()===now.getHours()) tempYesterdaySameTime=temps[i];
-      }
-    }
-
-    const tooltipSpan = document.getElementById('yesterday-minmax-tooltip');
-    tooltipSpan.innerText = `Igår – Min: ${minYesterday.toFixed(1)} °C | Max: ${maxYesterday.toFixed(1)} °C`;
-
-    const todayDiv = document.getElementById('today-minmax');
-    todayDiv.innerHTML = `Idag<br>Min: ${minToday.toFixed(1)} °C<br>Max: ${maxToday.toFixed(1)} °C`;
-
-    if(tempYesterdaySameTime!==null){
-      const yesterdayDiv = document.getElementById('temp-yesterday');
-      yesterdayDiv.innerText = `${tempYesterdaySameTime.toFixed(1)} °C`;
-      yesterdayDiv.style.color='gold';
-    }
-
-  } catch(err){
-    console.error("Historikfel:", err);
-  }
-}
-
-async function updateForecast5Days() {
-  try {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,weathercode&timezone=Europe/Stockholm&forecast_days=6`;
-    const res = await fetch(url);
-    const data = await res.json();
-
-    const container = document.getElementById('forecast-5days');
-    container.innerHTML = '';
-
-    const iconsMap = {
-      0: "☀️",1:"🌤️",2:"⛅",3:"☁️",
-      61:"🌧️",63:"🌧️",65:"🌧️⚡",
-      71:"🌨️",73:"🌨️",75:"🌨️",
-      95:"⚡",96:"⚡",99:"⚡⚡"
-    };
-    const iconTextMap = {
-      0:"Sol",1:"Lite sol",2:"Delvis moln",3:"Molnigt",
-      61:"Regn",63:"Regn",65:"Regn med åska",
-      71:"Snö",73:"Snö",75:"Snö",
-      95:"Åska",96:"Åska",99:"Kraftig åska"
-    };
-
-    for(let i=1;i<=5;i++){
-      const day = new Date(data.daily.time[i]).toLocaleDateString('sv-SE',{weekday:'short'});
-      const temp = data.daily.temperature_2m_max[i].toFixed(1);
-      const code = data.daily.weathercode[i];
-      const icon = iconsMap[code]||"☁️";
-
-      const div = document.createElement('div');
-      div.className='forecast-day';
-      div.innerHTML=`<div class="day">${day}</div><div class="temp">${temp}°</div>
-        <div class="icon" title="${iconTextMap[code]||'Moln'}">${icon}</div>`;
-      container.appendChild(div);
-    }
-
-  } catch(err){
-    console.error("5-dagars prognosfel:", err);
-  }
+  } catch(err){ console.error(err); }
 }
 
 updateDateWeek();
 updateWeatherNow();
-updateMinMax();
-updateForecast5Days();
-
 setInterval(updateWeatherNow,5*60*1000);
-setInterval(updateMinMax,15*60*1000);
-setInterval(updateForecast5Days,60*60*1000);
 </script>
 
 </body>
