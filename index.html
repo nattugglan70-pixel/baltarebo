@@ -1,4 +1,4 @@
-<!-- Väder 1.2: fallback för igår samma tid/min-max, uppdateras … om data saknas -->
+<!-- Komplett kod: Väder 1.2 med fallback "Uppdateras" -->
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -110,7 +110,7 @@ body{
 
   <div class="right">
     <div id="date"></div>
-    <div id="updated-container">Uppdaterad: <span id="updated"></span></div>
+    <div id="updated"></div>
   </div>
 </div>
 
@@ -176,7 +176,7 @@ async function loadForecast(){
   });
 
   forecast.innerHTML="";
-  Object.keys(daily).slice(1,6).forEach(d=>{ // startar dagen efter idag
+  Object.keys(daily).slice(1,6).forEach(d=>{ // börjar från nästa dag
     const arr=daily[d];
     const temps=arr.map(x=>{
       const p={};x.parameters.forEach(a=>p[a.name]=a.values[0]);
@@ -227,13 +227,14 @@ async function loadYesterday(){
     });
     ySame.textContent=Math.round(same.value)+"°";
 
-    updated.textContent=new Date().toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"});
+    // normal uppdaterad
+    const nowTime = new Date();
+    updated.textContent="Uppdaterad: "+nowTime.toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"});
     updated.style.color="white";
-  }else{
-    ySame.textContent="--";
-    yMin.textContent="--";
-    yMax.textContent="--";
-    updated.textContent="Uppdateras …";
+
+  } else {
+    // fallback: ingen data, visa "Uppdateras…"
+    updated.textContent="Uppdateras…";
     updated.style.color="orange";
   }
 }
