@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Väderdashboard</title>
+<title>VÄDER</title>
 <style>
 body {
   font-family: Arial, sans-serif;
@@ -32,18 +32,11 @@ body {
 .current-weather {
   display: flex;
   gap: 20px;
-  max-height: 150px;         /* Begränsar huvudrutans höjd */
-  align-items: center;
+  cursor: pointer;
+  transition: transform 0.2s ease;
 }
-
-/* SEKTIONER */
-.left-section, .middle-section, .right-section {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 8px;
-  padding: 0 10px;
-  flex: 1;
+.current-weather:hover {
+  transform: translateY(-3px);
 }
 
 /* VÄDERMAIN */
@@ -51,6 +44,7 @@ body {
   display: flex;
   align-items: center;
   gap: 20px;
+  flex: 2;
 }
 .weather-main img {
   width: 80px;
@@ -61,21 +55,52 @@ body {
 }
 .feels-like {
   opacity: 0.8;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.wind-direction {
+  font-size: 16px; /* Storlek som datum/senast uppdaterad */
+  font-weight: bold;
 }
 
-/* VINDRIKTNINGSPIL */
-.wind-arrow {
-  font-size: 14px; /* kommer uppdateras JS till samma storlek som datum */
-  transform: rotate(0deg);
-  display: inline-block;
-  margin-left: 5px;
+/* MITTINFO */
+.middle-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  justify-content: center;
 }
 
-/* DATUM/VECKA + SENAST UPPDATERAD */
-.date-week {
-  font-size: 16px; /* lite större som du önskade */
-  opacity: 0.8;
-  margin-bottom: 5px;
+/* HÖGERINFO */
+.weather-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 16px; /* Större textstorlek för datum och uppdaterad */
+  justify-content: center;
+}
+
+/* HOVER-OVERLAY (finns kvar om du vill använda senare) */
+.weather-tooltip {
+  position: absolute;
+  inset: 0;
+  background: gold;
+  color: black;
+  border-radius: 20px;
+  padding: 20px;
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  z-index: 10;
+}
+.current-weather:hover .weather-tooltip {
+  display: flex;
 }
 
 /* ===== 5 DAGARS PROGNOS ===== */
@@ -104,6 +129,13 @@ body {
 .temp-range {
   font-size: 14px;
 }
+
+/* DATUM/VECKA + SENAST UPPDATERAD */
+.date-week {
+  font-size: 16px;
+  opacity: 0.8;
+  margin-bottom: 5px;
+}
 </style>
 </head>
 <body>
@@ -112,32 +144,27 @@ body {
 
 <!-- DAGENS VÄDER -->
 <div class="card current-weather">
-  <!-- VÄNSTER -->
-  <div class="left-section">
-    <div class="weather-main">
-      <img id="weatherIcon" src="">
-      <div>
-        <div class="temp" id="temperature">--°</div>
-        <div class="feels-like">
-          Känns som <span id="feelsLike">--°</span>
-          <span class="wind-arrow" id="windArrow">↑</span>
-        </div>
+  <div class="weather-main">
+    <img id="weatherIcon" src="">
+    <div>
+      <div class="temp" id="temperature">--°</div>
+      <div class="feels-like" id="feelsLike">
+        Känns som --° 
+        <span class="wind-direction" id="windDir">⬆ N</span>
       </div>
     </div>
   </div>
 
-  <!-- MITTEN -->
-  <div class="middle-section">
-    <div>Vind: <span id="wind">-- m/s</span></div>
-    <div>Luftfuktighet: <span id="humidity">-- %</span></div>
-    <div>Tryck: <span id="pressure">-- hPa</span></div>
-    <div>Nederbörd (1h): <span id="precip">-- mm</span></div>
+  <div class="middle-info">
+    <div>Vind: <span id="wind">--</span></div>
+    <div>Luftfuktighet: <span id="humidity">--</span></div>
+    <div>Tryck: <span id="pressure">--</span></div>
+    <div>Nederbörd (1h): <span id="precip">--</span></div>
     <div>Igår samma tid: <span id="tempYesterday">--°</span></div>
     <div>Igår – Min: <span id="yesterdayMin">--°</span> / Max: <span id="yesterdayMax">--°</span></div>
   </div>
 
-  <!-- HÖGER -->
-  <div class="right-section">
+  <div class="weather-info">
     <div class="date-week" id="dateWeek">--</div>
     <div>Senast uppdaterad: <span id="updatedTime">--:--</span></div>
   </div>
@@ -168,39 +195,32 @@ function updateDateWeek() {
 
 // ===== WEATHER FETCH =====
 async function getWeather(lat, lon) {
-
   updateDateWeek();
   const now = new Date();
 
+  // Aktuellt
   const urlCurrent = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,relative_humidity_2m,surface_pressure,precipitation&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=Europe/Stockholm&forecast_days=6`;
   const res = await fetch(urlCurrent);
   const data = await res.json();
 
   const c = data.current_weather || data.current;
-  
-  // ===== RÄTT "FEELS LIKE" BERÄKNING =====
-  // Wind chill approximation (°C)
-  function calcFeelsLike(tempC, windMs){
-    if(tempC > 10) return tempC; // bara kalla dagar
-    let v = windMs * 3.6; // m/s -> km/h
-    return Math.round(13.12 + 0.6215*tempC - 11.37*Math.pow(v,0.16) + 0.3965*tempC*Math.pow(v,0.16));
-  }
 
-  const feelsTemp = calcFeelsLike(c.temperature_2m, c.wind_speed_10m);
+  // ===== KÄNNS SOM med korrekt beräkning =====
+  const tempC = c.temperature_2m;
+  const windMS = c.wind_speed_10m;
+  const feels = calculateFeelsLike(tempC, windMS);
+  temperature.textContent = Math.round(tempC) + "°";
+  feelsLike.textContent = "Känns som " + Math.round(feels) + "°";
 
-  temperature.textContent = Math.round(c.temperature_2m) + "°";
-  feelsLike.textContent = feelsTemp + "°";
+  // Vind och riktning
+  wind.textContent = windMS + " m/s";
+  const dir = windDirectionText(c.wind_direction_10m);
+  windDir.textContent = `${windArrow(c.wind_direction_10m)} ${dir}`;
 
-  wind.textContent = c.wind_speed_10m + " m/s";
   humidity.textContent = c.relative_humidity_2m + " %";
   pressure.textContent = c.surface_pressure + " hPa";
   precip.textContent = (c.precipitation || 0) + " mm";
-
-  // Vindriktning
-  const arrow = document.getElementById("windArrow");
-  arrow.style.transform = `rotate(${c.wind_direction_10m}deg)`;
-  arrow.style.fontSize = "16px";
-
+  weatherDescription.textContent = weatherCodeToText(c.weather_code);
   weatherIcon.src = weatherCodeToIcon(c.weather_code);
 
   // Femdygnsprognos
@@ -222,8 +242,7 @@ async function getWeather(lat, lon) {
   // ===== HISTORISKT: IGÅR =====
   const yesterdayDate = new Date(now.getTime() - 86400000);
   const start = yesterdayDate.toISOString().split('T')[0];
-  const end = start;
-  const urlHistory = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${start}&end_date=${end}&hourly=temperature_2m&timezone=Europe/Stockholm`;
+  const urlHistory = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${start}&end_date=${start}&hourly=temperature_2m&timezone=Europe/Stockholm`;
   const resH = await fetch(urlHistory);
   const dataH = await resH.json();
   let temps = dataH.hourly.temperature_2m;
@@ -244,6 +263,27 @@ async function getWeather(lat, lon) {
   updatedTime.textContent = now.toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'});
 }
 
+// ===== FEELS LIKE BERÄKNING =====
+function calculateFeelsLike(tempC, windMS){
+  // Enkel version av vindkyla (Wind Chill)
+  const v = windMS * 3.6; // m/s till km/h
+  if(tempC <= 10 && v > 4.8){
+    return 13.12 + 0.6215*tempC - 11.37*Math.pow(v,0.16) + 0.3965*tempC*Math.pow(v,0.16);
+  } else {
+    return tempC;
+  }
+}
+
+// ===== VINDRIKTNING =====
+function windDirectionText(deg){
+  const dirs = ["N","NV","V","SV","S","SO","O","NO"];
+  return dirs[Math.round(((deg %= 360) < 0 ? deg + 360 : deg) / 45) % 8];
+}
+function windArrow(deg){
+  const arrowDirs = ["↑","↖","←","↙","↓","↘","→","↗"];
+  return arrowDirs[Math.round(((deg %= 360) < 0 ? deg + 360 : deg) / 45) % 8];
+}
+
 // ===== GPS =====
 if(navigator.geolocation){
   navigator.geolocation.getCurrentPosition(
@@ -255,6 +295,10 @@ if(navigator.geolocation){
 }
 
 // ===== WEATHER CODE =====
+function weatherCodeToText(code){
+  const map = {0:"Klart",1:"Mestadels klart",2:"Halvklart",3:"Mulet",61:"Regn",71:"Snö",80:"Regnskurar",85:"Snöbyar"};
+  return map[code]||"Okänt väder";
+}
 function weatherCodeToIcon(code){
   if(code===0)return "https://cdn-icons-png.flaticon.com/512/869/869869.png";
   if([1,2].includes(code))return "https://cdn-icons-png.flaticon.com/512/1163/1163624.png";
