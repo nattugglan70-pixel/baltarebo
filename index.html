@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VÄDER</title>
-
+<title>Väderdashboard</title>
 <style>
 body {
   font-family: Arial, sans-serif;
@@ -13,15 +12,12 @@ body {
   margin: 0;
   padding: 30px;
 }
-
-/* WRAPPER */
 .container {
   max-width: 900px;
   margin: auto;
 }
 
-/* ===== BLOCK-STIL ===== */
-
+/* ===== DAGENS VÄDERBLOCK ===== */
 .card {
   background: rgba(255,255,255,0.08);
   backdrop-filter: blur(12px);
@@ -29,64 +25,72 @@ body {
   padding: 20px;
   box-shadow: 0 10px 25px rgba(0,0,0,0.3);
   margin-bottom: 25px;
+  position: relative;
 }
 
-/* ===== NUVARANDE VÄDER ===== */
-
+/* HUVUDBLOCK */
 .current-weather {
-  position: relative;
+  display: flex;
+  gap: 20px;
   cursor: pointer;
   transition: transform 0.2s ease;
 }
-
 .current-weather:hover {
   transform: translateY(-3px);
 }
 
+/* VÄDERMAIN */
 .weather-main {
   display: flex;
   align-items: center;
   gap: 20px;
+  flex: 2;
 }
-
 .weather-main img {
   width: 80px;
 }
-
 .temp {
   font-size: 52px;
   font-weight: bold;
 }
-
 .feels-like {
   opacity: 0.8;
 }
 
-/* Hover overlay */
+/* HÖGERINFO */
+.weather-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  justify-content: center;
+}
+
+/* HOVER-OVERLAY */
 .weather-tooltip {
   position: absolute;
   inset: 0;
-  background: rgba(0,0,0,0.9);
+  background: gold;
+  color: black;
   border-radius: 20px;
   padding: 20px;
   display: none;
   flex-direction: column;
   justify-content: center;
   gap: 8px;
+  z-index: 10;
 }
-
 .current-weather:hover .weather-tooltip {
   display: flex;
 }
 
-/* ===== PROGNOS ===== */
-
+/* ===== 5 DAGARS PROGNOS ===== */
 .forecast {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 15px;
 }
-
 .day-card {
   background: rgba(255,255,255,0.06);
   padding: 15px;
@@ -94,22 +98,25 @@ body {
   text-align: center;
   transition: transform 0.2s ease;
 }
-
 .day-card:hover {
   transform: translateY(-4px);
 }
-
 .day-card img {
   width: 45px;
 }
-
 .day-name {
   font-weight: bold;
   margin-bottom: 5px;
 }
-
 .temp-range {
   font-size: 14px;
+}
+
+/* DATUM/VECKA + SENAST UPPDATERAD */
+.date-week {
+  font-size: 14px;
+  opacity: 0.8;
+  margin-bottom: 5px;
 }
 </style>
 </head>
@@ -117,8 +124,7 @@ body {
 
 <div class="container">
 
-<h2 id="locationTitle">Hämtar position...</h2>
-
+<!-- DAGENS VÄDER -->
 <div class="card current-weather">
   <div class="weather-main">
     <img id="weatherIcon" src="">
@@ -126,6 +132,12 @@ body {
       <div class="temp" id="temperature">--°</div>
       <div class="feels-like" id="feelsLike">Känns som --°</div>
     </div>
+  </div>
+  <div class="weather-info">
+    <div class="date-week" id="dateWeek">--</div>
+    <div>Senast uppdaterad: <span id="updatedTime">--:--</span></div>
+    <div>Igår samma tid: <span id="tempYesterday">--°</span></div>
+    <div>Igår – Min: <span id="yesterdayMin">--°</span> / Max: <span id="yesterdayMax">--°</span></div>
   </div>
 
   <div class="weather-tooltip">
@@ -137,6 +149,7 @@ body {
   </div>
 </div>
 
+<!-- 5-DYGN -->
 <div class="card">
   <h3>5-dygnsprognos</h3>
   <div class="forecast" id="forecast"></div>
@@ -145,92 +158,106 @@ body {
 </div>
 
 <script>
-
+// ===== CONFIG / FALLBACK =====
 const fallback = { lat: 57.173, lon: 14.040, name: "Bor" };
 
-function getWeather(lat, lon, name="Din plats") {
-
-  document.getElementById("locationTitle").textContent =
-    "Väder för " + name;
-
-  fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m,surface_pressure,precipitation&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`)
-  .then(res => res.json())
-  .then(data => {
-
-    const c = data.current;
-
-    temperature.textContent = Math.round(c.temperature_2m) + "°";
-    feelsLike.textContent = "Känns som " + Math.round(c.apparent_temperature) + "°";
-    wind.textContent = c.wind_speed_10m + " m/s";
-    humidity.textContent = c.relative_humidity_2m + " %";
-    pressure.textContent = c.surface_pressure + " hPa";
-    precip.textContent = (c.precipitation || 0) + " mm";
-
-    weatherDescription.textContent = weatherCodeToText(c.weather_code);
-    weatherIcon.src = weatherCodeToIcon(c.weather_code);
-
-    forecast.innerHTML = "";
-
-    for (let i = 1; i <= 5; i++) {
-
-      const date = new Date(data.daily.time[i]);
-      const dayName = date.toLocaleDateString("sv-SE", { weekday: "short" });
-
-      const card = document.createElement("div");
-      card.className = "day-card";
-
-      card.innerHTML = `
-        <div class="day-name">${dayName}</div>
-        <img src="${weatherCodeToIcon(data.daily.weather_code[i])}">
-        <div class="temp-range">
-          ${Math.round(data.daily.temperature_2m_max[i])}° /
-          ${Math.round(data.daily.temperature_2m_min[i])}°
-        </div>
-      `;
-
-      forecast.appendChild(card);
-    }
-
-  });
+// ===== DATUM + VECKA =====
+function updateDateWeek() {
+  const now = new Date();
+  const dayNum = now.getDay() || 7;
+  const date = new Date(now);
+  const yearStart = new Date(date.getFullYear(),0,1);
+  const week = Math.ceil((((date - yearStart)/86400000 + 1)/7));
+  document.getElementById("dateWeek").innerText =
+    now.toLocaleDateString('sv-SE', { weekday:'long', day:'numeric', month:'long', year:'numeric'}) + " | Vecka " + week;
 }
 
-/* GPS */
+// ===== WEATHER FETCH =====
+async function getWeather(lat, lon) {
 
-if (navigator.geolocation) {
+  updateDateWeek();
+  const now = new Date();
+
+  // Aktuellt
+  const urlCurrent = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m,surface_pressure,precipitation&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=Europe/Stockholm&forecast_days=6`;
+  const res = await fetch(urlCurrent);
+  const data = await res.json();
+
+  const c = data.current_weather || data.current;
+  temperature.textContent = Math.round(c.temperature_2m) + "°";
+  feelsLike.textContent = "Känns som " + Math.round(c.apparent_temperature) + "°";
+  wind.textContent = c.wind_speed_10m + " m/s";
+  humidity.textContent = c.relative_humidity_2m + " %";
+  pressure.textContent = c.surface_pressure + " hPa";
+  precip.textContent = (c.precipitation || 0) + " mm";
+  weatherDescription.textContent = weatherCodeToText(c.weather_code);
+  weatherIcon.src = weatherCodeToIcon(c.weather_code);
+
+  // Femdygnsprognos
+  forecast.innerHTML = "";
+  for(let i=1;i<=5;i++){
+    const date = new Date(data.daily.time[i]);
+    const dayName = date.toLocaleDateString("sv-SE",{weekday:'short'});
+    const card = document.createElement("div");
+    card.className = "day-card";
+    card.innerHTML = `
+      <div class="day-name">${dayName}</div>
+      <img src="${weatherCodeToIcon(data.daily.weather_code[i])}">
+      <div class="temp-range">
+        ${Math.round(data.daily.temperature_2m_max[i])}° / ${Math.round(data.daily.temperature_2m_min[i])}°
+      </div>`;
+    forecast.appendChild(card);
+  }
+
+  // ===== HISTORISKT: IGÅR =====
+  const yesterdayDate = new Date(now.getTime() - 86400000);
+  const start = yesterdayDate.toISOString().split('T')[0];
+  const end = start;
+  const urlHistory = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${start}&end_date=${end}&hourly=temperature_2m&timezone=Europe/Stockholm`;
+  const resH = await fetch(urlHistory);
+  const dataH = await resH.json();
+  let temps = dataH.hourly.temperature_2m;
+  let times = dataH.hourly.time.map(t=>new Date(t));
+  let minY=999,maxY=-999,sameHourTemp=null;
+  const nowHour = now.getHours();
+  for(let i=0;i<temps.length;i++){
+    const d = times[i];
+    if(temps[i]<minY) minY=temps[i];
+    if(temps[i]>maxY) maxY=temps[i];
+    if(d.getHours()===nowHour) sameHourTemp = temps[i];
+  }
+  tempYesterday.textContent = sameHourTemp !== null ? Math.round(sameHourTemp)+"°" : "--";
+  yesterdayMin.textContent = Math.round(minY);
+  yesterdayMax.textContent = Math.round(maxY);
+
+  // Uppdaterad tid
+  updatedTime.textContent = now.toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'});
+}
+
+// ===== GPS =====
+if(navigator.geolocation){
   navigator.geolocation.getCurrentPosition(
-    pos => getWeather(pos.coords.latitude, pos.coords.longitude),
-    () => getWeather(fallback.lat, fallback.lon, fallback.name)
+    pos => getWeather(pos.coords.latitude,pos.coords.longitude),
+    () => getWeather(fallback.lat,fallback.lon)
   );
 } else {
-  getWeather(fallback.lat, fallback.lon, fallback.name);
+  getWeather(fallback.lat,fallback.lon);
 }
 
-/* Weather code */
-
-function weatherCodeToText(code) {
-  const map = {
-    0: "Klart",
-    1: "Mestadels klart",
-    2: "Halvklart",
-    3: "Mulet",
-    61: "Regn",
-    71: "Snö",
-    80: "Regnskurar",
-    85: "Snöbyar"
-  };
-  return map[code] || "Okänt väder";
+// ===== WEATHER CODE =====
+function weatherCodeToText(code){
+  const map = {0:"Klart",1:"Mestadels klart",2:"Halvklart",3:"Mulet",61:"Regn",71:"Snö",80:"Regnskurar",85:"Snöbyar"};
+  return map[code]||"Okänt väder";
 }
-
-function weatherCodeToIcon(code) {
-  if (code === 0) return "https://cdn-icons-png.flaticon.com/512/869/869869.png";
-  if ([1,2].includes(code)) return "https://cdn-icons-png.flaticon.com/512/1163/1163624.png";
-  if (code === 3) return "https://cdn-icons-png.flaticon.com/512/414/414825.png";
-  if ([61,80].includes(code)) return "https://cdn-icons-png.flaticon.com/512/1163/1163657.png";
-  if ([71,85].includes(code)) return "https://cdn-icons-png.flaticon.com/512/642/642102.png";
+function weatherCodeToIcon(code){
+  if(code===0)return "https://cdn-icons-png.flaticon.com/512/869/869869.png";
+  if([1,2].includes(code))return "https://cdn-icons-png.flaticon.com/512/1163/1163624.png";
+  if(code===3)return "https://cdn-icons-png.flaticon.com/512/414/414825.png";
+  if([61,80].includes(code))return "https://cdn-icons-png.flaticon.com/512/1163/1163657.png";
+  if([71,85].includes(code))return "https://cdn-icons-png.flaticon.com/512/642/642102.png";
   return "https://cdn-icons-png.flaticon.com/512/1163/1163661.png";
 }
 
 </script>
-
 </body>
 </html>
