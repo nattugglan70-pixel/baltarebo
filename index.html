@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VÄDER</title>
+<title>Väderdashboard</title>
 <style>
 body {
   font-family: Arial, sans-serif;
@@ -34,6 +34,7 @@ body {
   gap: 20px;
   cursor: pointer;
   transition: transform 0.2s ease;
+  position: relative;
 }
 .current-weather:hover {
   transform: translateY(-3px);
@@ -62,22 +63,25 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  font-size: 14px;
+  gap: 10px;
+  font-size: 16px; /* ökad textstorlek här */
   justify-content: center;
 }
 
-/* HOVER-OVERLAY */
+/* HOVER-OVERLAY: VÄNSTER STAPEL */
 .weather-tooltip {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: -220px; /* placeras till vänster om blocket */
+  width: 200px;
+  height: 100%; /* täcker hela höjden */
   background: black;
   color: white;
   border-radius: 20px;
   padding: 20px;
   display: none;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 8px;
   z-index: 10;
 }
@@ -114,8 +118,8 @@ body {
 
 /* DATUM/VECKA + SENAST UPPDATERAD */
 .date-week {
-  font-size: 14px;
-  opacity: 0.8;
+  font-size: 16px; /* ökad textstorlek */
+  opacity: 0.9;
   margin-bottom: 5px;
 }
 </style>
