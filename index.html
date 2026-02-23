@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Väderdashboard</title>
+<title>VÄDER</title>
 <style>
 body {
   font-family: Arial, sans-serif;
@@ -55,6 +55,15 @@ body {
 }
 .feels-like {
   opacity: 0.8;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* PIL FÖR VINDRIKTNING */
+.wind-arrow {
+  display: inline-block;
+  transform: rotate(0deg);
 }
 
 /* HÖGERINFO */
@@ -63,16 +72,18 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  font-size: 16px; /* justerat textstorlek lite större */
+  font-size: 16px; /* större text */
   justify-content: center;
 }
 
 /* HOVER-OVERLAY */
 .weather-tooltip {
   position: absolute;
-  inset: 0;
-  background: black; /* ändrat till svart bakgrund */
-  color: white; /* vit text */
+  top: 0;
+  left: -250px; /* poppar ut till vänster */
+  width: 250px;
+  background: black;
+  color: white;
   border-radius: 20px;
   padding: 20px;
   display: none;
@@ -114,8 +125,8 @@ body {
 
 /* DATUM/VECKA + SENAST UPPDATERAD */
 .date-week {
-  font-size: 16px; /* lite större */
-  opacity: 0.9;
+  font-size: 16px; /* större text */
+  opacity: 0.8;
   margin-bottom: 5px;
 }
 </style>
@@ -130,7 +141,9 @@ body {
     <img id="weatherIcon" src="">
     <div>
       <div class="temp" id="temperature">--°</div>
-      <div class="feels-like" id="feelsLike">Känns som --°</div>
+      <div class="feels-like" id="feelsLike">
+        Känns som --° <span class="wind-arrow" id="windArrow">↑</span>
+      </div>
     </div>
   </div>
   <div class="weather-info">
@@ -172,78 +185,77 @@ function updateDateWeek() {
     now.toLocaleDateString('sv-SE', { weekday:'long', day:'numeric', month:'long', year:'numeric'}) + " | Vecka " + week;
 }
 
-// ===== FEELS LIKE BERÄKNING =====
-function calculateFeelsLike(tempC, windMs) {
-  const windKmH = windMs*3.6;
-  if(tempC <= 10 && windMs > 1.3){
-    // Vindkylaformel
-    return 13.12 + 0.6215*tempC - 11.37*Math.pow(windKmH,0.16) + 0.3965*tempC*Math.pow(windKmH,0.16);
-  } else if(tempC >= 20){
-    // Värmeindex med luftfuktighet ej i denna simpla version, kan lägga till om vi vill
-    return tempC; 
-  } else {
-    return tempC;
-  }
-}
-
 // ===== WEATHER FETCH =====
 async function getWeather(lat, lon) {
+
   updateDateWeek();
   const now = new Date();
 
-  // SMHI aktuellt
-  const urlSMHI = `https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${lon}/lat/${lat}/data.json`;
-  const resSMHI = await fetch(urlSMHI);
-  const dataSMHI = await resSMHI.json();
+  // Aktuellt
+  const urlCurrent = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m,surface_pressure,precipitation&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=Europe/Stockholm&forecast_days=6`;
+  const res = await fetch(urlCurrent);
+  const data = await res.json();
 
-  const timeSeries = dataSMHI.timeSeries.map(ts=>({ ...ts, time: new Date(ts.validTime)}))
-                    .filter(ts=>ts.time <= now)
-                    .sort((a,b)=>b.time - a.time);
-  const current = timeSeries[0];
-  const params = current.parameters;
-  const temp = params.find(p=>p.name==='t')?.values[0];
-  const wind = params.find(p=>p.name==='ws')?.values[0];
-  const humidityVal = params.find(p=>p.name==='r')?.values[0];
-  const pressureVal = params.find(p=>p.name==='msl')?.values[0];
-  const precipVal = params.find(p=>p.name==='pmean')?.values[0] || 0;
-  const weatherCode = params.find(p=>p.name==='Wsymb2')?.values[0];
+  const c = data.current_weather || data.current;
 
+  // ===== FEELS LIKE KORREKT BERÄKNING =====
+  let temp = c.temperature_2m;
+  let wind = c.wind_speed_10m;
+  let feelsLike = temp;
+
+  // Vindavkylning (wind chill) om temperatur <= 10°C och vind > 1,3 m/s
+  if(temp <= 10 && wind > 1.3){
+    const windKmH = wind*3.6;
+    feelsLike = 13.12 + 0.6215*temp - 11.37*Math.pow(windKmH,0.16) + 0.3965*temp*Math.pow(windKmH,0.16);
+  }
+  // Värmeindex om temp >= 20°C
+  if(temp >= 20){
+    const T = temp, R = c.relative_humidity_2m;
+    feelsLike = -8.784695 + 1.61139411*T + 2.338549*R - 0.14611605*T*R
+                -0.012308094*T*T - 0.016424828*R*R + 0.002211732*T*T*R
+                + 0.00072546*T*R*R - 0.000003582*T*T*R*R;
+  }
+
+  // Visa värden
   temperature.textContent = Math.round(temp) + "°";
-  feelsLike.textContent = "Känns som " + Math.round(calculateFeelsLike(temp, wind)) + "°";
-  wind.textContent = wind.toFixed(1) + " m/s";
-  humidity.textContent = humidityVal + " %";
-  pressure.textContent = pressureVal + " hPa";
-  precip.textContent = precipVal.toFixed(1) + " mm";
-  weatherDescription.textContent = weatherCodeToText(weatherCode);
-  weatherIcon.src = weatherCodeToIcon(weatherCode);
+  feelsLike.textContent = "Känns som " + Math.round(feelsLike) + "° ";
+  wind.textContent = wind + " m/s";
+  humidity.textContent = c.relative_humidity_2m + " %";
+  pressure.textContent = c.surface_pressure + " hPa";
+  precip.textContent = (c.precipitation || 0) + " mm";
 
-  // 5-dygnsprognos från Open-Meteo
-  const urlForecast = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=Europe/Stockholm&forecast_days=6`;
-  const resForecast = await fetch(urlForecast);
-  const dataForecast = await resForecast.json();
+  // Pilen för vindriktning (här ett exempel: nordost = 45°)
+  const windArrow = document.getElementById("windArrow");
+  windArrow.style.transform = "rotate(45deg)";
+
+  weatherDescription.textContent = weatherCodeToText(c.weather_code);
+  weatherIcon.src = weatherCodeToIcon(c.weather_code);
+
+  // Femdygnsprognos
   forecast.innerHTML = "";
   for(let i=1;i<=5;i++){
-    const date = new Date(dataForecast.daily.time[i]);
+    const date = new Date(data.daily.time[i]);
     const dayName = date.toLocaleDateString("sv-SE",{weekday:'short'});
     const card = document.createElement("div");
     card.className = "day-card";
     card.innerHTML = `
       <div class="day-name">${dayName}</div>
-      <img src="${weatherCodeToIcon(dataForecast.daily.weathercode[i])}">
+      <img src="${weatherCodeToIcon(data.daily.weather_code[i])}">
       <div class="temp-range">
-        ${Math.round(dataForecast.daily.temperature_2m_max[i])}° / ${Math.round(dataForecast.daily.temperature_2m_min[i])}°
+        ${Math.round(data.daily.temperature_2m_max[i])}° / ${Math.round(data.daily.temperature_2m_min[i])}°
       </div>`;
     forecast.appendChild(card);
   }
 
-  // Historik igår
-  const yesterdayDate = new Date(now.getTime()-86400000);
+  // ===== HISTORISKT: IGÅR =====
+  const yesterdayDate = new Date(now.getTime() - 86400000);
   const start = yesterdayDate.toISOString().split('T')[0];
-  const urlHistory = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${start}&end_date=${start}&hourly=temperature_2m&timezone=Europe/Stockholm`;
+  const end = start;
+  const urlHistory = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${start}&end_date=${end}&hourly=temperature_2m&timezone=Europe/Stockholm`;
   const resH = await fetch(urlHistory);
   const dataH = await resH.json();
-  const temps = dataH.hourly.temperature_2m;
-  const times = dataH.hourly.time.map(t=>new Date(t));
+  let temps = dataH.hourly.temperature_2m;
+  let times = dataH.hourly.time.map(t=>new Date(t));
   let minY=999,maxY=-999,sameHourTemp=null;
   const nowHour = now.getHours();
   for(let i=0;i<temps.length;i++){
@@ -256,10 +268,11 @@ async function getWeather(lat, lon) {
   yesterdayMin.textContent = Math.round(minY);
   yesterdayMax.textContent = Math.round(maxY);
 
+  // Uppdaterad tid
   updatedTime.textContent = now.toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'});
 }
 
-// GPS
+// ===== GPS =====
 if(navigator.geolocation){
   navigator.geolocation.getCurrentPosition(
     pos => getWeather(pos.coords.latitude,pos.coords.longitude),
@@ -269,7 +282,7 @@ if(navigator.geolocation){
   getWeather(fallback.lat,fallback.lon);
 }
 
-// Weather code to text/icon
+// ===== WEATHER CODE =====
 function weatherCodeToText(code){
   const map = {0:"Klart",1:"Mestadels klart",2:"Halvklart",3:"Mulet",61:"Regn",71:"Snö",80:"Regnskurar",85:"Snöbyar"};
   return map[code]||"Okänt väder";
