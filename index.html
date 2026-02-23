@@ -45,7 +45,7 @@ body{
 .temp{font-size:52px;font-weight:bold;}
 .feels{display:flex;align-items:center;gap:10px;}
 .wind-arrow{
-  font-size:32px;
+  font-size:35px; /* större pil */
   display:inline-block;
 }
 
@@ -84,6 +84,8 @@ body{
 </head>
 
 <body>
+<!-- Väder 1.1 – fallback för igår-värden och senast uppmätt -->
+
 <div class="container">
 
 <div class="card current">
@@ -144,7 +146,6 @@ async function loadForecast(){
   const data = await res.json();
   const series = data.timeSeries;
 
-  // närmaste framtida tid
   const now = new Date();
   const current = series.find(ts => new Date(ts.validTime) >= now) || series[0];
 
@@ -175,7 +176,8 @@ async function loadForecast(){
   });
 
   forecast.innerHTML="";
-  Object.keys(daily).slice(0,5).forEach(d=>{
+  // starta från imorgon: slice(1,6)
+  Object.keys(daily).slice(1,6).forEach(d=>{
     const arr=daily[d];
     const temps=arr.map(x=>{
       const p={};x.parameters.forEach(a=>p[a.name]=a.values[0]);
@@ -225,6 +227,14 @@ async function loadYesterday(){
              ?curr:prev;
     });
     ySame.textContent=Math.round(same.value)+"°";
+
+    // normal uppdaterad
+    updated.textContent=new Date().toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"});
+    updated.style.color="white";
+  }else{
+    // fallback-indikator
+    updated.textContent="Uppdateras …";
+    updated.style.color="orange";
   }
 }
 
@@ -232,7 +242,6 @@ async function loadYesterday(){
 function init(){
   const now=new Date();
   date.textContent=now.toLocaleDateString("sv-SE",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
-  updated.textContent=now.toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"});
   loadForecast();
   loadYesterday();
 }
