@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Väderdashboard</title>
+<title>VÄDER</title>
 <style>
 body {
   font-family: Arial, sans-serif;
@@ -35,13 +35,16 @@ body {
   flex-direction: column;
   justify-content: center;
   gap: 8px;
+  padding: 0 10px;
 }
 .left-section {
   flex: 2;
   align-items: flex-start;
+  border-right: 1px solid rgba(255,255,255,0.2);
 }
 .middle-section {
   flex: 2;
+  border-right: 1px solid rgba(255,255,255,0.2);
 }
 .right-section {
   flex: 1;
@@ -66,7 +69,7 @@ body {
 
 /* PIL FÖR VINDRIKTNING */
 .wind-arrow {
-  font-size: 14px;
+  font-size: 16px; /* samma storlek som datumtext */
   display: inline-block;
 }
 
@@ -257,7 +260,6 @@ function weatherCodeToIcon(code){
 }
 
 function windDirFromDeg(deg){
-  // Enkel pil för 8 väderstreck
   if(deg>=337.5 || deg<22.5) return "↑ N";
   if(deg>=22.5 && deg<67.5) return "↗ NE";
   if(deg>=67.5 && deg<112.5) return "→ E";
