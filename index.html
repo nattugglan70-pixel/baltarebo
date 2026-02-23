@@ -2,262 +2,237 @@
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
-<title>INFOBOARD</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Väderpanel</title>
 
 <style>
 body {
   font-family: Arial, sans-serif;
-  background: #000;
-  color: #fff;
+  background: linear-gradient(to right, #203a43, #2c5364);
+  color: white;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 15px;
+  padding: 30px;
 }
 
-.section {
-  margin: 10px 0;
-  padding: 20px;
-  background: #111;
-  border-radius: 12px;
-  width: 100%;
-  max-width: 380px;
-  box-shadow: 0 2px 10px rgba(255,255,255,0.2);
-  text-align: center;
-}
+/* ===== NUVARANDE VÄDER ===== */
 
-.value {
-  font-size: 32px;
-  font-weight: bold;
-  margin: 8px 0;
-}
-
-.subtext {
-  font-size: 16px;
-  color: #ccc;
-}
-
-.yesterday-temp {
-  color: gold;
-  font-size: 20px;
-  margin-top: 6px;
-}
-
-/* ===== Tooltip ===== */
-
-.tooltip {
+.current-weather {
   position: relative;
-  display: inline-block;
-  cursor: default;
+  background: linear-gradient(145deg, #1e3c72, #2a5298);
+  padding: 20px;
+  border-radius: 18px;
+  width: 320px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  margin-bottom: 30px;
 }
 
-/* Fade + slide animation */
-@keyframes tooltipFade {
-  0% { opacity: 0; transform: translate(-50%, -10px); }
-  100% { opacity: 1; transform: translate(-50%, 0); }
+.current-weather:hover {
+  transform: scale(1.03);
 }
 
-.big-tooltip {
-  visibility: hidden;
-  opacity: 0;
-  background: rgba(0,0,0,0.95);
-  color: #fff;
-  padding: 12px 16px;
-  border-radius: 12px;
-  font-size: 14px;
-  line-height: 1.6;
-  min-width: 220px;
-  box-shadow: 0 8px 25px rgba(0,0,0,0.6);
-  position: absolute;
-  bottom: 125%;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 20;
-  transition: opacity 0.3s ease;
-}
-
-.tooltip:hover .big-tooltip {
-  visibility: visible;
-  opacity: 1;
-  animation: tooltipFade 0.3s ease forwards;
-}
-
-/* ===== Glide animation for temperature ===== */
-
-@keyframes glideIn {
-  0% { opacity: 0; transform: translateY(-10px); }
-  50% { opacity: 0.5; transform: translateY(2px); }
-  100% { opacity: 1; transform: translateY(0); }
-}
-
-.animate-update {
-  animation: glideIn 0.5s ease-in-out;
-}
-
-/* ===== Min/max tooltip ===== */
-
-.tooltiptext {
-  visibility: hidden;
-  background: gold;
-  color: black;
-  padding: 5px 8px;
-  border-radius: 6px;
-  font-size: 13px;
-  position: absolute;
-  bottom: 125%;
-  left: 50%;
-  transform: translateX(-50%);
-  white-space: nowrap;
-}
-
-.tooltip:hover .tooltiptext {
-  visibility: visible;
-}
-
-.minmax {
-  font-size: 18px;
-  line-height: 1.6;
-  margin-top: 5px;
-}
-
-/* ===== Forecast ===== */
-
-.forecast-row {
+.weather-main {
   display: flex;
-  gap: 10px;
-  overflow-x: auto;
-  margin-top: 10px;
+  align-items: center;
+  gap: 15px;
 }
 
-.forecast-day {
-  min-width: 60px;
+.weather-main img {
+  width: 70px;
+}
+
+.temp {
+  font-size: 48px;
+  font-weight: bold;
+}
+
+.feels-like {
+  font-size: 16px;
+  opacity: 0.8;
+}
+
+.weather-tooltip {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.92);
+  border-radius: 18px;
+  padding: 20px;
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.current-weather:hover .weather-tooltip {
+  display: flex;
+}
+
+/* ===== 5 DAGARS PROGNOS ===== */
+
+.forecast {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.day {
+  background: rgba(255,255,255,0.1);
+  padding: 15px;
+  border-radius: 14px;
   text-align: center;
+  width: 90px;
+  backdrop-filter: blur(5px);
+}
+
+.day img {
+  width: 40px;
+}
+
+.day-name {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.temp-range {
+  font-size: 14px;
 }
 </style>
 </head>
-
 <body>
 
-<div class="section">
-  <div id="date-week"></div>
-  <div class="subtext" id="weather-updated">Senast uppdaterad: --:--</div>
-</div>
+<h2 id="locationTitle">Hämtar position...</h2>
 
-<div class="section">
-  <div class="tooltip value">
-    <div id="temp-now">-- °C (-- °C)</div>
-    <div class="big-tooltip" id="weather-tooltip">
-      Laddar väderdata...
+<div class="current-weather">
+  <div class="weather-main">
+    <img id="weatherIcon" src="">
+    <div>
+      <div class="temp" id="temperature">--°</div>
+      <div class="feels-like" id="feelsLike">Känns som --°</div>
     </div>
   </div>
-  <div class="yesterday-temp" id="temp-yesterday">-- °C</div>
-</div>
 
-<div class="section">
-  <div class="tooltip minmax">
-    <div id="today-minmax">Idag<br>Min: -- °C<br>Max: -- °C</div>
-    <div class="tooltiptext" id="yesterday-minmax-tooltip">
-      Igår – Min: -- °C | Max: -- °C
-    </div>
+  <div class="weather-tooltip">
+    <div id="weatherDescription"></div>
+    <div>Vind: <span id="wind"></span></div>
+    <div>Luftfuktighet: <span id="humidity"></span></div>
+    <div>Tryck: <span id="pressure"></span></div>
+    <div>Nederbörd (1h): <span id="precip"></span></div>
   </div>
 </div>
 
-<div class="section">
-  <div>Prognos 5 dagar:</div>
-  <div class="forecast-row" id="forecast-5days"></div>
-</div>
+<h3>5-dygnsprognos</h3>
+<div class="forecast" id="forecast"></div>
 
 <script>
-const lat = 57.114025;
-const lon = 14.168177;
 
-function animateUpdate(element) {
-  element.classList.remove('animate-update');
-  void element.offsetWidth;
-  element.classList.add('animate-update');
-}
+const fallback = {
+  lat: 57.173,
+  lon: 14.040,
+  name: "Bor"
+};
 
-function updateDateWeek() {
-  const now = new Date();
-  document.getElementById('date-week').innerText =
-    now.toLocaleDateString('sv-SE', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
-}
+function getWeather(lat, lon, name="Din plats") {
 
-async function updateWeatherNow() {
-  try {
-    const url = `https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${lon}/lat/${lat}/data.json`;
-    const res = await fetch(url);
-    const data = await res.json();
+  document.getElementById("locationTitle").textContent =
+    "Väder för " + name;
 
-    const now = new Date();
-    const current = data.timeSeries
-      .map(ts => ({...ts, time:new Date(ts.validTime)}))
-      .filter(ts => ts.time <= now)
-      .sort((a,b)=>b.time-a.time)[0];
+  fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m,surface_pressure,precipitation&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`)
+  .then(res => res.json())
+  .then(data => {
 
-    if(!current) return;
+    const current = data.current;
 
-    const params = current.parameters;
+    temperature.textContent =
+      Math.round(current.temperature_2m) + "°";
 
-    const temp = params.find(p=>p.name==="t")?.values[0];
-    const wind = params.find(p=>p.name==="ws")?.values[0];
-    const humidity = params.find(p=>p.name==="r")?.values[0];
-    const pressure = params.find(p=>p.name==="msl")?.values[0];
-    const precip = params.find(p=>p.name==="pmean")?.values[0] || 0;
-    const symbol = params.find(p=>p.name==="Wsymb2")?.values[0];
+    feelsLike.textContent =
+      "Känns som " + Math.round(current.apparent_temperature) + "°";
 
-    let feelsLike = temp;
+    wind.textContent = current.wind_speed_10m + " m/s";
+    humidity.textContent = current.relative_humidity_2m + " %";
+    pressure.textContent = current.surface_pressure + " hPa";
+    precip.textContent = (current.precipitation || 0) + " mm";
 
-    if (temp <= 10 && wind > 1.3) {
-      const windKmH = wind * 3.6;
-      feelsLike = 13.12 + 0.6215*temp - 11.37*Math.pow(windKmH,0.16) + 0.3965*temp*Math.pow(windKmH,0.16);
+    weatherDescription.textContent =
+      weatherCodeToText(current.weather_code);
+
+    weatherIcon.src =
+      weatherCodeToIcon(current.weather_code);
+
+    const forecastEl = document.getElementById("forecast");
+    forecastEl.innerHTML = "";
+
+    for (let i = 1; i <= 5; i++) {
+
+      const date = new Date(data.daily.time[i]);
+      const dayName = date.toLocaleDateString("sv-SE", { weekday: "short" });
+
+      const day = document.createElement("div");
+      day.className = "day";
+
+      day.innerHTML = `
+        <div class="day-name">${dayName}</div>
+        <img src="${weatherCodeToIcon(data.daily.weather_code[i])}">
+        <div class="temp-range">
+          ${Math.round(data.daily.temperature_2m_max[i])}° /
+          ${Math.round(data.daily.temperature_2m_min[i])}°
+        </div>
+      `;
+
+      forecastEl.appendChild(day);
     }
 
-    let icon="☁️", weatherText="Molnigt";
-
-    if(symbol===1){ icon="☀️"; weatherText="Klart väder"; }
-    else if(symbol===2){ icon="🌤️"; weatherText="Lätt molnighet"; }
-    else if(symbol===3){ icon="⛅"; weatherText="Växlande molnighet"; }
-    else if(symbol===4){ icon="☁️"; weatherText="Mulet"; }
-    else if(symbol===5){ icon="🌦️"; weatherText="Snöblandat regn"; }
-    else if(symbol===6){ icon="🌧️"; weatherText="Regn"; }
-    else if(symbol===7||symbol===8){ icon="🌨️"; weatherText="Snö"; }
-    else if(symbol===9){ icon="⛈️"; weatherText="Åska"; }
-
-    const tempNowDiv = document.getElementById('temp-now');
-    tempNowDiv.innerHTML = `${icon} ${temp?.toFixed(1)} °C (${feelsLike?.toFixed(1)} °C)`;
-
-    if(temp <= 10) tempNowDiv.style.color='#00bfff';
-    else if(temp <= 20) tempNowDiv.style.color='#ffff00';
-    else tempNowDiv.style.color='#ff4500';
-
-    animateUpdate(tempNowDiv);
-
-    document.getElementById('weather-tooltip').innerHTML = `
-      <strong>${weatherText}</strong><br>
-      🌡️ Temperatur: ${temp?.toFixed(1)} °C<br>
-      🤔 Känns som: ${feelsLike?.toFixed(1)} °C<br>
-      🌬️ Vind: ${wind?.toFixed(1)} m/s<br>
-      💧 Luftfuktighet: ${humidity?.toFixed(0)} %<br>
-      📈 Tryck: ${pressure?.toFixed(0)} hPa<br>
-      🌧️ Nederbörd kommande timme: ${precip?.toFixed(1)} mm
-    `;
-
-    document.getElementById('weather-updated').innerText =
-      "Senast uppdaterad: " +
-      now.toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'});
-
-  } catch(err){ console.error(err); }
+  });
 }
 
-updateDateWeek();
-updateWeatherNow();
-setInterval(updateWeatherNow,5*60*1000);
+/* ===== GPS ===== */
+
+if (navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(
+    position => {
+      getWeather(
+        position.coords.latitude,
+        position.coords.longitude,
+        "Din plats"
+      );
+    },
+    () => {
+      getWeather(fallback.lat, fallback.lon, fallback.name);
+    }
+  );
+} else {
+  getWeather(fallback.lat, fallback.lon, fallback.name);
+}
+
+/* ===== WEATHER CODE ===== */
+
+function weatherCodeToText(code) {
+  const map = {
+    0: "Klart",
+    1: "Mestadels klart",
+    2: "Halvklart",
+    3: "Mulet",
+    45: "Dimma",
+    61: "Regn",
+    71: "Snö",
+    80: "Regnskurar",
+    85: "Snöbyar"
+  };
+  return map[code] || "Okänt väder";
+}
+
+function weatherCodeToIcon(code) {
+  if (code === 0) return "https://cdn-icons-png.flaticon.com/512/869/869869.png";
+  if ([1,2].includes(code)) return "https://cdn-icons-png.flaticon.com/512/1163/1163624.png";
+  if (code === 3) return "https://cdn-icons-png.flaticon.com/512/414/414825.png";
+  if ([61,80].includes(code)) return "https://cdn-icons-png.flaticon.com/512/1163/1163657.png";
+  if ([71,85].includes(code)) return "https://cdn-icons-png.flaticon.com/512/642/642102.png";
+  return "https://cdn-icons-png.flaticon.com/512/1163/1163661.png";
+}
+
 </script>
 
 </body>
