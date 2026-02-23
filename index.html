@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Väderdashboard</title>
+<title>VÄDER</title>
 <style>
 body {
   font-family: Arial, sans-serif;
@@ -45,7 +45,6 @@ body {
   align-items: center;
   gap: 20px;
   flex: 2;
-  position: relative;
 }
 .weather-main img {
   width: 80px;
@@ -58,10 +57,16 @@ body {
   opacity: 0.8;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
+
+/* Pilikon för vindriktning */
 .wind-arrow {
-  font-size: 24px;
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  transform: rotate(0deg);
+  transition: transform 0.5s ease;
 }
 
 /* HÖGERINFO */
@@ -70,15 +75,15 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  font-size: 16px; /* större text för datum/vecka */
+  font-size: 16px; /* lite större text */
   justify-content: center;
 }
 
 /* HOVER-OVERLAY */
 .weather-tooltip {
   position: absolute;
-  top: 0;
   left: -250px; /* poppar ut till vänster */
+  top: 0;
   width: 240px;
   background: black;
   color: white;
@@ -86,7 +91,7 @@ body {
   padding: 20px;
   display: none;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 8px;
   z-index: 10;
 }
@@ -120,6 +125,13 @@ body {
 .temp-range {
   font-size: 14px;
 }
+
+/* DATUM/VECKA + SENAST UPPDATERAD */
+.date-week {
+  font-size: 16px; /* större text */
+  opacity: 0.9;
+  margin-bottom: 5px;
+}
 </style>
 </head>
 <body>
@@ -133,7 +145,10 @@ body {
     <div>
       <div class="temp" id="temperature">--°</div>
       <div class="feels-like" id="feelsLike">
-        Känns som --° <span class="wind-arrow" id="windArrow">➤</span>
+        Känns som --°
+        <svg class="wind-arrow" id="windArrow" viewBox="0 0 24 24">
+          <path d="M12 2 L12 22 M5 15 L12 22 L19 15" stroke="white" stroke-width="2" fill="none"/>
+        </svg>
       </div>
     </div>
   </div>
@@ -189,42 +204,34 @@ async function getWeather(lat, lon) {
 
   const c = data.current_weather || data.current;
 
-  // ===== FEELS LIKE justering
-  let temp = c.temperature_2m;
-  let windSpeed = c.wind_speed_10m;
-  let humidity = c.relative_humidity_2m;
-  let feels = temp;
-  if(temp <= 10 && windSpeed > 1.3){ // Wind chill
-    const windKmH = windSpeed * 3.6;
-    feels = 13.12 + 0.6215*temp - 11.37*Math.pow(windKmH,0.16) + 0.3965*temp*Math.pow(windKmH,0.16);
-  } else if(temp >= 20){ // Heat index
-    const T = temp, R = humidity;
-    feels = -8.784695 + 1.61139411*T + 2.338549*R - 0.14611605*T*R
-            -0.012308094*T*T - 0.016424828*R*R + 0.002211732*T*T*R
-            + 0.00072546*T*R*R - 0.000003582*T*T*R*R;
-  }
+  // Temperatur + feels like
+  const temp = Math.round(c.temperature_2m);
+  const feels = Math.round(c.apparent_temperature);
+  temperature.textContent = temp+"°";
+  feelsLike.childNodes[0].textContent = "Känns som "+feels+"° ";
 
-  temperature.textContent = Math.round(temp) + "°";
-  feelsLike.textContent = "Känns som " + Math.round(feels) + "°";
+  // Vind
+  wind.textContent = c.wind_speed_10m+" m/s";
 
   // Vindpil
   const arrow = document.getElementById("windArrow");
-  const dir = c.wind_direction_10m;
-  arrow.style.transform = `rotate(${dir}deg)`;
+  if(c.wind_direction_10m!==undefined){
+    arrow.style.transform = `rotate(${c.wind_direction_10m}deg)`;
+  }
 
-  // Tooltip info
-  wind.textContent = windSpeed + " m/s";
-  humidity.textContent = humidity + " %";
-  pressure.textContent = c.surface_pressure + " hPa";
-  precip.textContent = (c.precipitation || 0) + " mm";
+  humidity.textContent = c.relative_humidity_2m+" %";
+  pressure.textContent = c.surface_pressure+" hPa";
+  precip.textContent = (c.precipitation||0)+" mm";
+
+  // Väderikon och text
   weatherDescription.textContent = weatherCodeToText(c.weather_code);
   weatherIcon.src = weatherCodeToIcon(c.weather_code);
 
   // Femdygnsprognos
   forecast.innerHTML = "";
   for(let i=1;i<=5;i++){
-    const date = new Date(data.daily.time[i]);
-    const dayName = date.toLocaleDateString("sv-SE",{weekday:'short'});
+    const dateF = new Date(data.daily.time[i]);
+    const dayName = dateF.toLocaleDateString("sv-SE",{weekday:'short'});
     const card = document.createElement("div");
     card.className = "day-card";
     card.innerHTML = `
@@ -239,8 +246,7 @@ async function getWeather(lat, lon) {
   // ===== HISTORISKT: IGÅR =====
   const yesterdayDate = new Date(now.getTime() - 86400000);
   const start = yesterdayDate.toISOString().split('T')[0];
-  const end = start;
-  const urlHistory = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${start}&end_date=${end}&hourly=temperature_2m&timezone=Europe/Stockholm`;
+  const urlHistory = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${start}&end_date=${start}&hourly=temperature_2m&timezone=Europe/Stockholm`;
   const resH = await fetch(urlHistory);
   const dataH = await resH.json();
   let temps = dataH.hourly.temperature_2m;
@@ -284,6 +290,7 @@ function weatherCodeToIcon(code){
   if([71,85].includes(code))return "https://cdn-icons-png.flaticon.com/512/642/642102.png";
   return "https://cdn-icons-png.flaticon.com/512/1163/1163661.png";
 }
+
 </script>
 </body>
 </html>
