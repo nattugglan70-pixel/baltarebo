@@ -1,4 +1,4 @@
-<!-- Komplett kod: Väder 1.2 med fallback "Uppdateras" -->
+<!-- Komplett kod: Väder 1.3 med fallback "Uppdateras…" och veckonummer -->
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -81,6 +81,11 @@ body{
 .day-card img{width:45px;}
 .day-name{font-weight:bold;margin-bottom:5px;}
 .temp-range{font-size:14px;}
+
+.fallback{
+  color:#ffcc00;
+  font-style:italic;
+}
 </style>
 </head>
 
@@ -110,7 +115,9 @@ body{
 
   <div class="right">
     <div id="date"></div>
-    <div id="updated"></div>
+    <div id="updatedContainer">
+      <span id="updated"></span>
+    </div>
   </div>
 </div>
 
@@ -145,7 +152,6 @@ async function loadForecast(){
   const data = await res.json();
   const series = data.timeSeries;
 
-  // närmaste framtida tid
   const now = new Date();
   const current = series.find(ts => new Date(ts.validTime) >= now) || series[0];
 
@@ -176,7 +182,10 @@ async function loadForecast(){
   });
 
   forecast.innerHTML="";
-  Object.keys(daily).slice(1,6).forEach(d=>{ // börjar från nästa dag
+  // femdygnsprognos från dagen efter
+  const keys=Object.keys(daily);
+  const tomorrowIndex=keys.findIndex(d=>new Date(d)>now);
+  Object.keys(daily).slice(tomorrowIndex,tomorrowIndex+5).forEach(d=>{
     const arr=daily[d];
     const temps=arr.map(x=>{
       const p={};x.parameters.forEach(a=>p[a.name]=a.values[0]);
@@ -227,22 +236,21 @@ async function loadYesterday(){
     });
     ySame.textContent=Math.round(same.value)+"°";
 
-    // normal uppdaterad
-    const nowTime = new Date();
-    updated.textContent="Uppdaterad: "+nowTime.toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"});
-    updated.style.color="white";
-
+    updated.textContent = new Date().toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"});
+    updated.classList.remove("fallback");
   } else {
-    // fallback: ingen data, visa "Uppdateras…"
+    // fallback
     updated.textContent="Uppdateras…";
-    updated.style.color="orange";
+    updated.classList.add("fallback");
   }
 }
 
 // ---------- INIT ----------
 function init(){
   const now=new Date();
-  date.textContent=now.toLocaleDateString("sv-SE",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  const weekNr = new Intl.DateTimeFormat('sv-SE',{week:'numeric'}).format(now);
+  date.textContent=now.toLocaleDateString("sv-SE",{weekday:"long",day:"numeric",month:"long",year:"numeric"})+" (v"+weekNr+")";
+
   loadForecast();
   loadYesterday();
 }
