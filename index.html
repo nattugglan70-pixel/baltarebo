@@ -1,9 +1,13 @@
-<!-- Komplett kod: Väder 1.5.4 - Fullständig HTML med fallback och OpenMeteo --><!DOCTYPE html><html lang="sv">
+<!-- Komplett kod: Väder 1.5.2 - Stabil version -->
+<!DOCTYPE html>
+<html lang="sv">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VÄDER 1.5.4</title>
-<link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/869/869869.png" sizes="32x32"><style>
+<title>VÄDER</title>
+<link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/414/414825.png" sizes="32x32">
+
+<style>
 body{
   font-family: Arial, sans-serif;
   background: linear-gradient(to right,#141e30,#243b55);
@@ -22,19 +26,22 @@ body{
   margin-bottom:25px;
   position:relative;
 }
+
 .version{
   position:absolute;
   top:10px;
   right:15px;
-  font-size:12px;
+  font-size:14px;
   color:gold;
   font-weight:bold;
 }
+
 .current{
   display:flex;
   gap:25px;
   align-items:center;
 }
+
 .left{
   flex:1.5;
   display:flex;
@@ -53,6 +60,7 @@ body{
   font-size:32px;
   display:inline-block;
 }
+
 .middle{
   flex:1;
   display:flex;
@@ -60,10 +68,12 @@ body{
   gap:6px;
   font-size:14px;
 }
+
 .right{
   flex:1;
   font-size:14px;
 }
+
 .forecast{
   display:grid;
   grid-template-columns:repeat(5,1fr);
@@ -82,15 +92,22 @@ body{
 .day-card img{width:45px;}
 .day-name{font-weight:bold;margin-bottom:5px;}
 .temp-range{font-size:14px;}
-#updated{font-weight:bold;}
-</style></head>
+
+#updated{
+  font-weight:bold;
+  color:gold;
+}
+</style>
+</head>
+
 <body>
 <div class="container">
+
 <div class="card current">
-  <div class="version">1.5.4</div>
+  <div class="version">1.5.2</div>
   <div class="left">
     <div class="left-top">
-      <img id="icon">
+      <img id="icon" alt="Väderikon">
       <div class="temp" id="temp">--°</div>
     </div>
     <div class="feels">
@@ -98,6 +115,7 @@ body{
       <div class="wind-arrow" id="windArrow">↑</div>
     </div>
   </div>
+
   <div class="middle">
     <div>Vind: <span id="wind">--</span></div>
     <div>Luftfuktighet: <span id="humidity">--</span></div>
@@ -106,20 +124,175 @@ body{
     <div>Igår samma tid: <span id="ySame">--</span></div>
     <div>Igår Min/Max: <span id="yMin">--</span> / <span id="yMax">--</span></div>
   </div>
+
   <div class="right">
     <div id="date"></div>
     <div id="updated">Uppdateras…</div>
   </div>
 </div>
+
 <div class="card">
   <h3>5-dygnsprognos</h3>
   <div class="forecast" id="forecast"></div>
 </div>
+
 </div>
+
 <script>
-const lat = 57.123;
-const lon = 13.952;
-const stations = [97490, 97492, 97485]; // Åminne + närliggandefunction feelsLike(t, ws){ const kmh = ws3.6; if(t<=10 && kmh>4.8){ return Math.round(13.12 + 0.6215t - 11.37Math.pow(kmh,0.16) + 0.3965tMath.pow(kmh,0.16)); } return Math.round(t); } function getISOWeek(date) { const tmpDate = new Date(date.getTime()); tmpDate.setHours(0,0,0,0); tmpDate.setDate(tmpDate.getDate() + 3 - (tmpDate.getDay() + 6) % 7); const week1 = new Date(tmpDate.getFullYear(),0,4); return 1 + Math.round(((tmpDate - week1)/86400000 -3 + (week1.getDay()+6)%7)/7); } async function loadForecast(){ try{ const url = https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${lon}/lat/${lat}/data.json; const res = await fetch(url); const data = await res.json(); const series = data.timeSeries; const now = new Date(); const current = series.find(ts => new Date(ts.validTime)>=now)||series[0]; const params = {}; current.parameters.forEach(p=>params[p.name]=p.values[0]); temp.textContent = Math.round(params.t)+"°"; feels.textContent = "Känns som "+feelsLike(params.t,params.ws)+"°"; wind.textContent = params.ws.toFixed(1)+" m/s ("+Math.round(params.ws3.6)+" km/h)"; humidity.textContent = params.r+" %"; pressure.textContent = params.msl+" hPa"; precip.textContent = params.pmean+" mm"; windArrow.style.transform=rotate(${params.wd}deg); icon.src="https://cdn-icons-png.flaticon.com/512/414/414825.png"; icon.title = "Molnigt"; updated.textContent = "Uppdaterad: "+now.toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"}); updated.style.color="white"; const daily={}; series.forEach(ts=>{const d=ts.validTime.split("T")[0]; if(!daily[d]) daily[d]=[]; daily[d].push(ts);}); forecast.innerHTML=""; Object.keys(daily).slice(1,6).forEach(d=>{ const arr=daily[d]; const temps=arr.map(x=>{const p={}; x.parameters.forEach(a=>p[a.name]=a.values[0]); return p.t;}); const max=Math.max(...temps); const min=Math.min(...temps); const card=document.createElement("div"); card.className="day-card"; card.innerHTML=<div class="day-name">${new Date(d).toLocaleDateString("sv-SE",{weekday:"short"})}</div><img src="https://cdn-icons-png.flaticon.com/512/414/414825.png" title="Molnigt"><div class="temp-range">${Math.round(max)}° / ${Math.round(min)}°</div>; forecast.appendChild(card); }); }catch(e){ console.error("Forecast fetch error",e); updated.textContent="Uppdateras…"; updated.style.color="orange"; } } async function loadYesterday(){ for(const station of stations){ try{ const res = await fetch(https://opendata-download-metobs.smhi.se/api/version/latest/parameter/1/station/${station}/period/latest-month/data.json); const data = await res.json(); const values = data.value; const now = new Date(); const yesterday = new Date(now.getTime()-86400000); const yVals = values.filter(v=>{const d=new Date(v.date); return d.getDate()===yesterday.getDate() && d.getMonth()===yesterday.getMonth();}); if(yVals.length){ const temps=yVals.map(v=>v.value); yMin.textContent=Math.round(Math.min(...temps))+"°"; yMax.textContent=Math.round(Math.max(...temps))+"°"; const same=yVals.reduce((prev,curr)=>{const h=new Date(curr.date).getHours(); return Math.abs(h-now.getHours())<Math.abs(new Date(prev.date).getHours()-now.getHours())?curr:prev;}); ySame.textContent=Math.round(same.value)+"°"; return; } }catch(e){ console.warn(Station fetch error ${station},e); } } ySame.textContent="--"; yMin.textContent="--"; yMax.textContent="--"; updated.textContent="Uppdateras…"; updated.style.color="orange"; } function init(){ const now = new Date(); const weekNum = getISOWeek(now); date.textContent = now.toLocaleDateString("sv-SE",{weekday:"long",day:"numeric",month:"long",year:"numeric"}) + " ( V "+weekNum+" )"; loadForecast(); loadYesterday(); setInterval(()=>{loadForecast(); loadYesterday();},600000); } init(); </script>
+const lat = 57.173;
+const lon = 14.040;
+const station = 2556;
+
+// ---------- FEELS LIKE ----------
+function feelsLike(t, ws){
+  const kmh = ws*3.6;
+  if(t<=10 && kmh>4.8){
+    return Math.round(
+      13.12 + 0.6215*t - 11.37*Math.pow(kmh,0.16)
+      + 0.3965*t*Math.pow(kmh,0.16)
+    );
+  }
+  return Math.round(t);
+}
+
+// ---------- ISO VECKONUMMER ----------
+function getISOWeek(date) {
+  const tmpDate = new Date(date.getTime());
+  tmpDate.setHours(0,0,0,0);
+  tmpDate.setDate(tmpDate.getDate() + 3 - (tmpDate.getDay() + 6) % 7);
+  const week1 = new Date(tmpDate.getFullYear(), 0, 4);
+  return 1 + Math.round(((tmpDate - week1) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+}
+
+// ---------- HÄMTA PROGNOS (NU + 5 DYGN) ----------
+async function loadForecast(){
+  const url = `https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${lon}/lat/${lat}/data.json`;
+  try{
+    const res = await fetch(url);
+    const data = await res.json();
+    const series = data.timeSeries;
+
+    const now = new Date();
+    const current = series.find(ts => new Date(ts.validTime) >= now) || series[0];
+
+    const params = {};
+    current.parameters.forEach(p=>params[p.name]=p.values[0]);
+
+    const t = params.t;
+    const ws = params.ws;
+    const wd = params.wd;
+
+    temp.textContent = Math.round(t)+"°";
+    feels.textContent = "Känns som "+feelsLike(t,ws)+"°";
+    wind.textContent = ws.toFixed(1)+" m/s (" + Math.round(ws*3.6) + " km/h)";
+    humidity.textContent = params.r+" %";
+    pressure.textContent = params.msl+" hPa";
+    precip.textContent = params.pmean+" mm";
+    windArrow.style.transform=`rotate(${wd}deg)`;
+
+    // ikon
+    icon.src="https://cdn-icons-png.flaticon.com/512/414/414825.png";
+
+    updated.textContent="Uppdaterad: "+now.toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"});
+    updated.style.color="gold";
+
+    // DAGLIG SUMMERING
+    const daily = {};
+    series.forEach(ts=>{
+      const d = ts.validTime.split("T")[0];
+      if(!daily[d]) daily[d]=[];
+      daily[d].push(ts);
+    });
+
+    forecast.innerHTML="";
+    Object.keys(daily).slice(1,6).forEach(d=>{
+      const arr=daily[d];
+      const temps=arr.map(x=>{
+        const p={};x.parameters.forEach(a=>p[a.name]=a.values[0]);
+        return p.t;
+      });
+      const max=Math.max(...temps);
+      const min=Math.min(...temps);
+
+      const card=document.createElement("div");
+      card.className="day-card";
+      card.innerHTML=`
+        <div class="day-name">
+          ${new Date(d).toLocaleDateString("sv-SE",{weekday:"short"})}
+        </div>
+        <img src="https://cdn-icons-png.flaticon.com/512/414/414825.png" alt="Väderikon">
+        <div class="temp-range">${Math.round(max)}° / ${Math.round(min)}°</div>
+      `;
+      forecast.appendChild(card);
+    });
+
+  } catch(e){
+    console.error("Forecast fetch error", e);
+    updated.textContent="Uppdateras…";
+    updated.style.color="orange";
+  }
+}
+
+// ---------- HÄMTA IGÅR ----------
+async function loadYesterday(){
+  const url=`https://opendata-download-metobs.smhi.se/api/version/latest/parameter/1/station/${station}/period/latest-month/data.json`;
+  try{
+    const res=await fetch(url);
+    const data=await res.json();
+    const values=data.value;
+
+    const now=new Date();
+    const yesterday=new Date(now.getTime()-86400000);
+
+    const yVals=values.filter(v=>{
+      const d=new Date(v.date);
+      return d.getDate()===yesterday.getDate() &&
+             d.getMonth()===yesterday.getMonth();
+    });
+
+    if(yVals.length){
+      const temps=yVals.map(v=>v.value);
+      yMin.textContent=Math.round(Math.min(...temps))+"°";
+      yMax.textContent=Math.round(Math.max(...temps))+"°";
+
+      const same=yVals.reduce((prev,curr)=>{
+        const h=new Date(curr.date).getHours();
+        return Math.abs(h-now.getHours())<
+               Math.abs(new Date(prev.date).getHours()-now.getHours())
+               ?curr:prev;
+      });
+      ySame.textContent=Math.round(same.value)+"°";
+
+    } else {
+      yMin.textContent="--°";
+      yMax.textContent="--°";
+      ySame.textContent="--°";
+    }
+
+  } catch(e){
+    console.error("Yesterday fetch error", e);
+    yMin.textContent="--°";
+    yMax.textContent="--°";
+    ySame.textContent="--°";
+  }
+}
+
+// ---------- INIT ----------
+function init(){
+  const now=new Date();
+  const weekNum = getISOWeek(now);
+  date.textContent=now.toLocaleDateString("sv-SE",{weekday:"long",day:"numeric",month:"long",year:"numeric"}) + " ( V " + weekNum + " )";
+
+  loadForecast();
+  loadYesterday();
+
+  setInterval(()=>{
+    loadForecast();
+    loadYesterday();
+  },600000); // var 10:e minut
+}
+init();
+</script>
 
 </body>
 </html>
