@@ -1,4 +1,4 @@
-<!-- VÄDER 1.6.4 - SMHI vind + korrekt "feels like" -->
+<!-- VÄDER 1.6.5 - Stabil, SMHI-vind + korrekt "feels like" -->
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -98,7 +98,7 @@ body{
 <div class="container">
 
 <div class="card current">
-  <div class="version">1.6.4</div>
+  <div class="version">1.6.5</div>
   <div class="left">
     <div class="left-top">
       <img id="icon" title="--">
@@ -131,11 +131,10 @@ body{
 </div>
 
 <script>
-const lat = 57.123; // Åminne
+const lat = 57.123;
 const lon = 13.952;
 const smhiStation = 97490; // Åminne
-
-let currentWind = 0; // global vindhastighet för "feels like"
+let currentWind = 0;
 
 function feelsLike(t, ws){
   const kmh = ws*3.6;
@@ -153,64 +152,73 @@ function getISOWeek(date) {
   return 1 + Math.round(((tmpDate - week1) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
 }
 
-// ---------- HÄMTA OPEN-METEO ----------
-async function loadOpenMeteo(updateIconOnly=false){
+// ---------- UPPDATERA ALLT ----------
+async function updateWeather(){
+  // 1. Hämta SMHI-vind först
+  try{
+    const wsRes = await fetch(`https://opendata-download-metobs.smhi.se/api/version/latest/parameter/1/station/${smhiStation}/period/latest-month/data.json`);
+    const wsData = await wsRes.json();
+    const latest = wsData.value[wsData.value.length-1];
+    currentWind = latest ? latest.value : 0;
+
+    wind.textContent=currentWind.toFixed(1)+" m/s ("+Math.round(currentWind*3.6)+" km/h)";
+    windArrow.style.transform=`rotate(${latest.direction||0}deg)`;
+  } catch(e){
+    console.error("SMHI wind fetch error", e);
+    currentWind=0;
+    wind.textContent="0 m/s (0 km/h)";
+  }
+
+  // 2. Hämta Open-Meteo-data
   try{
     const url=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,precipitation,pressure_msl,relativehumidity_2m&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=Europe/Stockholm`;
-    const res=await fetch(url);
-    const data=await res.json();
+    const res = await fetch(url);
+    const data = await res.json();
 
     const t = data.current_weather.temperature;
+    temp.textContent = Math.round(t)+"°";
+    feels.textContent = "Känns som "+feelsLike(t,currentWind)+"°";
+    humidity.textContent = data.hourly.relativehumidity_2m[0]+" %";
+    pressure.textContent = data.hourly.pressure_msl[0]+" hPa";
+    precip.textContent = data.hourly.precipitation[0]+" mm";
 
-    if(!updateIconOnly){
-      temp.textContent=Math.round(t)+"°";
-      feels.textContent="Känns som "+feelsLike(t,currentWind)+"°";
-      humidity.textContent=data.hourly.relativehumidity_2m[0]+" %";
-      pressure.textContent=data.hourly.pressure_msl[0]+" hPa";
-      precip.textContent=data.hourly.precipitation[0]+" mm";
-      const now=new Date();
-      updated.textContent="Uppdaterad: "+now.toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"});
-      updated.style.color="white";
+    const now = new Date();
+    updated.textContent = "Uppdaterad: "+now.toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"});
+    updated.style.color="white";
 
-      // DAGLIG PROGNOS
-      forecast.innerHTML="";
-      const daily = data.daily || {};
-      const days = ["Sön","Mån","Tis","Ons","Tor","Fre","Lör"];
-      const weatherTextMap = {
-        0:"Soligt",1:"Dagsmoln",2:"Molnigt",3:"Molnigt",45:"Dimma",48:"Dimma",
-        51:"Duggregn",53:"Duggregn",55:"Duggregn",61:"Regn",63:"Regn",65:"Regn",
-        66:"Fryst regn",67:"Fryst regn",71:"Snö",73:"Snö",75:"Snö",77:"Snö",
-        80:"Regnskurar",81:"Regnskurar",82:"Regnskurar",85:"Snöskurar",86:"Snöskurar",
-        95:"Åska",96:"Åska",99:"Åska"
-      };
-      for(let i=1;i<=5;i++){
-        const day = new Date();
-        day.setDate(day.getDate()+i);
-        const weekday = days[day.getDay()];
-        const tempMax = Math.round(daily.temperature_2m_max[i]||0);
-        const tempMin = Math.round(daily.temperature_2m_min[i]||0);
-        const code = daily.weathercode[i] || 0;
-        const weatherText = weatherTextMap[code] || "Okänt";
-
-        const card = document.createElement("div");
-        card.className="day-card";
-        card.innerHTML=`
-          <div class="day-name">${weekday}</div>
-          <div>${weatherText}</div>
-          <div class="temp-range">${tempMin}° / ${tempMax}°</div>
-        `;
-        forecast.appendChild(card);
-      }
-    }
-
-    // IKON (uppdateras snabbare)
-    const iconMap = {
+    // DAGLIG PROGNOS
+    forecast.innerHTML="";
+    const daily = data.daily || {};
+    const days = ["Sön","Mån","Tis","Ons","Tor","Fre","Lör"];
+    const weatherTextMap = {
       0:"Soligt",1:"Dagsmoln",2:"Molnigt",3:"Molnigt",45:"Dimma",48:"Dimma",
       51:"Duggregn",53:"Duggregn",55:"Duggregn",61:"Regn",63:"Regn",65:"Regn",
       66:"Fryst regn",67:"Fryst regn",71:"Snö",73:"Snö",75:"Snö",77:"Snö",
       80:"Regnskurar",81:"Regnskurar",82:"Regnskurar",85:"Snöskurar",86:"Snöskurar",
       95:"Åska",96:"Åska",99:"Åska"
     };
+
+    for(let i=1;i<=5;i++){
+      const day = new Date();
+      day.setDate(day.getDate()+i);
+      const weekday = days[day.getDay()];
+      const tempMax = Math.round(daily.temperature_2m_max[i]||0);
+      const tempMin = Math.round(daily.temperature_2m_min[i]||0);
+      const code = daily.weathercode[i] || 0;
+      const weatherText = weatherTextMap[code] || "Okänt";
+
+      const card = document.createElement("div");
+      card.className="day-card";
+      card.innerHTML=`
+        <div class="day-name">${weekday}</div>
+        <div>${weatherText}</div>
+        <div class="temp-range">${tempMin}° / ${tempMax}°</div>
+      `;
+      forecast.appendChild(card);
+    }
+
+    // IKON
+    const iconMap = weatherTextMap;
     const code = data.current_weather.weathercode;
     const iconName = iconMap[code] || "Okänt";
     icon.src=`https://cdn-icons-png.flaticon.com/512/414/414825.png`; // placeholder ikon
@@ -218,36 +226,8 @@ async function loadOpenMeteo(updateIconOnly=false){
 
   } catch(e){
     console.error("Open-Meteo fetch error", e);
-    if(!updateIconOnly){
-      updated.textContent="Uppdateras…";
-      updated.style.color="orange";
-    }
-  }
-}
-
-// ---------- HÄMTA VIND FRÅN SMHI ----------
-async function loadWindSMHI(){
-  try{
-    const url=`https://opendata-download-metobs.smhi.se/api/version/latest/parameter/1/station/${smhiStation}/period/latest-month/data.json`;
-    const res=await fetch(url);
-    const data=await res.json();
-    const latest = data.value[data.value.length-1];
-    const ws = latest ? latest.value : 0;
-    currentWind = ws;
-
-    wind.textContent=ws.toFixed(1)+" m/s ("+Math.round(ws*3.6)+" km/h)";
-    wind.dataset.speed = ws;
-    windArrow.style.transform=`rotate(${latest.direction||0}deg)`;
-
-    // uppdatera feels like direkt med korrekt vind
-    const t = parseFloat(temp.textContent) || 0;
-    feels.textContent = "Känns som "+feelsLike(t,currentWind)+"°";
-
-  } catch(e){
-    console.error("SMHI wind fetch error", e);
-    wind.textContent="--";
-    wind.dataset.speed=0;
-    currentWind = 0;
+    updated.textContent="Uppdateras…";
+    updated.style.color="orange";
   }
 }
 
@@ -257,17 +237,8 @@ function init(){
   const weekNum = getISOWeek(now);
   date.textContent=now.toLocaleDateString("sv-SE",{weekday:"long",day:"numeric",month:"long",year:"numeric"}) + " ( V " + weekNum + " )";
 
-  loadOpenMeteo();
-  loadWindSMHI();
-
-  setInterval(()=>{
-    loadOpenMeteo();
-    loadWindSMHI();
-  },600000); // var 10:e minut
-
-  setInterval(()=>{
-    loadOpenMeteo(true); // uppdatera bara ikon snabbt
-  },120000); // var 2:a minut
+  updateWeather();
+  setInterval(updateWeather,600000); // var 10:e minut
 }
 
 init();
