@@ -1,8 +1,8 @@
-<!-- VÄDER 1.7.1
-Emoji-version (stabil)
-- Inga externa ikonlänkar
-- Dag/natt korrekt
-- Emoji även i 5-dygnsprognos
+<!-- VÄDER 1.7.2
+Fixar:
+- Exakt temp i hover
+- Vind tillbaka
+- Stabil emoji-version
 -->
 
 <!DOCTYPE html>
@@ -22,7 +22,7 @@ body{
   overflow-x:hidden;
 }
 
-.container{max-width:900px;margin:auto;position:relative;z-index:2;}
+.container{max-width:900px;margin:auto;}
 
 .card{
   background:rgba(255,255,255,0.08);
@@ -125,7 +125,7 @@ body{
 <div class="container">
 
 <div class="card current">
-  <div class="version">1.7.1</div>
+  <div class="version">1.7.2</div>
 
   <div class="left">
     <div class="left-top">
@@ -171,7 +171,6 @@ const weatherTextMap = {
 };
 
 function getWeatherIcon(code, isDay){
-
   if(code === 0) return isDay ? "☀️" : "🌙";
   if(code === 1 || code === 2) return isDay ? "🌤️" : "🌙☁️";
   if(code === 3) return "☁️";
@@ -179,7 +178,6 @@ function getWeatherIcon(code, isDay){
   if([51,53,55,61,63,65,80,81,82].includes(code)) return "🌧️";
   if([71,73,75,85,86].includes(code)) return "❄️";
   if([95,96,99].includes(code)) return "⛈️";
-
   return "☁️";
 }
 
@@ -193,6 +191,7 @@ async function updateWeather(){
   const t = data.current_weather.temperature;
   const code = data.current_weather.weathercode;
   const isDay = data.current_weather.is_day === 1;
+  const windSpeed = data.current_weather.windspeed;
 
   let weatherText;
   if(code === 0){
@@ -204,10 +203,12 @@ async function updateWeather(){
   }
 
   icon.textContent = getWeatherIcon(code,isDay);
-  icon.title = weatherText;
+  icon.title = `${weatherText}, ${t.toFixed(1)}°`;
 
   temp.textContent = Math.round(t)+"°";
   feels.textContent = "Känns som "+Math.round(t)+"°";
+
+  wind.textContent = windSpeed.toFixed(1) + " m/s (" + Math.round(windSpeed*3.6) + " km/h)";
   humidity.textContent = data.hourly.relativehumidity_2m[0]+" %";
   pressure.textContent = data.hourly.pressure_msl[0]+" hPa";
   precip.textContent = data.hourly.precipitation[0]+" mm";
@@ -217,7 +218,6 @@ async function updateWeather(){
   const days = ["Sön","Mån","Tis","Ons","Tor","Fre","Lör"];
 
   for(let i=1;i<=5;i++){
-
     const day = new Date();
     day.setDate(day.getDate()+i);
 
@@ -243,7 +243,6 @@ async function updateWeather(){
       <div class="weather-text">${dayText}</div>
       <div class="temp-range">${tempMin}° / ${tempMax}°</div>
     `;
-
     forecast.appendChild(card);
   }
 
