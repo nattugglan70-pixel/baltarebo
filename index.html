@@ -1,4 +1,4 @@
-<!-- Komplett kod: VÄDER 1.5 med fallback och versionsnummer -->
+<!-- Komplett kod: VÄDER 1.5 -->
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -14,7 +14,7 @@ body{
   margin:0;
   padding:30px;
 }
-.container{max-width:900px;margin:auto;}
+.container{max-width:900px;margin:auto;position:relative;}
 
 .card{
   background:rgba(255,255,255,0.08);
@@ -23,6 +23,7 @@ body{
   padding:20px;
   box-shadow:0 10px 25px rgba(0,0,0,0.3);
   margin-bottom:25px;
+  position:relative;
 }
 
 .current{
@@ -61,9 +62,38 @@ body{
 .right{
   flex:1;
   font-size:14px;
-  position:relative;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
 }
 
+/* Översta boxens datumsektion */
+.date-section{
+  text-align:left;
+  margin-bottom:4px;
+}
+.date-section span{
+  margin-left:4px;
+  margin-right:4px;
+}
+
+/* Versionsnummer högst upp höger */
+.version{
+  position:absolute;
+  top:10px;
+  right:10px;
+  color:gold;
+  font-weight:bold;
+  font-size:14px;
+}
+
+/* Uppdaterad/fallback */
+.updated{
+  font-size:14px;
+  margin-top:2px;
+}
+
+/* 5-dygnsprognos */
 .forecast{
   display:grid;
   grid-template-columns:repeat(5,1fr);
@@ -89,6 +119,8 @@ body{
 <div class="container">
 
 <div class="card current">
+  <div class="version">1.5</div>
+
   <div class="left">
     <div class="left-top">
       <img id="icon">
@@ -101,7 +133,7 @@ body{
   </div>
 
   <div class="middle">
-    <div>Vind: <span id="wind">--</span> (<span id="windKmh">--</span> km/h)</div>
+    <div>Vind: <span id="wind">--</span></div>
     <div>Luftfuktighet: <span id="humidity">--</span></div>
     <div>Tryck: <span id="pressure">--</span></div>
     <div>Nederbörd (1h): <span id="precip">--</span></div>
@@ -110,10 +142,8 @@ body{
   </div>
 
   <div class="right">
-    <div id="week">( V 9 )</div>
-    <div id="date"></div>
-    <div id="updated"></div>
-    <div id="version" style="position:absolute; top:10px; right:10px; color:orange; font-weight:bold;">1.5</div>
+    <div class="date-section" id="date"></div>
+    <div class="updated" id="updated"></div>
   </div>
 </div>
 
@@ -148,7 +178,6 @@ async function loadForecast(){
   const data = await res.json();
   const series = data.timeSeries;
 
-  // närmaste framtida tid
   const now = new Date();
   const current = series.find(ts => new Date(ts.validTime) >= now) || series[0];
 
@@ -161,17 +190,12 @@ async function loadForecast(){
 
   temp.textContent = Math.round(t)+"°";
   feels.textContent = "Känns som "+feelsLike(t,ws)+"°";
-  wind.textContent = ws.toFixed(1)+" m/s";
-
-  const kmh = Math.round(ws*3.6);
-  windKmh.textContent = kmh;
-
+  wind.textContent = ws.toFixed(1)+" m/s ("+Math.round(ws*3.6)+" km/h)";
   humidity.textContent = params.r+" %";
   pressure.textContent = params.msl+" hPa";
   precip.textContent = params.pmean+" mm";
   windArrow.style.transform=`rotate(${wd}deg)`;
 
-  // ikon
   icon.src="https://cdn-icons-png.flaticon.com/512/414/414825.png";
 
   // ---- DAGLIG SUMMERING ----
@@ -183,7 +207,8 @@ async function loadForecast(){
   });
 
   forecast.innerHTML="";
-  Object.keys(daily).slice(1,6).forEach(d=>{ // börjar från nästa dag
+  const dailyKeys = Object.keys(daily).slice(1,6); // nästa dag till 5 dagar
+  dailyKeys.forEach(d=>{
     const arr=daily[d];
     const temps=arr.map(x=>{
       const p={};x.parameters.forEach(a=>p[a.name]=a.values[0]);
@@ -234,13 +259,13 @@ async function loadYesterday(){
     });
     ySame.textContent=Math.round(same.value)+"°";
 
-    // normal uppdaterad
+    // korrekt uppdaterad
     const nowTime = new Date();
     updated.textContent="Uppdaterad: "+nowTime.toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"});
     updated.style.color="white";
 
   } else {
-    // fallback: ingen data, visa "Uppdateras…"
+    // fallback: ingen data
     updated.textContent="Uppdateras…";
     updated.style.color="orange";
   }
@@ -249,12 +274,17 @@ async function loadYesterday(){
 // ---------- INIT ----------
 function init(){
   const now=new Date();
-  date.textContent=now.toLocaleDateString("sv-SE",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  const week = Math.ceil((((now-new Date(now.getFullYear(),0,1))/86400000)+new Date(now.getFullYear(),0,1).getDay()+1)/7);
+  date.textContent=now.toLocaleDateString("sv-SE",{weekday:"long",day:"numeric",month:"long",year:"numeric"})+" ( V "+week+" )";
+
   loadForecast();
   loadYesterday();
 
-  // uppdatera automatiskt var 10:e minut
-  setInterval(()=>{loadForecast(); loadYesterday();},10*60*1000);
+  // automatisk uppdatering var 10:e minut
+  setInterval(()=>{
+    loadForecast();
+    loadYesterday();
+  }, 600000); // 600000 ms = 10 min
 }
 init();
 </script>
