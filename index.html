@@ -1,4 +1,4 @@
-<!-- VÄDER 1.6.1 - Open-Meteo snabb ikon + femdygnsprognos text -->
+<!-- VÄDER 1.6.2 - Open-Meteo femdygnsprognos text, SMHI vind, ingen min/max -->
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -98,7 +98,7 @@ body{
 <div class="container">
 
 <div class="card current">
-  <div class="version">1.6.1</div>
+  <div class="version">1.6.2</div>
   <div class="left">
     <div class="left-top">
       <img id="icon" title="--">
@@ -115,7 +115,6 @@ body{
     <div>Luftfuktighet: <span id="humidity">--</span></div>
     <div>Tryck: <span id="pressure">--</span></div>
     <div>Nederbörd (1h): <span id="precip">--</span></div>
-    <div>Igår Min/Max: <span id="yMin">--</span> / <span id="yMax">--</span></div>
   </div>
 
   <div class="right">
@@ -163,11 +162,11 @@ async function loadOpenMeteo(updateIconOnly=false){
     const data=await res.json();
 
     const t = data.current_weather.temperature;
-    const ws = 0; // placeholder för SMHI
     const wd = data.current_weather.winddirection;
+
     if(!updateIconOnly){
       temp.textContent=Math.round(t)+"°";
-      feels.textContent="Känns som "+feelsLike(t,ws)+"°";
+      feels.textContent="Känns som "+feelsLike(t,parseFloat(wind.dataset.speed||0))+"°";
       humidity.textContent=data.hourly.relativehumidity_2m[0]+" %";
       pressure.textContent=data.hourly.pressure_msl[0]+" hPa";
       precip.textContent=data.hourly.precipitation[0]+" mm";
@@ -179,19 +178,19 @@ async function loadOpenMeteo(updateIconOnly=false){
       forecast.innerHTML="";
       const daily = data.daily || {};
       const days = ["Sön","Mån","Tis","Ons","Tor","Fre","Lör"];
+      const weatherTextMap = {
+        0:"Soligt",1:"Dagsmoln",2:"Molnigt",3:"Molnigt",45:"Dimma",48:"Dimma",
+        51:"Duggregn",53:"Duggregn",55:"Duggregn",61:"Regn",63:"Regn",65:"Regn",
+        66:"Fryst regn",67:"Fryst regn",71:"Snö",73:"Snö",75:"Snö",77:"Snö",
+        80:"Regnskurar",81:"Regnskurar",82:"Regnskurar",85:"Snöskurar",86:"Snöskurar",
+        95:"Åska",96:"Åska",99:"Åska"
+      };
       for(let i=1;i<=5;i++){
         const day = new Date();
         day.setDate(day.getDate()+i);
         const weekday = days[day.getDay()];
         const tempMax = Math.round(daily.temperature_2m_max[i]||0);
         const tempMin = Math.round(daily.temperature_2m_min[i]||0);
-        const weatherTextMap = {
-          0:"Soligt",1:"Dagsmoln",2:"Molnigt",3:"Molnigt",45:"Dimma",48:"Dimma",
-          51:"Duggregn",53:"Duggregn",55:"Duggregn",61:"Regn",63:"Regn",65:"Regn",
-          66:"Fryst regn",67:"Fryst regn",71:"Snö",73:"Snö",75:"Snö",77:"Snö",
-          80:"Regnskurar",81:"Regnskurar",82:"Regnskurar",85:"Snöskurar",86:"Snöskurar",
-          95:"Åska",96:"Åska",99:"Åska"
-        };
         const code = daily.weathercode[i] || 0;
         const weatherText = weatherTextMap[code] || "Okänt";
 
@@ -208,13 +207,14 @@ async function loadOpenMeteo(updateIconOnly=false){
 
     // IKON (uppdateras snabbare)
     const iconMap = {
-      0:"sunny",1:"partly_cloudy",2:"cloudy",3:"overcast",45:"fog",48:"fog",
-      51:"drizzle",53:"drizzle",55:"drizzle",61:"rain",63:"rain",65:"rain",
-      66:"freezing_rain",67:"freezing_rain",71:"snow",73:"snow",75:"snow",77:"snow",
-      80:"rain_showers",81:"rain_showers",82:"rain_showers",85:"snow_showers",86:"snow_showers",
-      95:"thunderstorm",96:"thunderstorm",99:"thunderstorm"
+      0:"Soligt",1:"Dagsmoln",2:"Molnigt",3:"Molnigt",45:"Dimma",48:"Dimma",
+      51:"Duggregn",53:"Duggregn",55:"Duggregn",61:"Regn",63:"Regn",65:"Regn",
+      66:"Fryst regn",67:"Fryst regn",71:"Snö",73:"Snö",75:"Snö",77:"Snö",
+      80:"Regnskurar",81:"Regnskurar",82:"Regnskurar",85:"Snöskurar",86:"Snöskurar",
+      95:"Åska",96:"Åska",99:"Åska"
     };
-    const iconName = iconMap[data.current_weather.weathercode] || "unknown";
+    const code = data.current_weather.weathercode;
+    const iconName = iconMap[code] || "Okänt";
     icon.src=`https://cdn-icons-png.flaticon.com/512/414/414825.png`; // placeholder ikon
     icon.title = `${iconName}, ${t.toFixed(1)}°`;
 
@@ -236,37 +236,12 @@ async function loadWindSMHI(){
     const latest = data.value[data.value.length-1];
     const ws = latest ? latest.value : 0;
     wind.textContent=ws.toFixed(1)+" m/s ("+Math.round(ws*3.6)+" km/h)";
+    wind.dataset.speed = ws;
     windArrow.style.transform=`rotate(${latest.direction||0}deg)`;
   } catch(e){
     console.error("SMHI wind fetch error", e);
     wind.textContent="--";
-  }
-}
-
-// ---------- HÄMTA GÅRDAGENS MIN/MAX ----------
-async function loadYesterday(){
-  try{
-    const url=`https://opendata-download-metobs.smhi.se/api/version/latest/parameter/1/station/${smhiStation}/period/latest-month/data.json`;
-    const res=await fetch(url);
-    const data=await res.json();
-    const now=new Date();
-    const yesterday=new Date(now.getTime()-86400000);
-    const yVals=data.value.filter(v=>{
-      const d=new Date(v.date);
-      return d.getDate()===yesterday.getDate() && d.getMonth()===yesterday.getMonth();
-    });
-    if(yVals.length){
-      const temps=yVals.map(v=>v.value);
-      yMin.textContent=Math.round(Math.min(...temps))+"°";
-      yMax.textContent=Math.round(Math.max(...temps))+"°";
-    } else {
-      yMin.textContent="--";
-      yMax.textContent="--";
-    }
-  } catch(e){
-    console.error("Yesterday fetch error", e);
-    yMin.textContent="--";
-    yMax.textContent="--";
+    wind.dataset.speed=0;
   }
 }
 
@@ -278,12 +253,10 @@ function init(){
 
   loadOpenMeteo();
   loadWindSMHI();
-  loadYesterday();
 
   setInterval(()=>{
     loadOpenMeteo();
     loadWindSMHI();
-    loadYesterday();
   },600000); // var 10:e minut
 
   setInterval(()=>{
