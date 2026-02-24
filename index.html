@@ -1,4 +1,4 @@
-<!-- Komplett kod: VÄDER 1.5.2 - 48h igår + loop + fallback Open-Meteo -->
+<!-- Komplett kod: VÄDER 1.5.3 - Snabb ikonu, hover-text och Åminne + närmaste stationer -->
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -72,7 +72,6 @@ body{
 .right{
   flex:1;
   font-size:14px;
-  text-align:left;
 }
 
 .forecast{
@@ -104,10 +103,10 @@ body{
 <div class="container">
 
 <div class="card current">
-  <div class="version">1.5.2</div>
+  <div class="version">1.5.2 → 1.5.3</div>
   <div class="left">
     <div class="left-top">
-      <img id="icon">
+      <img id="icon" title="">
       <div class="temp" id="temp">--°</div>
     </div>
     <div class="feels">
@@ -127,7 +126,7 @@ body{
 
   <div class="right">
     <div id="date"></div>
-    <div id="updated" style="color:orange;">Uppdateras…</div>
+    <div id="updated"></div>
   </div>
 </div>
 
@@ -139,15 +138,18 @@ body{
 </div>
 
 <script>
-const lat = 57.123; // Åminne
+const lat = 57.123;
 const lon = 13.952;
-const stations = [97490, 97491, 97492, 2556]; // Åminne, Lindhult, Fryle, Hagskult fallback
+const stations = [97490, 97492, 97485]; // Åminne + närmaste stationer
 
 // ---------- FEELS LIKE ----------
 function feelsLike(t, ws){
   const kmh = ws*3.6;
   if(t<=10 && kmh>4.8){
-    return Math.round(13.12 + 0.6215*t - 11.37*Math.pow(kmh,0.16) + 0.3965*t*Math.pow(kmh,0.16));
+    return Math.round(
+      13.12 + 0.6215*t - 11.37*Math.pow(kmh,0.16)
+      + 0.3965*t*Math.pow(kmh,0.16)
+    );
   }
   return Math.round(t);
 }
@@ -178,6 +180,7 @@ async function loadForecast(){
     const t = params.t;
     const ws = params.ws;
     const wd = params.wd;
+    const wSymbol = params.Wsymb2; // symbol för ikon
 
     temp.textContent = Math.round(t)+"°";
     feels.textContent = "Känns som "+feelsLike(t,ws)+"°";
@@ -187,8 +190,21 @@ async function loadForecast(){
     precip.textContent = params.pmean+" mm";
     windArrow.style.transform=`rotate(${wd}deg)`;
 
-    // ikon
-    icon.src="https://cdn-icons-png.flaticon.com/512/414/414825.png";
+    // Ikon + hover
+    let iconURL = "https://cdn-icons-png.flaticon.com/512/414/414825.png"; // standard molnigt
+    let iconTitle = "Molnigt";
+
+    switch(wSymbol){
+      case 1: iconURL="https://cdn-icons-png.flaticon.com/512/1163/1163661.png"; iconTitle="Klart"; break;
+      case 2: iconURL="https://cdn-icons-png.flaticon.com/512/1163/1163685.png"; iconTitle="Delvis molnigt"; break;
+      case 3: iconURL="https://cdn-icons-png.flaticon.com/512/1163/1163686.png"; iconTitle="Molnigt"; break;
+      case 4: iconURL="https://cdn-icons-png.flaticon.com/512/1163/1163687.png"; iconTitle="Duggregn"; break;
+      case 5: iconURL="https://cdn-icons-png.flaticon.com/512/1163/1163688.png"; iconTitle="Regn"; break;
+      // lägg till fler symboler vid behov
+    }
+
+    icon.src = iconURL;
+    icon.title = iconTitle;
 
     updated.textContent="Uppdaterad: "+now.toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"});
     updated.style.color="white";
@@ -217,7 +233,7 @@ async function loadForecast(){
         <div class="day-name">
           ${new Date(d).toLocaleDateString("sv-SE",{weekday:"short"})}
         </div>
-        <img src="https://cdn-icons-png.flaticon.com/512/414/414825.png">
+        <img src="https://cdn-icons-png.flaticon.com/512/414/414825.png" title="Molnigt">
         <div class="temp-range">${Math.round(max)}° / ${Math.round(min)}°</div>
       `;
       forecast.appendChild(card);
@@ -230,72 +246,54 @@ async function loadForecast(){
   }
 }
 
-// ---------- HÄMTA IGÅR MED 48 TIM INTERVALL + LOOP ÖVER STATIONER ----------
+// ---------- HÄMTA IGÅR ----------
 async function loadYesterday(){
+  let found=false;
   const now = new Date();
   const yesterday = new Date(now.getTime()-86400000);
 
-  let found = false;
-
-  for(const station of stations){
+  for(let station of stations){
     try{
-      const res = await fetch(`https://opendata-download-metobs.smhi.se/api/version/latest/parameter/1/station/${station}/period/latest-month/data.json`);
-      const data = await res.json();
-      const values = data.value;
+      const res=await fetch(`https://opendata-download-metobs.smhi.se/api/version/latest/parameter/1/station/${station}/period/latest-month/data.json`);
+      const data=await res.json();
+      const values=data.value;
 
-      // filtrera ±48 timmar runt igår samma tid
-      const yVals = values.filter(v=>{
-        const d = new Date(v.date);
-        const diff = Math.abs(d - yesterday);
-        return diff <= 48*3600*1000;
+      const yVals=values.filter(v=>{
+        const d=new Date(v.date);
+        return d.getDate()===yesterday.getDate() &&
+               d.getMonth()===yesterday.getMonth();
       });
 
       if(yVals.length){
-        const temps = yVals.map(v=>v.value);
+        const temps=yVals.map(v=>v.value);
         yMin.textContent=Math.round(Math.min(...temps))+"°";
         yMax.textContent=Math.round(Math.max(...temps))+"°";
 
-        // Hitta värdet närmast samma timme
-        const same = yVals.reduce((prev,curr)=>{
-          return Math.abs(new Date(curr.date).getHours()-now.getHours()) <
-                 Math.abs(new Date(prev.date).getHours()-now.getHours()) ? curr : prev;
+        const same=yVals.reduce((prev,curr)=>{
+          const h=new Date(curr.date).getHours();
+          return Math.abs(h-now.getHours())<
+                 Math.abs(new Date(prev.date).getHours()-now.getHours())
+                 ?curr:prev;
         });
         ySame.textContent=Math.round(same.value)+"°";
-
-        found = true;
-        break;
+        found=true;
+        break; // vi har hittat data, hoppa ur loop
       }
-
     } catch(e){
-      console.warn(`Station ${station} failed, försöker nästa`, e);
-      continue;
+      console.warn("Station fetch error for "+station, e);
     }
   }
 
   if(!found){
-    // fallback Open-Meteo
-    try{
-      const latLonUrl = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&hourly=temperature_2m&start=${yesterday.toISOString().split("T")[0]}T00:00:00Z&end=${yesterday.toISOString().split("T")[0]}T23:59:59Z&timezone=Europe/Stockholm`;
-      const res = await fetch(latLonUrl);
-      const data = await res.json();
-      const temps = data.hourly.temperature_2m;
-      if(temps && temps.length){
-        yMin.textContent=Math.round(Math.min(...temps))+"°";
-        yMax.textContent=Math.round(Math.max(...temps))+"°";
-        ySame.textContent=Math.round(temps[now.getHours()])+"°";
-      }
-    } catch(e){
-      console.error("Open-Meteo fallback failed", e);
-      yMin.textContent="--";
-      yMax.textContent="--";
-      ySame.textContent="--";
-    }
+    ySame.textContent=yMin.textContent=yMax.textContent="--";
+    updated.textContent="Uppdateras…";
+    updated.style.color="orange";
   }
 }
 
 // ---------- INIT ----------
 function init(){
-  const now = new Date();
+  const now=new Date();
   const weekNum = getISOWeek(now);
   date.textContent=now.toLocaleDateString("sv-SE",{weekday:"long",day:"numeric",month:"long",year:"numeric"}) + " ( V " + weekNum + " )";
 
