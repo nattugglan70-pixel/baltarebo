@@ -1,4 +1,4 @@
-<!-- VÄDER 1.6.6 - Stabil 1.6.5 + subtil bakgrundsanimation -->
+<!-- VÄDER 1.6.7 - Stabil layout + vädertext i 5-dygn + vädertyp i ikon-hover -->
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -14,42 +14,8 @@ body{
   color:white;
   margin:0;
   padding:30px;
-  position:relative;
-  overflow-x:hidden;
 }
-
-/* ===== BAKGRUND ===== */
-#bg-animation{
-  position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
-  pointer-events:none;
-  z-index:0;
-  overflow:hidden;
-}
-
-.cloud{
-  position:absolute;
-  background:rgba(255,255,255,0.05);
-  border-radius:50%;
-  filter:blur(12px);
-  animation:moveCloud linear infinite;
-}
-
-@keyframes moveCloud{
-  from{ transform:translateX(-250px); }
-  to{ transform:translateX(110vw); }
-}
-/* ===== SLUT BAKGRUND ===== */
-
-.container{
-  max-width:900px;
-  margin:auto;
-  position:relative;
-  z-index:2;
-}
+.container{max-width:900px;margin:auto;}
 
 .card{
   background:rgba(255,255,255,0.08);
@@ -124,18 +90,16 @@ body{
   text-align:center;
 }
 .day-name{font-weight:bold;margin-bottom:5px;}
+.weather-text{font-size:13px;margin:4px 0;}
 .temp-range{font-size:14px;}
 </style>
 </head>
 
 <body>
-
-<div id="bg-animation"></div>
-
 <div class="container">
 
 <div class="card current">
-  <div class="version">1.6.6</div>
+  <div class="version">1.6.7</div>
   <div class="left">
     <div class="left-top">
       <img id="icon" title="--">
@@ -173,22 +137,17 @@ const lon = 13.952;
 const smhiStation = 97490;
 let currentWind = 0;
 
-/* ===== SKAPA SUBTILA MOLN ===== */
-function createClouds(){
-  const bg=document.getElementById("bg-animation");
-  bg.innerHTML="";
-  for(let i=0;i<6;i++){
-    const cloud=document.createElement("div");
-    cloud.className="cloud";
-    cloud.style.width=200+Math.random()*200+"px";
-    cloud.style.height=80+Math.random()*60+"px";
-    cloud.style.top=Math.random()*80+"%";
-    cloud.style.animationDuration=50+Math.random()*40+"s";
-    bg.appendChild(cloud);
-  }
-}
-createClouds();
-/* ===== SLUT MOLN ===== */
+const weatherTextMap = {
+  0:"Soligt",1:"Dagsmoln",2:"Molnigt",3:"Molnigt",
+  45:"Dimma",48:"Dimma",
+  51:"Duggregn",53:"Duggregn",55:"Duggregn",
+  61:"Regn",63:"Regn",65:"Regn",
+  66:"Fryst regn",67:"Fryst regn",
+  71:"Snö",73:"Snö",75:"Snö",77:"Snö",
+  80:"Regnskurar",81:"Regnskurar",82:"Regnskurar",
+  85:"Snöskurar",86:"Snöskurar",
+  95:"Åska",96:"Åska",99:"Åska"
+};
 
 function feelsLike(t, ws){
   const kmh = ws*3.6;
@@ -226,11 +185,17 @@ async function updateWeather(){
     const data = await res.json();
 
     const t = data.current_weather.temperature;
+    const code = data.current_weather.weathercode;
+    const weatherText = weatherTextMap[code] || "Okänt";
+
     temp.textContent = Math.round(t)+"°";
     feels.textContent = "Känns som "+feelsLike(t,currentWind)+"°";
     humidity.textContent = data.hourly.relativehumidity_2m[0]+" %";
     pressure.textContent = data.hourly.pressure_msl[0]+" hPa";
     precip.textContent = data.hourly.precipitation[0]+" mm";
+
+    icon.src=`https://cdn-icons-png.flaticon.com/512/414/414825.png`;
+    icon.title = `${weatherText}, ${t.toFixed(1)}°`;
 
     const now = new Date();
     updated.textContent = "Uppdaterad: "+now.toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"});
@@ -245,18 +210,18 @@ async function updateWeather(){
       const weekday = days[day.getDay()];
       const tempMax = Math.round(daily.temperature_2m_max[i]||0);
       const tempMin = Math.round(daily.temperature_2m_min[i]||0);
+      const dayCode = daily.weathercode[i] || 0;
+      const dayWeatherText = weatherTextMap[dayCode] || "Okänt";
 
       const card = document.createElement("div");
       card.className="day-card";
       card.innerHTML=`
         <div class="day-name">${weekday}</div>
+        <div class="weather-text">${dayWeatherText}</div>
         <div class="temp-range">${tempMin}° / ${tempMax}°</div>
       `;
       forecast.appendChild(card);
     }
-
-    icon.src=`https://cdn-icons-png.flaticon.com/512/414/414825.png`;
-    icon.title = `${t.toFixed(1)}°`;
 
   } catch(e){
     updated.textContent="Uppdateras…";
