@@ -1,11 +1,8 @@
-<!-- VÄDER 1.7.0
-Bas: 1.6.8
-Ändringar:
-- Full dag/natt-logik
-- Sol visas endast dagtid
-- Måne visas nattetid
-- Delvis molnigt får korrekt ikon (dag/natt)
-- Förbättrad ikonmappning
+<!-- VÄDER 1.7.1
+Emoji-version (stabil)
+- Inga externa ikonlänkar
+- Dag/natt korrekt
+- Emoji även i 5-dygnsprognos
 -->
 
 <!DOCTYPE html>
@@ -24,28 +21,9 @@ body{
   padding:30px;
   overflow-x:hidden;
 }
-#bg-animation{
-  position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
-  pointer-events:none;
-  z-index:0;
-  overflow:hidden;
-}
-.cloud{
-  position:absolute;
-  background:rgba(255,255,255,0.05);
-  border-radius:50%;
-  filter:blur(12px);
-  animation:moveCloud linear infinite;
-}
-@keyframes moveCloud{
-  from{ transform:translateX(-250px); }
-  to{ transform:translateX(110vw); }
-}
+
 .container{max-width:900px;margin:auto;position:relative;z-index:2;}
+
 .card{
   background:rgba(255,255,255,0.08);
   backdrop-filter:blur(12px);
@@ -55,6 +33,7 @@ body{
   margin-bottom:25px;
   position:relative;
 }
+
 .version{
   position:absolute;
   top:10px;
@@ -63,24 +42,36 @@ body{
   color:gold;
   font-weight:bold;
 }
+
 .current{
   display:flex;
   gap:25px;
   align-items:center;
 }
+
 .left{
   flex:1.5;
   display:flex;
   flex-direction:column;
   gap:10px;
 }
+
 .left-top{
   display:flex;
   align-items:center;
   gap:15px;
 }
-.left img{width:80px;}
-.temp{font-size:52px;font-weight:bold;}
+
+#icon{
+  font-size:60px;
+  line-height:1;
+}
+
+.temp{
+  font-size:52px;
+  font-weight:bold;
+}
+
 .middle{
   flex:1;
   display:flex;
@@ -88,40 +79,57 @@ body{
   gap:6px;
   font-size:14px;
 }
+
 .right{flex:1;font-size:14px;}
+
 .forecast{
   display:grid;
   grid-template-columns:repeat(5,1fr);
   gap:10px;
 }
+
 .day-card{
   display:flex;
   flex-direction:column;
   align-items:center;
   justify-content:center;
   background:rgba(255,255,255,0.06);
-  padding:10px;
+  padding:12px 8px;
   border-radius:16px;
   text-align:center;
 }
-.day-name{font-weight:bold;margin-bottom:5px;}
-.weather-text{font-size:13px;margin:4px 0;}
-.temp-range{font-size:14px;}
+
+.day-name{
+  font-weight:bold;
+  margin-bottom:5px;
+}
+
+.day-icon{
+  font-size:28px;
+  margin:4px 0;
+}
+
+.weather-text{
+  font-size:13px;
+  margin:2px 0;
+}
+
+.temp-range{
+  font-size:14px;
+}
 </style>
 </head>
 
 <body>
 
-<div id="bg-animation"></div>
-
 <div class="container">
 
 <div class="card current">
-  <div class="version">1.7.0</div>
+  <div class="version">1.7.1</div>
 
   <div class="left">
     <div class="left-top">
-      <img id="icon" title="--">
+      <div id="icon">--</div>
       <div class="temp" id="temp">--°</div>
     </div>
     <div id="feels">Känns som --°</div>
@@ -150,85 +158,35 @@ body{
 <script>
 const lat = 57.123;
 const lon = 13.952;
-const smhiStation = 97490;
-let currentWind = 0;
 
 const weatherTextMap = {
   3:"Molnigt",
   45:"Dimma",48:"Dimma",
   51:"Duggregn",53:"Duggregn",55:"Duggregn",
   61:"Regn",63:"Regn",65:"Regn",
-  66:"Fryst regn",67:"Fryst regn",
-  71:"Snö",73:"Snö",75:"Snö",77:"Snö",
+  71:"Snö",73:"Snö",75:"Snö",
   80:"Regnskurar",81:"Regnskurar",82:"Regnskurar",
   85:"Snöskurar",86:"Snöskurar",
   95:"Åska",96:"Åska",99:"Åska"
 };
 
-function createClouds(){
-  const bg=document.getElementById("bg-animation");
-  for(let i=0;i<6;i++){
-    const cloud=document.createElement("div");
-    cloud.className="cloud";
-    cloud.style.width=200+Math.random()*200+"px";
-    cloud.style.height=80+Math.random()*60+"px";
-    cloud.style.top=Math.random()*80+"%";
-    cloud.style.animationDuration=40+Math.random()*40+"s";
-    bg.appendChild(cloud);
-  }
-}
-createClouds();
+function getWeatherIcon(code, isDay){
 
-function getMainIcon(code,isDay){
+  if(code === 0) return isDay ? "☀️" : "🌙";
+  if(code === 1 || code === 2) return isDay ? "🌤️" : "🌙☁️";
+  if(code === 3) return "☁️";
+  if(code === 45 || code === 48) return "🌫️";
+  if([51,53,55,61,63,65,80,81,82].includes(code)) return "🌧️";
+  if([71,73,75,85,86].includes(code)) return "❄️";
+  if([95,96,99].includes(code)) return "⛈️";
 
-  if(code === 0){
-    return isDay
-      ? "https://cdn-icons-png.flaticon.com/512/869/869869.png"
-      : "https://cdn-icons-png.flaticon.com/512/869/869958.png";
-  }
-
-  if(code === 1 || code === 2){
-    return isDay
-      ? "https://cdn-icons-png.flaticon.com/512/1163/1163624.png"
-      : "https://cdn-icons-png.flaticon.com/512/1163/1163661.png";
-  }
-
-  if(code === 3){
-    return "https://cdn-icons-png.flaticon.com/512/414/414825.png";
-  }
-
-  if(code === 45 || code === 48){
-    return "https://cdn-icons-png.flaticon.com/512/4005/4005901.png";
-  }
-
-  if([51,53,55,61,63,65,80,81,82].includes(code)){
-    return "https://cdn-icons-png.flaticon.com/512/414/414974.png";
-  }
-
-  if([71,73,75,77,85,86].includes(code)){
-    return "https://cdn-icons-png.flaticon.com/512/642/642102.png";
-  }
-
-  if([95,96,99].includes(code)){
-    return "https://cdn-icons-png.flaticon.com/512/1146/1146860.png";
-  }
-
-  return "https://cdn-icons-png.flaticon.com/512/414/414825.png";
+  return "☁️";
 }
 
 async function updateWeather(){
 
-  try{
-    const wsRes = await fetch(`https://opendata-download-metobs.smhi.se/api/version/latest/parameter/1/station/${smhiStation}/period/latest-month/data.json`);
-    const wsData = await wsRes.json();
-    const latest = wsData.value[wsData.value.length-1];
-    currentWind = latest ? latest.value : 0;
-    wind.textContent=currentWind.toFixed(1)+" m/s ("+Math.round(currentWind*3.6)+" km/h)";
-  } catch{
-    wind.textContent="0 m/s (0 km/h)";
-  }
-
   const url=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,precipitation,pressure_msl,relativehumidity_2m&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=Europe/Stockholm`;
+
   const res = await fetch(url);
   const data = await res.json();
 
@@ -237,7 +195,6 @@ async function updateWeather(){
   const isDay = data.current_weather.is_day === 1;
 
   let weatherText;
-
   if(code === 0){
     weatherText = isDay ? "Soligt" : "Klart";
   } else if(code === 1 || code === 2){
@@ -246,39 +203,47 @@ async function updateWeather(){
     weatherText = weatherTextMap[code] || "Okänt";
   }
 
+  icon.textContent = getWeatherIcon(code,isDay);
+  icon.title = weatherText;
+
   temp.textContent = Math.round(t)+"°";
   feels.textContent = "Känns som "+Math.round(t)+"°";
   humidity.textContent = data.hourly.relativehumidity_2m[0]+" %";
   pressure.textContent = data.hourly.pressure_msl[0]+" hPa";
   precip.textContent = data.hourly.precipitation[0]+" mm";
 
-  icon.src = getMainIcon(code,isDay);
-  icon.title = `${weatherText}, ${t.toFixed(1)}°`;
-
   forecast.innerHTML="";
-  const daily = data.daily || {};
+  const daily = data.daily;
   const days = ["Sön","Mån","Tis","Ons","Tor","Fre","Lör"];
 
   for(let i=1;i<=5;i++){
+
     const day = new Date();
     day.setDate(day.getDate()+i);
-    const weekday = days[day.getDay()];
-    const tempMax = Math.round(daily.temperature_2m_max[i]||0);
-    const tempMin = Math.round(daily.temperature_2m_min[i]||0);
-    const dayCode = daily.weathercode[i] || 0;
 
-    const dayWeatherText =
-      dayCode===0 ? "Soligt" :
-      (dayCode===1 || dayCode===2) ? "Delvis molnigt" :
-      (weatherTextMap[dayCode] || "Okänt");
+    const weekday = days[day.getDay()];
+    const tempMax = Math.round(daily.temperature_2m_max[i]);
+    const tempMin = Math.round(daily.temperature_2m_min[i]);
+    const dayCode = daily.weathercode[i];
+
+    let dayText;
+    if(dayCode === 0){
+      dayText = "Soligt";
+    } else if(dayCode === 1 || dayCode === 2){
+      dayText = "Delvis molnigt";
+    } else {
+      dayText = weatherTextMap[dayCode] || "Okänt";
+    }
 
     const card = document.createElement("div");
     card.className="day-card";
     card.innerHTML=`
       <div class="day-name">${weekday}</div>
-      <div class="weather-text">${dayWeatherText}</div>
+      <div class="day-icon">${getWeatherIcon(dayCode,true)}</div>
+      <div class="weather-text">${dayText}</div>
       <div class="temp-range">${tempMin}° / ${tempMax}°</div>
     `;
+
     forecast.appendChild(card);
   }
 
