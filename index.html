@@ -1,4 +1,4 @@
-<!-- VÄDER 1.6.2 - Open-Meteo femdygnsprognos text, SMHI vind, ingen min/max -->
+<!-- VÄDER 1.6.3 - Femdygnsprognos korrekt lägsta/högsta, SMHI vind fixad -->
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -98,7 +98,7 @@ body{
 <div class="container">
 
 <div class="card current">
-  <div class="version">1.6.2</div>
+  <div class="version">1.6.3</div>
   <div class="left">
     <div class="left-top">
       <img id="icon" title="--">
@@ -162,7 +162,6 @@ async function loadOpenMeteo(updateIconOnly=false){
     const data=await res.json();
 
     const t = data.current_weather.temperature;
-    const wd = data.current_weather.winddirection;
 
     if(!updateIconOnly){
       temp.textContent=Math.round(t)+"°";
@@ -199,7 +198,7 @@ async function loadOpenMeteo(updateIconOnly=false){
         card.innerHTML=`
           <div class="day-name">${weekday}</div>
           <div>${weatherText}</div>
-          <div class="temp-range">${tempMax}° / ${tempMin}°</div>
+          <div class="temp-range">${tempMin}° / ${tempMax}°</div>
         `;
         forecast.appendChild(card);
       }
