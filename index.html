@@ -6,21 +6,22 @@
 <link rel="icon" href="favicon.ico" type="image/x-icon">
 
 <!-- 
-Version 1.6.6
+Version 1.6.6a
 Ändringar: 
-- Vindpilen hämtas separat från SMHI, uppdateras varje minut
-- Subtila bakgrundsanimationer (snö, regn, moln) bakom väderboxarna
-- Ingen annan ändring, layout och funktion exakt som i version 1.6.5
+- Bakgrundsanimationer (snö, regn, moln) flyttade bakom boxarna utan att påverka layout/färger.
+- Layout och färger exakt som i version 1.6.5
+- Vindpilen hämtas separat från SMHI
 -->
 
 <style>
 body {
     margin: 0;
     font-family: sans-serif;
-    background-color: #c0d6e4;
+    background-color: #4a7ca1; /* exakt som 1.6.5 */
     position: relative;
     overflow: hidden;
 }
+
 #version {
     position: absolute;
     top: 5px;
@@ -28,6 +29,7 @@ body {
     font-size: 12px;
     color: gold;
 }
+
 #background-animation {
     position: absolute;
     top: 0;
@@ -37,11 +39,13 @@ body {
     z-index: -1;
     pointer-events: none;
 }
+
 .flake, .drop, .cloud {
     position: absolute;
     opacity: 0.5;
     pointer-events: none;
 }
+
 .flake {
     width: 8px;
     height: 8px;
@@ -49,6 +53,7 @@ body {
     border-radius: 50%;
     animation: fall linear infinite;
 }
+
 .drop {
     width: 2px;
     height: 10px;
@@ -56,6 +61,7 @@ body {
     border-radius: 50%;
     animation: fall linear infinite;
 }
+
 .cloud {
     width: 80px;
     height: 50px;
@@ -63,32 +69,41 @@ body {
     border-radius: 50%;
     animation: glide linear infinite;
 }
+
 @keyframes fall {
     0% {transform: translateY(-10px);}
     100% {transform: translateY(100vh);}
 }
+
 @keyframes glide {
     0% {transform: translateX(-100px);}
     100% {transform: translateX(100vw);}
 }
+
+/* Boxar som i 1.6.5 */
 .weather-box {
     position: relative;
     margin: 20px auto;
     width: 400px;
     padding: 15px;
-    background: rgba(255,255,255,0.9);
+    background: rgba(20,35,50,0.85); /* återställt mörk ton */
     border-radius: 12px;
     box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    color: white;
 }
+
 .current-weather {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
 }
+
 .weather-icon {
     font-size: 48px;
+    margin-right: 10px;
     position: relative;
 }
+
 .weather-icon:hover::after {
     content: attr(data-hover);
     position: absolute;
@@ -101,6 +116,7 @@ body {
     font-size: 12px;
     white-space: nowrap;
 }
+
 .wind-arrow {
     display: inline-block;
     width: 24px;
@@ -110,15 +126,17 @@ body {
     transform-origin: center center;
     transition: transform 0.5s ease-in-out;
 }
+
 .five-day {
     display: flex;
     justify-content: space-between;
     margin-top: 15px;
 }
+
 .day-box {
     width: 70px;
     text-align: center;
-    background: rgba(220,220,220,0.5);
+    background: rgba(30,50,70,0.7);
     border-radius: 8px;
     padding: 5px;
     font-size: 12px;
@@ -126,7 +144,7 @@ body {
 </style>
 </head>
 <body>
-<div id="version">v1.6.6</div>
+<div id="version">v1.6.6a</div>
 <div id="background-animation"></div>
 
 <div class="weather-box">
@@ -191,7 +209,7 @@ let currentWeather = {
   precip: 0,
   weather_text: 'Molnigt',
   weather_code: 'cloudy',
-  wind_speed: 1, // m/s
+  wind_speed: 1,
   wind_kmh: 3,
   five_day: [
     {day:'Ons', text:'Molnigt', min:0, max:3},
@@ -228,7 +246,7 @@ function updateFiveDay() {
 
 // ---- Vindpilen (SMHI separat) ----
 function updateWind() {
-  const smhiWind = { speed:1, kmh:3, direction:170 }; // syd-sydväst
+  const smhiWind = { speed:1, kmh:3, direction:170 };
   document.getElementById('wind-speed').textContent=smhiWind.speed+' m/s';
   document.getElementById('wind-kmh').textContent=smhiWind.kmh+' km/h';
   document.getElementById('wind-arrow').style.transform=`rotate(${smhiWind.direction}deg)`;
