@@ -1,11 +1,11 @@
-<!-- VÄDER 1.6.9
+<!-- VÄDER 1.7.0
 Bas: 1.6.8
 Ändringar:
-- Dag/Natt-logik via is_day
-- "Soligt" endast dagtid
-- "Klart" nattetid
-- Ikon växlar mellan sol/måne
-- Moln visar moln+måne på natten
+- Full dag/natt-logik
+- Sol visas endast dagtid
+- Måne visas nattetid
+- Delvis molnigt får korrekt ikon (dag/natt)
+- Förbättrad ikonmappning
 -->
 
 <!DOCTYPE html>
@@ -117,7 +117,7 @@ body{
 <div class="container">
 
 <div class="card current">
-  <div class="version">1.6.9</div>
+  <div class="version">1.7.0</div>
 
   <div class="left">
     <div class="left-top">
@@ -154,7 +154,7 @@ const smhiStation = 97490;
 let currentWind = 0;
 
 const weatherTextMap = {
-  1:"Dagsmoln",2:"Molnigt",3:"Molnigt",
+  3:"Molnigt",
   45:"Dimma",48:"Dimma",
   51:"Duggregn",53:"Duggregn",55:"Duggregn",
   61:"Regn",63:"Regn",65:"Regn",
@@ -180,16 +180,39 @@ function createClouds(){
 createClouds();
 
 function getMainIcon(code,isDay){
-  if(code===0){
+
+  if(code === 0){
     return isDay
-      ? "https://cdn-icons-png.flaticon.com/512/869/869869.png"   // sol
-      : "https://cdn-icons-png.flaticon.com/512/869/869869.png";  // måne (byt vid behov)
+      ? "https://cdn-icons-png.flaticon.com/512/869/869869.png"
+      : "https://cdn-icons-png.flaticon.com/512/869/869958.png";
   }
-  if(code===2 || code===3){
+
+  if(code === 1 || code === 2){
     return isDay
-      ? "https://cdn-icons-png.flaticon.com/512/414/414825.png"   // moln dag
-      : "https://cdn-icons-png.flaticon.com/512/414/414825.png";  // moln natt
+      ? "https://cdn-icons-png.flaticon.com/512/1163/1163624.png"
+      : "https://cdn-icons-png.flaticon.com/512/1163/1163661.png";
   }
+
+  if(code === 3){
+    return "https://cdn-icons-png.flaticon.com/512/414/414825.png";
+  }
+
+  if(code === 45 || code === 48){
+    return "https://cdn-icons-png.flaticon.com/512/4005/4005901.png";
+  }
+
+  if([51,53,55,61,63,65,80,81,82].includes(code)){
+    return "https://cdn-icons-png.flaticon.com/512/414/414974.png";
+  }
+
+  if([71,73,75,77,85,86].includes(code)){
+    return "https://cdn-icons-png.flaticon.com/512/642/642102.png";
+  }
+
+  if([95,96,99].includes(code)){
+    return "https://cdn-icons-png.flaticon.com/512/1146/1146860.png";
+  }
+
   return "https://cdn-icons-png.flaticon.com/512/414/414825.png";
 }
 
@@ -214,8 +237,11 @@ async function updateWeather(){
   const isDay = data.current_weather.is_day === 1;
 
   let weatherText;
-  if(code===0){
+
+  if(code === 0){
     weatherText = isDay ? "Soligt" : "Klart";
+  } else if(code === 1 || code === 2){
+    weatherText = "Delvis molnigt";
   } else {
     weatherText = weatherTextMap[code] || "Okänt";
   }
@@ -241,7 +267,10 @@ async function updateWeather(){
     const tempMin = Math.round(daily.temperature_2m_min[i]||0);
     const dayCode = daily.weathercode[i] || 0;
 
-    const dayWeatherText = dayCode===0 ? "Soligt" : (weatherTextMap[dayCode] || "Okänt");
+    const dayWeatherText =
+      dayCode===0 ? "Soligt" :
+      (dayCode===1 || dayCode===2) ? "Delvis molnigt" :
+      (weatherTextMap[dayCode] || "Okänt");
 
     const card = document.createElement("div");
     card.className="day-card";
