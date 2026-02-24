@@ -1,4 +1,4 @@
-<!-- Komplett kod: VÄDER 1.5 -->
+<!-- Komplett kod: VÄDER 1.6 med fallback "Uppdateras…" -->
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -62,38 +62,8 @@ body{
 .right{
   flex:1;
   font-size:14px;
-  display:flex;
-  flex-direction:column;
-  align-items:flex-start;
 }
 
-/* Översta boxens datumsektion */
-.date-section{
-  text-align:left;
-  margin-bottom:4px;
-}
-.date-section span{
-  margin-left:4px;
-  margin-right:4px;
-}
-
-/* Versionsnummer högst upp höger */
-.version{
-  position:absolute;
-  top:10px;
-  right:10px;
-  color:gold;
-  font-weight:bold;
-  font-size:14px;
-}
-
-/* Uppdaterad/fallback */
-.updated{
-  font-size:14px;
-  margin-top:2px;
-}
-
-/* 5-dygnsprognos */
 .forecast{
   display:grid;
   grid-template-columns:repeat(5,1fr);
@@ -112,6 +82,22 @@ body{
 .day-card img{width:45px;}
 .day-name{font-weight:bold;margin-bottom:5px;}
 .temp-range{font-size:14px;}
+
+/* Versionsnummer längst upp till höger */
+.version-number{
+  position:absolute;
+  top:10px;
+  right:15px;
+  color:gold;
+  font-weight:bold;
+  font-size:14px;
+}
+
+/* Uppdateras/uppdaterad under datum */
+#updated{
+  margin-top:5px;
+  font-weight:bold;
+}
 </style>
 </head>
 
@@ -119,8 +105,7 @@ body{
 <div class="container">
 
 <div class="card current">
-  <div class="version">1.5</div>
-
+  <div class="version-number">1.6</div>
   <div class="left">
     <div class="left-top">
       <img id="icon">
@@ -142,8 +127,8 @@ body{
   </div>
 
   <div class="right">
-    <div class="date-section" id="date"></div>
-    <div class="updated" id="updated"></div>
+    <div id="date"></div>
+    <div id="updated"></div>
   </div>
 </div>
 
@@ -178,6 +163,7 @@ async function loadForecast(){
   const data = await res.json();
   const series = data.timeSeries;
 
+  // närmaste framtida tid
   const now = new Date();
   const current = series.find(ts => new Date(ts.validTime) >= now) || series[0];
 
@@ -190,12 +176,13 @@ async function loadForecast(){
 
   temp.textContent = Math.round(t)+"°";
   feels.textContent = "Känns som "+feelsLike(t,ws)+"°";
-  wind.textContent = ws.toFixed(1)+" m/s ("+Math.round(ws*3.6)+" km/h)";
+  wind.textContent = ws.toFixed(1)+" m/s";
   humidity.textContent = params.r+" %";
   pressure.textContent = params.msl+" hPa";
   precip.textContent = params.pmean+" mm";
   windArrow.style.transform=`rotate(${wd}deg)`;
 
+  // ikon
   icon.src="https://cdn-icons-png.flaticon.com/512/414/414825.png";
 
   // ---- DAGLIG SUMMERING ----
@@ -207,8 +194,7 @@ async function loadForecast(){
   });
 
   forecast.innerHTML="";
-  const dailyKeys = Object.keys(daily).slice(1,6); // nästa dag till 5 dagar
-  dailyKeys.forEach(d=>{
+  Object.keys(daily).slice(1,6).forEach(d=>{ // börjar från nästa dag
     const arr=daily[d];
     const temps=arr.map(x=>{
       const p={};x.parameters.forEach(a=>p[a.name]=a.values[0]);
@@ -259,13 +245,13 @@ async function loadYesterday(){
     });
     ySame.textContent=Math.round(same.value)+"°";
 
-    // korrekt uppdaterad
+    // normal uppdaterad
     const nowTime = new Date();
     updated.textContent="Uppdaterad: "+nowTime.toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"});
     updated.style.color="white";
 
   } else {
-    // fallback: ingen data
+    // fallback: ingen data, visa "Uppdateras…"
     updated.textContent="Uppdateras…";
     updated.style.color="orange";
   }
@@ -274,17 +260,10 @@ async function loadYesterday(){
 // ---------- INIT ----------
 function init(){
   const now=new Date();
-  const week = Math.ceil((((now-new Date(now.getFullYear(),0,1))/86400000)+new Date(now.getFullYear(),0,1).getDay()+1)/7);
-  date.textContent=now.toLocaleDateString("sv-SE",{weekday:"long",day:"numeric",month:"long",year:"numeric"})+" ( V "+week+" )";
-
+  const weekNum = Math.ceil(((now - new Date(now.getFullYear(),0,1))/86400000 + new Date(now.getFullYear(),0,1).getDay()+1)/7);
+  date.textContent=now.toLocaleDateString("sv-SE",{weekday:"long",day:"numeric",month:"long",year:"numeric"}) + " ( V " + weekNum + " )";
   loadForecast();
   loadYesterday();
-
-  // automatisk uppdatering var 10:e minut
-  setInterval(()=>{
-    loadForecast();
-    loadYesterday();
-  }, 600000); // 600000 ms = 10 min
 }
 init();
 </script>
