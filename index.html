@@ -1,58 +1,98 @@
-<!-- Komplett kod: Väder 1.5.8 - Fix SMHI ikoner + lokal observation -->
 <!DOCTYPE html>
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VÄDER 1.5.8</title>
-<link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/869/869869.png" sizes="32x32">
+<title>VÄDER 1.6</title>
 
 <style>
-body{font-family:Arial,sans-serif;background:linear-gradient(to right,#141e30,#243b55);color:white;margin:0;padding:30px;}
+body{
+  font-family:Arial,sans-serif;
+  background:linear-gradient(to right,#141e30,#243b55);
+  color:white;
+  margin:0;
+  padding:30px;
+}
 .container{max-width:900px;margin:auto;}
-.card{background:rgba(255,255,255,0.08);backdrop-filter:blur(12px);border-radius:20px;padding:20px;box-shadow:0 10px 25px rgba(0,0,0,0.3);margin-bottom:25px;position:relative;}
-.version{position:absolute;top:10px;right:15px;font-size:12px;color:gold;font-weight:bold;}
-.current{display:flex;gap:25px;align-items:center;}
-.left{flex:1.5;display:flex;flex-direction:column;gap:10px;}
-.left-top{display:flex;align-items:center;gap:15px;}
+.card{
+  background:rgba(255,255,255,0.08);
+  backdrop-filter:blur(12px);
+  border-radius:20px;
+  padding:20px;
+  box-shadow:0 10px 25px rgba(0,0,0,0.3);
+  margin-bottom:25px;
+  position:relative;
+}
+.version{
+  position:absolute;
+  top:10px;
+  right:15px;
+  font-size:12px;
+  color:gold;
+  font-weight:bold;
+}
+.current{
+  display:flex;
+  gap:25px;
+  align-items:center;
+}
+.left{
+  flex:1.5;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.left-top{
+  display:flex;
+  align-items:center;
+  gap:15px;
+}
 .left img{width:80px;}
 .temp{font-size:52px;font-weight:bold;}
-.feels{display:flex;align-items:center;gap:10px;}
-.wind-arrow{font-size:32px;display:inline-block;}
-.middle{flex:1;display:flex;flex-direction:column;gap:6px;font-size:14px;}
+.middle{flex:1;font-size:14px;}
 .right{flex:1;font-size:14px;}
-.forecast{display:grid;grid-template-columns:repeat(5,1fr);gap:15px;}
-.day-card{display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,255,255,0.06);padding:15px;border-radius:16px;text-align:center;}
+.forecast{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:15px;
+}
+.day-card{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  background:rgba(255,255,255,0.06);
+  padding:15px;
+  border-radius:16px;
+  text-align:center;
+}
 .day-card img{width:45px;}
 .day-name{font-weight:bold;margin-bottom:5px;}
 .temp-range{font-size:14px;}
-#updated{font-weight:bold;}
-#updated.yellow{color:orange;}
 </style>
 </head>
 
 <body>
 <div class="container">
+
 <div class="card current">
-  <div class="version">1.5.8</div>
+  <div class="version">1.6</div>
+
   <div class="left">
     <div class="left-top">
-      <img id="icon" title="--">
+      <img id="icon" src="">
       <div class="temp" id="temp">--°</div>
     </div>
-    <div class="feels">
-      <div id="feels">Känns som --°</div>
-      <div class="wind-arrow" id="windArrow">↑</div>
-    </div>
   </div>
+
   <div class="middle">
     <div>Vind: <span id="wind">--</span></div>
     <div>Luftfuktighet: <span id="humidity">--</span></div>
     <div>Tryck: <span id="pressure">--</span></div>
     <div>Nederbörd (1h): <span id="precip">--</span></div>
-    <div>Igår samma tid: <span id="ySame">--</span></div>
     <div>Igår Min/Max: <span id="yMin">--</span> / <span id="yMax">--</span></div>
   </div>
+
   <div class="right">
     <div id="date"></div>
     <div id="updated"></div>
@@ -63,120 +103,120 @@ body{font-family:Arial,sans-serif;background:linear-gradient(to right,#141e30,#2
   <h3>5-dygnsprognos</h3>
   <div class="forecast" id="forecast"></div>
 </div>
+
 </div>
 
 <script>
-const lat = 57.123;
-const lon = 13.952;
-const stationFallbacks = [97490,97492,97485];
+const lat = 57.185;   // Värnamo
+const lon = 14.040;
+const station = 97490;
 
-function feelsLike(t, ws){
-  const kmh = ws*3.6;
-  if(t<=10 && kmh>4.8){
-    return Math.round(13.12+0.6215*t-11.37*Math.pow(kmh,0.16)+0.3965*t*Math.pow(kmh,0.16));
-  }
-  return Math.round(t);
-}
-
-function getISOWeek(date){
-  const tmpDate = new Date(date.getTime());
-  tmpDate.setHours(0,0,0,0);
-  tmpDate.setDate(tmpDate.getDate()+3-(tmpDate.getDay()+6)%7);
-  const week1 = new Date(tmpDate.getFullYear(),0,4);
-  return 1 + Math.round(((tmpDate-week1)/86400000-3+(week1.getDay()+6)%7)/7);
-}
-
-// ---------- HÄMTA PROGNOS ----------
+// ===== PROGNOS =====
 async function loadForecast(){
-  const url = `https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${lon}/lat/${lat}/data.json`;
   try{
-    const res = await fetch(url);
+    const res = await fetch(
+      `https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${lon}/lat/${lat}/data.json`
+    );
     const data = await res.json();
     const series = data.timeSeries;
 
     const now = new Date();
-    const current = series.find(ts=>new Date(ts.validTime)>=now) || series[0];
+    const current = series.find(ts => new Date(ts.validTime) >= now) || series[0];
+
     const params = {};
-    current.parameters.forEach(p=>params[p.name]=p.values[0]);
+    current.parameters.forEach(p => params[p.name] = p.values[0]);
 
-    temp.textContent=Math.round(params.t)+"°";
-    feels.textContent="Känns som "+feelsLike(params.t,params.ws)+"°";
-    wind.textContent=params.ws.toFixed(1)+" m/s ("+Math.round(params.ws*3.6)+" km/h)";
-    humidity.textContent=params.r+" %";
-    pressure.textContent=params.msl+" hPa";
-    precip.textContent=params.pmean+" mm";
-    windArrow.style.transform=`rotate(${params.wd}deg)`;
+    temp.textContent = Math.round(params.t) + "°";
+    wind.textContent = params.ws.toFixed(1) + " m/s";
+    humidity.textContent = params.r + " %";
+    pressure.textContent = params.msl + " hPa";
+    precip.textContent = params.pmean + " mm";
 
-    // SMHI Wsymb2 ikoner, hover-text
-    const wcode = params.Wsymb2 || 1;
-    icon.src=`https://opendata-download-metfcst.smhi.se/static/images/icons/w/${wcode}.png`;
-    icon.title=wcode;
+    // Stabil ikon
+    const w = params.Wsymb2 ? params.Wsymb2 : 1;
+    icon.src = `https://opendata-download-metfcst.smhi.se/static/images/icons/w/${w}.png`;
 
-    updated.textContent="Uppdaterad: "+now.toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"});
-    updated.style.color="white";
+    updated.textContent = "Uppdaterad: " +
+      now.toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"});
 
-    const daily={};
+    // ===== 5 dygn =====
+    const daily = {};
     series.forEach(ts=>{
-      const d=ts.validTime.split("T")[0];
+      const d = ts.validTime.split("T")[0];
       if(!daily[d]) daily[d]=[];
       daily[d].push(ts);
     });
 
     forecast.innerHTML="";
+
     Object.keys(daily).slice(1,6).forEach(d=>{
-      const arr=daily[d];
-      const temps=arr.map(x=>{const p={};x.parameters.forEach(a=>p[a.name]=a.values[0]);return p.t;});
-      const max=Math.max(...temps);
-      const min=Math.min(...temps);
-      const w = arr[Math.floor(arr.length/2)].parameters.find(a=>a.name=="Wsymb2").values[0];
+      const arr = daily[d];
+      const temps = arr.map(x=>{
+        const p={};
+        x.parameters.forEach(a=>p[a.name]=a.values[0]);
+        return p.t;
+      });
+
+      const max = Math.max(...temps);
+      const min = Math.min(...temps);
+
+      const wParam = arr[Math.floor(arr.length/2)].parameters.find(a=>a.name=="Wsymb2");
+      const w = wParam ? wParam.values[0] : 1;
+
       const card=document.createElement("div");
       card.className="day-card";
       card.innerHTML=`
         <div class="day-name">${new Date(d).toLocaleDateString("sv-SE",{weekday:"short"})}</div>
-        <img src='https://opendata-download-metfcst.smhi.se/static/images/icons/w/${w}.png' title='Wsymb2: ${w}'>
+        <img src="https://opendata-download-metfcst.smhi.se/static/images/icons/w/${w}.png">
         <div class="temp-range">${Math.round(max)}° / ${Math.round(min)}°</div>
       `;
       forecast.appendChild(card);
     });
 
   }catch(e){
-    console.error("Forecast fetch error",e);
-    updated.textContent="Uppdateras…";
-    updated.classList.add("yellow");
+    updated.textContent="Kunde inte hämta prognos";
   }
 }
 
-// ---------- HÄMTA IGÅR ----------
+// ===== IGÅR MIN/MAX =====
 async function loadYesterday(){
-  for(const st of stationFallbacks){
-    try{
-      const res = await fetch(`https://opendata-download-metobs.smhi.se/api/version/latest/parameter/1/station/${st}/period/latest-month/data.json`);
-      const data = await res.json();
-      const now = new Date();
-      const yesterday = new Date(now.getTime()-86400000);
-      const yVals = data.value.filter(v=>{ const d=new Date(v.date); return d.getDate()===yesterday.getDate() && d.getMonth()===yesterday.getMonth(); });
-      if(yVals.length){
-        const temps=yVals.map(v=>v.value);
-        yMin.textContent=Math.round(Math.min(...temps))+"°";
-        yMax.textContent=Math.round(Math.max(...temps))+"°";
-        const same=yVals.reduce((prev,curr)=>{ const h=new Date(curr.date).getHours(); return Math.abs(h-now.getHours())<Math.abs(new Date(prev.date).getHours()-now.getHours())?curr:prev; });
-        ySame.textContent=Math.round(same.value)+"°";
-        return; // sluta loopa efter första fungerande station
-      }
-    }catch(e){
-      console.error(`Station fetch error ${st}`,e);
-    }
+  try{
+    const res = await fetch(
+      `https://opendata-download-metobs.smhi.se/api/version/latest/parameter/1/station/${station}/period/latest-day/data.json`
+    );
+    const data = await res.json();
+
+    if(!data.value || !data.value.length) return;
+
+    const now = new Date();
+    const yesterday = new Date(now.getTime() - 86400000);
+
+    const yVals = data.value.filter(v=>{
+      const d = new Date(v.date);
+      return d.getDate() === yesterday.getDate() &&
+             d.getMonth() === yesterday.getMonth();
+    });
+
+    if(!yVals.length) return;
+
+    const temps = yVals.map(v=>v.value);
+    yMin.textContent = Math.round(Math.min(...temps))+"°";
+    yMax.textContent = Math.round(Math.max(...temps))+"°";
+
+  }catch(e){
+    console.log("Igår-data misslyckades");
   }
 }
 
 function init(){
   const now=new Date();
-  const weekNum=getISOWeek(now);
-  date.textContent=now.toLocaleDateString("sv-SE",{weekday:"long",day:"numeric",month:"long",year:"numeric"})+" ( V "+weekNum+" )";
+  date.textContent =
+    now.toLocaleDateString("sv-SE",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
   loadForecast();
   loadYesterday();
-  setInterval(()=>{ loadForecast(); loadYesterday(); },600000);
+  setInterval(()=>{loadForecast();loadYesterday();},600000);
 }
+
 init();
 </script>
 
