@@ -1,10 +1,10 @@
-<!-- Komplett kod: Väder 1.3 med fallback "Uppdateras…" och veckonummer -->
+<!-- Komplett kod: VÄDER 1.4 – korrekt ISO-vecka + stabil fallback -->
 <!DOCTYPE html>
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Väderdashboard</title>
+<title>VÄDER</title>
 
 <style>
 body{
@@ -81,11 +81,6 @@ body{
 .day-card img{width:45px;}
 .day-name{font-weight:bold;margin-bottom:5px;}
 .temp-range{font-size:14px;}
-
-.fallback{
-  color:#ffcc00;
-  font-style:italic;
-}
 </style>
 </head>
 
@@ -115,9 +110,7 @@ body{
 
   <div class="right">
     <div id="date"></div>
-    <div id="updatedContainer">
-      <span id="updated"></span>
-    </div>
+    <div id="updated"></div>
   </div>
 </div>
 
@@ -133,6 +126,15 @@ const lat = 57.173;
 const lon = 14.040;
 const station = 2556;
 
+// ---------- ISO VECKA ----------
+function getISOWeek(date){
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+}
+
 // ---------- FEELS LIKE ----------
 function feelsLike(t, ws){
   const kmh = ws*3.6;
@@ -145,7 +147,7 @@ function feelsLike(t, ws){
   return Math.round(t);
 }
 
-// ---------- HÄMTA PROGNOS (NU + 5 DYGN) ----------
+// ---------- HÄMTA PROGNOS ----------
 async function loadForecast(){
   const url = `https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${lon}/lat/${lat}/data.json`;
   const res = await fetch(url);
@@ -170,10 +172,8 @@ async function loadForecast(){
   precip.textContent = params.pmean+" mm";
   windArrow.style.transform=`rotate(${wd}deg)`;
 
-  // ikon
   icon.src="https://cdn-icons-png.flaticon.com/512/414/414825.png";
 
-  // ---- DAGLIG SUMMERING ----
   const daily = {};
   series.forEach(ts=>{
     const d = ts.validTime.split("T")[0];
@@ -182,10 +182,7 @@ async function loadForecast(){
   });
 
   forecast.innerHTML="";
-  // femdygnsprognos från dagen efter
-  const keys=Object.keys(daily);
-  const tomorrowIndex=keys.findIndex(d=>new Date(d)>now);
-  Object.keys(daily).slice(tomorrowIndex,tomorrowIndex+5).forEach(d=>{
+  Object.keys(daily).slice(1,6).forEach(d=>{
     const arr=daily[d];
     const temps=arr.map(x=>{
       const p={};x.parameters.forEach(a=>p[a.name]=a.values[0]);
@@ -209,21 +206,23 @@ async function loadForecast(){
 
 // ---------- HÄMTA IGÅR ----------
 async function loadYesterday(){
-  const url=`https://opendata-download-metobs.smhi.se/api/version/latest/parameter/1/station/${station}/period/latest-month/data.json`;
-  const res=await fetch(url);
-  const data=await res.json();
-  const values=data.value;
+  try{
+    const url=`https://opendata-download-metobs.smhi.se/api/version/latest/parameter/1/station/${station}/period/latest-month/data.json`;
+    const res=await fetch(url);
+    const data=await res.json();
+    const values=data.value;
 
-  const now=new Date();
-  const yesterday=new Date(now.getTime()-86400000);
+    const now=new Date();
+    const yesterday=new Date(now.getTime()-86400000);
 
-  const yVals=values.filter(v=>{
-    const d=new Date(v.date);
-    return d.getDate()===yesterday.getDate() &&
-           d.getMonth()===yesterday.getMonth();
-  });
+    const yVals=values.filter(v=>{
+      const d=new Date(v.date);
+      return d.getDate()===yesterday.getDate() &&
+             d.getMonth()===yesterday.getMonth();
+    });
 
-  if(yVals.length){
+    if(!yVals.length) throw new Error("Ingen data");
+
     const temps=yVals.map(v=>v.value);
     yMin.textContent=Math.round(Math.min(...temps))+"°";
     yMax.textContent=Math.round(Math.max(...temps))+"°";
@@ -236,20 +235,24 @@ async function loadYesterday(){
     });
     ySame.textContent=Math.round(same.value)+"°";
 
-    updated.textContent = new Date().toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"});
-    updated.classList.remove("fallback");
-  } else {
-    // fallback
+    const nowTime = new Date();
+    updated.textContent="Uppdaterad: "+nowTime.toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"});
+    updated.style.color="white";
+
+  }catch{
     updated.textContent="Uppdateras…";
-    updated.classList.add("fallback");
+    updated.style.color="#ffcc00";
   }
 }
 
 // ---------- INIT ----------
 function init(){
   const now=new Date();
-  const weekNr = new Intl.DateTimeFormat('sv-SE',{week:'numeric'}).format(now);
-  date.textContent=now.toLocaleDateString("sv-SE",{weekday:"long",day:"numeric",month:"long",year:"numeric"})+" (v"+weekNr+")";
+  const weekNr = getISOWeek(now);
+
+  date.textContent=
+    now.toLocaleDateString("sv-SE",{weekday:"long",day:"numeric",month:"long",year:"numeric"})
+    + " (V" + weekNr + ")";
 
   loadForecast();
   loadYesterday();
