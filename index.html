@@ -1,4 +1,4 @@
-<!-- Komplett kod: VÄDER 1.4.1 - Fix igår-data med 48h intervall, uppdateras/uppdaterad, ISO-vecka -->
+<!-- Komplett kod: VÄDER 1.5.1 - Fix: Åminne station, igår-data, uppdateras/uppdaterad, version -->
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -103,7 +103,7 @@ body{
 <div class="container">
 
 <div class="card current">
-  <div class="version">1.4.1</div>
+  <div class="version">1.5.1</div>
   <div class="left">
     <div class="left-top">
       <img id="icon">
@@ -126,7 +126,7 @@ body{
 
   <div class="right">
     <div id="date"></div>
-    <div id="updated"></div>
+    <div id="updated" style="color:orange;">Uppdateras…</div>
   </div>
 </div>
 
@@ -138,9 +138,9 @@ body{
 </div>
 
 <script>
-const lat = 57.173;
-const lon = 14.040;
-const station = 2556;
+const lat = 57.123; // Åminne
+const lon = 13.952;
+const station = 97490; // Åminne närmaste SMHI station
 
 // ---------- FEELS LIKE ----------
 function feelsLike(t, ws){
@@ -173,7 +173,6 @@ async function loadForecast(){
 
     const now = new Date();
     const current = series.find(ts => new Date(ts.validTime) >= now) || series[0];
-
     const params = {};
     current.parameters.forEach(p=>params[p.name]=p.values[0]);
 
@@ -183,16 +182,13 @@ async function loadForecast(){
 
     temp.textContent = Math.round(t)+"°";
     feels.textContent = "Känns som "+feelsLike(t,ws)+"°";
-    wind.textContent = ws.toFixed(1)+" m/s (" + Math.round(ws*3.6) + " km/h)";
+    wind.textContent = ws.toFixed(1)+" m/s ( " + Math.round(ws*3.6) + " km/h )";
     humidity.textContent = params.r+" %";
     pressure.textContent = params.msl+" hPa";
     precip.textContent = params.pmean+" mm";
     windArrow.style.transform=`rotate(${wd}deg)`;
-
-    // ikon
     icon.src="https://cdn-icons-png.flaticon.com/512/414/414825.png";
 
-    // Uppdaterad
     updated.textContent="Uppdaterad: "+now.toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"});
     updated.style.color="white";
 
@@ -217,9 +213,7 @@ async function loadForecast(){
       const card=document.createElement("div");
       card.className="day-card";
       card.innerHTML=`
-        <div class="day-name">
-          ${new Date(d).toLocaleDateString("sv-SE",{weekday:"short"})}
-        </div>
+        <div class="day-name">${new Date(d).toLocaleDateString("sv-SE",{weekday:"short"})}</div>
         <img src="https://cdn-icons-png.flaticon.com/512/414/414825.png">
         <div class="temp-range">${Math.round(max)}° / ${Math.round(min)}°</div>
       `;
@@ -233,7 +227,7 @@ async function loadForecast(){
   }
 }
 
-// ---------- HÄMTA IGÅR MED 48H INTERVALL ----------
+// ---------- HÄMTA IGÅR ----------
 async function loadYesterday(){
   const url=`https://opendata-download-metobs.smhi.se/api/version/latest/parameter/1/station/${station}/period/latest-month/data.json`;
   try{
@@ -242,36 +236,24 @@ async function loadYesterday(){
     const values = data.value;
 
     const now = new Date();
-    const start = new Date(now.getTime() - 48*60*60*1000); // 48 timmar tillbaka
+    const start48h = new Date(now.getTime() - 48*60*60*1000);
 
-    // filtrera värden för senaste 48h
-    const recentVals = values.filter(v=>{
+    const yVals = values.filter(v=>{
       const d = new Date(v.date);
-      return d >= start && d <= now;
+      return d >= start48h && d < now;
     });
 
-    // hitta igår samma tid
-    if(recentVals.length){
-      const yesterday = new Date(now.getTime() - 24*60*60*1000);
-      const yVals = recentVals.filter(v=>{
-        const d = new Date(v.date);
-        return d.getDate()===yesterday.getDate() && d.getMonth()===yesterday.getMonth();
+    if(yVals.length){
+      const temps=yVals.map(v=>v.value);
+      yMin.textContent=Math.round(Math.min(...temps))+"°";
+      yMax.textContent=Math.round(Math.max(...temps))+"°";
+
+      const same=yVals.reduce((prev,curr)=>{
+        const h=new Date(curr.date).getHours();
+        return Math.abs(h-now.getHours())<Math.abs(new Date(prev.date).getHours()-now.getHours()) ? curr : prev;
       });
-
-      if(yVals.length){
-        const temps = yVals.map(v=>v.value);
-        yMin.textContent = Math.round(Math.min(...temps))+"°";
-        yMax.textContent = Math.round(Math.max(...temps))+"°";
-
-        // närmaste timme till nu
-        const same = yVals.reduce((prev,curr)=>{
-          const h = new Date(curr.date).getHours();
-          return Math.abs(h-now.getHours()) < Math.abs(new Date(prev.date).getHours()-now.getHours()) ? curr : prev;
-        });
-        ySame.textContent = Math.round(same.value)+"°";
-      }
+      ySame.textContent=Math.round(same.value)+"°";
     }
-
   } catch(e){
     console.error("Yesterday fetch error", e);
   }
