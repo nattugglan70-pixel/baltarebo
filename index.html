@@ -1,106 +1,59 @@
+<!--
+VÄDER 1.7.1
+ÄNDRINGAR:
+- Tydlig versionsmärkning i HTML
+- Synlig versionsetikett i layout
+- Förenklad stabil logik
+- Igår Min/Max = senaste ~48 mätpunkter
+- Ingen datumfiltrering
+- Ingen övermatchning av tider
+-->
+
 <!DOCTYPE html>
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VÄDER 1.6.1</title>
+<title>VÄDER 1.7.1</title>
 
 <style>
-body{
-  font-family:Arial,sans-serif;
-  background:linear-gradient(to right,#141e30,#243b55);
-  color:white;
-  margin:0;
-  padding:30px;
-}
-.container{max-width:900px;margin:auto;}
-.card{
-  background:rgba(255,255,255,0.08);
-  backdrop-filter:blur(12px);
-  border-radius:20px;
-  padding:20px;
-  box-shadow:0 10px 25px rgba(0,0,0,0.3);
-  margin-bottom:25px;
-  position:relative;
-}
+body{font-family:Arial;background:#1e2a38;color:white;padding:30px}
+.container{max-width:900px;margin:auto}
+.card{background:#2e3c4f;padding:20px;border-radius:20px;margin-bottom:20px;position:relative}
 .version{
   position:absolute;
   top:10px;
   right:15px;
   font-size:12px;
-  color:gold;
+  color:#ffd700;
   font-weight:bold;
 }
-.current{
-  display:flex;
-  gap:25px;
-  align-items:center;
-}
-.left{
-  flex:1.5;
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-}
-.left-top{
-  display:flex;
-  align-items:center;
-  gap:15px;
-}
-.left img{width:80px;}
-.temp{font-size:52px;font-weight:bold;}
-.middle{flex:1;font-size:14px;}
-.right{flex:1;font-size:14px;}
-.forecast{
-  display:grid;
-  grid-template-columns:repeat(5,1fr);
-  gap:15px;
-}
-.day-card{
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  background:rgba(255,255,255,0.06);
-  padding:15px;
-  border-radius:16px;
-  text-align:center;
-}
-.day-card img{width:45px;}
-.day-name{font-weight:bold;margin-bottom:5px;}
-.temp-range{font-size:14px;}
+.current{display:flex;gap:30px;align-items:center}
+.temp{font-size:50px;font-weight:bold}
+.forecast{display:grid;grid-template-columns:repeat(5,1fr);gap:15px;margin-top:20px}
+.day{text-align:center;background:#3b4c61;padding:15px;border-radius:15px}
+.day img{width:40px}
 </style>
 </head>
 
 <body>
+
 <div class="container">
 
 <div class="card current">
-  <div class="version">1.6.1</div>
-
-  <div class="left">
-    <div class="left-top">
-      <img id="icon">
-      <div class="temp" id="temp">--°</div>
-    </div>
-  </div>
-
-  <div class="middle">
+  <div class="version">1.7.1</div>
+  <img id="icon" width="80">
+  <div>
+    <div class="temp" id="temp">--°</div>
     <div>Vind: <span id="wind">--</span></div>
-    <div>Luftfuktighet: <span id="humidity">--</span></div>
+    <div>Fukt: <span id="humidity">--</span></div>
     <div>Tryck: <span id="pressure">--</span></div>
-    <div>Nederbörd (1h): <span id="precip">--</span></div>
     <div>Igår Min/Max: <span id="yMin">--</span> / <span id="yMax">--</span></div>
-  </div>
-
-  <div class="right">
-    <div id="date"></div>
     <div id="updated"></div>
   </div>
 </div>
 
 <div class="card">
-  <h3>5-dygnsprognos</h3>
   <div class="forecast" id="forecast"></div>
 </div>
 
@@ -111,126 +64,97 @@ const lat = 57.185;
 const lon = 14.040;
 const station = 97490;
 
-// ==================== PROGNOS ====================
-async function loadForecast(){
-  try{
-    const res = await fetch(
-      `https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${lon}/lat/${lat}/data.json`
-    );
-    const data = await res.json();
-    const series = data.timeSeries;
+// ===== NUVARANDE =====
+async function loadCurrent(){
+  const res = await fetch(
+  `https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${lon}/lat/${lat}/data.json`
+  );
+  const data = await res.json();
 
-    const now = new Date();
-    let current = series.find(ts => new Date(ts.validTime) >= now);
-    if(!current) current = series[0];
+  const current = data.timeSeries[0];
 
-    const params = {};
-    current.parameters.forEach(p => params[p.name] = p.values[0]);
+  const p = {};
+  current.parameters.forEach(x=>p[x.name]=x.values[0]);
 
-    temp.textContent = Math.round(params.t) + "°";
-    wind.textContent = params.ws.toFixed(1) + " m/s";
-    humidity.textContent = params.r + " %";
-    pressure.textContent = params.msl + " hPa";
-    precip.textContent = params.pmean + " mm";
+  temp.textContent = Math.round(p.t)+"°";
+  wind.textContent = p.ws+" m/s";
+  humidity.textContent = p.r+" %";
+  pressure.textContent = p.msl+" hPa";
 
-    // Stabil ikon (använd aktuell rad)
-    const wParam = current.parameters.find(p=>p.name==="Wsymb2");
-    const w = wParam ? wParam.values[0] : 1;
+  const w = p.Wsymb2 || 1;
+  icon.src = `https://opendata-download-metfcst.smhi.se/static/images/icons/w/${w}.png`;
 
-    icon.src =
-      `https://opendata-download-metfcst.smhi.se/static/images/icons/w/${w}.png`;
+  updated.textContent = "Uppdaterad: "+
+  new Date().toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"});
 
-    updated.textContent = "Uppdaterad: " +
-      now.toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"});
-
-    // ===== 5 DYGN =====
-    const daily = {};
-    series.forEach(ts=>{
-      const d = ts.validTime.split("T")[0];
-      if(!daily[d]) daily[d]=[];
-      daily[d].push(ts);
-    });
-
-    forecast.innerHTML="";
-
-    Object.keys(daily).slice(1,6).forEach(d=>{
-      const arr = daily[d];
-
-      const temps = arr.map(x=>{
-        const p={};
-        x.parameters.forEach(a=>p[a.name]=a.values[0]);
-        return p.t;
-      });
-
-      const max = Math.max(...temps);
-      const min = Math.min(...temps);
-
-      const mid = arr[Math.floor(arr.length/2)];
-      const wMidParam = mid.parameters.find(p=>p.name==="Wsymb2");
-      const wMid = wMidParam ? wMidParam.values[0] : 1;
-
-      const card=document.createElement("div");
-      card.className="day-card";
-      card.innerHTML=`
-        <div class="day-name">${new Date(d).toLocaleDateString("sv-SE",{weekday:"short"})}</div>
-        <img src="https://opendata-download-metfcst.smhi.se/static/images/icons/w/${wMid}.png">
-        <div class="temp-range">${Math.round(max)}° / ${Math.round(min)}°</div>
-      `;
-      forecast.appendChild(card);
-    });
-
-  }catch(e){
-    updated.textContent="Prognosfel";
-  }
+  buildForecast(data.timeSeries);
 }
 
-// ==================== IGÅR MIN/MAX ====================
+// ===== 5 DYGN =====
+function buildForecast(series){
+  const days = {};
+  series.forEach(ts=>{
+    const d = ts.validTime.split("T")[0];
+    if(!days[d]) days[d]=[];
+    days[d].push(ts);
+  });
+
+  forecast.innerHTML="";
+
+  Object.keys(days).slice(1,6).forEach(d=>{
+    const arr = days[d];
+
+    const temps = arr.map(x=>{
+      const p={};
+      x.parameters.forEach(a=>p[a.name]=a.values[0]);
+      return p.t;
+    });
+
+    const mid = arr[Math.floor(arr.length/2)];
+    const midP={};
+    mid.parameters.forEach(a=>midP[a.name]=a.values[0]);
+
+    const w = midP.Wsymb2 || 1;
+
+    const el=document.createElement("div");
+    el.className="day";
+    el.innerHTML=`
+      <div>${new Date(d).toLocaleDateString("sv-SE",{weekday:"short"})}</div>
+      <img src="https://opendata-download-metfcst.smhi.se/static/images/icons/w/${w}.png">
+      <div>${Math.round(Math.max(...temps))}° / ${Math.round(Math.min(...temps))}°</div>
+    `;
+    forecast.appendChild(el);
+  });
+}
+
+// ===== IGÅR =====
 async function loadYesterday(){
-  try{
-    const res = await fetch(
-      `https://opendata-download-metobs.smhi.se/api/version/latest/parameter/1/station/${station}/period/latest-month/data.json`
-    );
-    const data = await res.json();
+  const res = await fetch(
+  `https://opendata-download-metobs.smhi.se/api/version/latest/parameter/1/station/${station}/period/latest-month/data.json`
+  );
+  const data = await res.json();
 
-    if(!data.value) return;
+  if(!data.value) return;
 
-    const now = new Date();
-    const yesterday = new Date(now.getTime() - 86400000);
+  const vals = data.value.slice(-48);
 
-    const yVals = data.value.filter(v=>{
-      const d = new Date(v.date);
-      return d.getDate() === yesterday.getDate() &&
-             d.getMonth() === yesterday.getMonth();
-    });
+  const temps = vals.map(v=>v.value);
 
-    if(!yVals.length) return;
-
-    const temps = yVals.map(v=>v.value);
-
-    yMin.textContent = Math.round(Math.min(...temps))+"°";
-    yMax.textContent = Math.round(Math.max(...temps))+"°";
-
-  }catch(e){
-    console.log("Igår-data misslyckades");
-  }
+  yMin.textContent = Math.round(Math.min(...temps))+"°";
+  yMax.textContent = Math.round(Math.max(...temps))+"°";
 }
 
-function init(){
-  const now=new Date();
-  date.textContent =
-    now.toLocaleDateString("sv-SE",
-      {weekday:"long",day:"numeric",month:"long",year:"numeric"});
-
-  loadForecast();
-  loadYesterday();
-
-  setInterval(()=>{
-    loadForecast();
-    loadYesterday();
-  },600000);
+async function init(){
+  try{
+    await loadCurrent();
+    await loadYesterday();
+  }catch(e){
+    updated.textContent="Datafel";
+  }
 }
 
 init();
+setInterval(init,600000);
 </script>
 
 </body>
