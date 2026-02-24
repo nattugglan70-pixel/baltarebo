@@ -1,10 +1,12 @@
-<!-- Komplett kod: VÄDER 1.6 med fallback "Uppdateras…" -->
+<!-- Komplett kod: Väder 1.7 
+Ändringar: Fixat "Uppdateras…" fallback under datum, säkerställt att "Uppdaterad" visas när data finns, lagt till 32x32 sol-favicon. -->
 <!DOCTYPE html>
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VÄDER</title>
+<link rel="icon" type="image/png" sizes="32x32" href="https://cdn-icons-png.flaticon.com/512/869/869869.png">
 
 <style>
 body{
@@ -62,6 +64,7 @@ body{
 .right{
   flex:1;
   font-size:14px;
+  text-align:left; /* datum vänstercentrerat i boxen */
 }
 
 .forecast{
@@ -83,20 +86,14 @@ body{
 .day-name{font-weight:bold;margin-bottom:5px;}
 .temp-range{font-size:14px;}
 
-/* Versionsnummer längst upp till höger */
-.version-number{
+/* Versionsnummer uppe i högra hörnet */
+.version-tag{
   position:absolute;
   top:10px;
   right:15px;
-  color:gold;
-  font-weight:bold;
   font-size:14px;
-}
-
-/* Uppdateras/uppdaterad under datum */
-#updated{
-  margin-top:5px;
   font-weight:bold;
+  color:gold;
 }
 </style>
 </head>
@@ -105,7 +102,8 @@ body{
 <div class="container">
 
 <div class="card current">
-  <div class="version-number">1.6</div>
+  <div class="version-tag">1.7</div> <!-- Versionsnummer -->
+
   <div class="left">
     <div class="left-top">
       <img id="icon">
@@ -163,7 +161,6 @@ async function loadForecast(){
   const data = await res.json();
   const series = data.timeSeries;
 
-  // närmaste framtida tid
   const now = new Date();
   const current = series.find(ts => new Date(ts.validTime) >= now) || series[0];
 
@@ -176,7 +173,7 @@ async function loadForecast(){
 
   temp.textContent = Math.round(t)+"°";
   feels.textContent = "Känns som "+feelsLike(t,ws)+"°";
-  wind.textContent = ws.toFixed(1)+" m/s";
+  wind.textContent = ws.toFixed(1)+" m/s ("+Math.round(ws*3.6)+" km/h)";
   humidity.textContent = params.r+" %";
   pressure.textContent = params.msl+" hPa";
   precip.textContent = params.pmean+" mm";
@@ -194,7 +191,7 @@ async function loadForecast(){
   });
 
   forecast.innerHTML="";
-  Object.keys(daily).slice(1,6).forEach(d=>{ // börjar från nästa dag
+  Object.keys(daily).slice(1,6).forEach(d=>{
     const arr=daily[d];
     const temps=arr.map(x=>{
       const p={};x.parameters.forEach(a=>p[a.name]=a.values[0]);
@@ -226,18 +223,20 @@ async function loadYesterday(){
   const now=new Date();
   const yesterday=new Date(now.getTime()-86400000);
 
-  const yVals=values.filter(v=>{
+  const yVals = values.filter(v=>{
     const d=new Date(v.date);
     return d.getDate()===yesterday.getDate() &&
            d.getMonth()===yesterday.getMonth();
   });
 
-  if(yVals.length){
-    const temps=yVals.map(v=>v.value);
+  const validYVals = yVals.filter(v => v.value !== null);
+
+  if(validYVals.length){
+    const temps = validYVals.map(v=>v.value);
     yMin.textContent=Math.round(Math.min(...temps))+"°";
     yMax.textContent=Math.round(Math.max(...temps))+"°";
 
-    const same=yVals.reduce((prev,curr)=>{
+    const same=validYVals.reduce((prev,curr)=>{
       const h=new Date(curr.date).getHours();
       return Math.abs(h-now.getHours())<
              Math.abs(new Date(prev.date).getHours()-now.getHours())
@@ -245,13 +244,10 @@ async function loadYesterday(){
     });
     ySame.textContent=Math.round(same.value)+"°";
 
-    // normal uppdaterad
-    const nowTime = new Date();
-    updated.textContent="Uppdaterad: "+nowTime.toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"});
+    updated.textContent="Uppdaterad: "+now.toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"});
     updated.style.color="white";
 
   } else {
-    // fallback: ingen data, visa "Uppdateras…"
     updated.textContent="Uppdateras…";
     updated.style.color="orange";
   }
@@ -260,8 +256,8 @@ async function loadYesterday(){
 // ---------- INIT ----------
 function init(){
   const now=new Date();
-  const weekNum = Math.ceil(((now - new Date(now.getFullYear(),0,1))/86400000 + new Date(now.getFullYear(),0,1).getDay()+1)/7);
-  date.textContent=now.toLocaleDateString("sv-SE",{weekday:"long",day:"numeric",month:"long",year:"numeric"}) + " ( V " + weekNum + " )";
+  const weekNum = Math.ceil((((now - new Date(now.getFullYear(),0,1))/86400000)+1)/7);
+  date.textContent=now.toLocaleDateString("sv-SE",{weekday:"long",day:"numeric",month:"long",year:"numeric"})+" ( V "+weekNum+" )";
   loadForecast();
   loadYesterday();
 }
