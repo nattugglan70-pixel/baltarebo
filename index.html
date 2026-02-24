@@ -1,11 +1,18 @@
-<!-- VÄDER 1.6.7 - Stabil layout + vädertext i 5-dygn + vädertyp i ikon-hover -->
+<!-- VÄDER 1.6.8
+Bas: 1.6.5 (stabil layout + animation)
+Ändringar:
+- Vindriktningspil borttagen helt
+- Bakgrundsanimation återinförd
+- Vädertyp visas i 5-dygnsprognos
+- Vädertyp + exakt temp visas vid hover på huvudikon
+-->
+
 <!DOCTYPE html>
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VÄDER</title>
-<link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/869/869869.png" sizes="32x32">
 
 <style>
 body{
@@ -14,8 +21,34 @@ body{
   color:white;
   margin:0;
   padding:30px;
+  overflow-x:hidden;
 }
-.container{max-width:900px;margin:auto;}
+
+/* ===== Bakgrundsanimation (återställd) ===== */
+#bg-animation{
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  pointer-events:none;
+  z-index:0;
+  overflow:hidden;
+}
+.cloud{
+  position:absolute;
+  background:rgba(255,255,255,0.05);
+  border-radius:50%;
+  filter:blur(12px);
+  animation:moveCloud linear infinite;
+}
+@keyframes moveCloud{
+  from{ transform:translateX(-250px); }
+  to{ transform:translateX(110vw); }
+}
+/* ===== Slut animation ===== */
+
+.container{max-width:900px;margin:auto;position:relative;z-index:2;}
 
 .card{
   background:rgba(255,255,255,0.08);
@@ -53,13 +86,9 @@ body{
   align-items:center;
   gap:15px;
 }
-.left img{width:80px; cursor:default;}
+.left img{width:80px;}
 .temp{font-size:52px;font-weight:bold;}
 .feels{display:flex;align-items:center;gap:10px;}
-.wind-arrow{
-  font-size:32px;
-  display:inline-block;
-}
 
 .middle{
   flex:1;
@@ -96,10 +125,14 @@ body{
 </head>
 
 <body>
+
+<div id="bg-animation"></div>
+
 <div class="container">
 
 <div class="card current">
-  <div class="version">1.6.7</div>
+  <div class="version">1.6.8</div>
+
   <div class="left">
     <div class="left-top">
       <img id="icon" title="--">
@@ -107,7 +140,6 @@ body{
     </div>
     <div class="feels">
       <div id="feels">Känns som --°</div>
-      <div class="wind-arrow" id="windArrow">↑</div>
     </div>
   </div>
 
@@ -149,6 +181,22 @@ const weatherTextMap = {
   95:"Åska",96:"Åska",99:"Åska"
 };
 
+/* ===== Skapa moln ===== */
+function createClouds(){
+  const bg=document.getElementById("bg-animation");
+  for(let i=0;i<6;i++){
+    const cloud=document.createElement("div");
+    cloud.className="cloud";
+    cloud.style.width=200+Math.random()*200+"px";
+    cloud.style.height=80+Math.random()*60+"px";
+    cloud.style.top=Math.random()*80+"%";
+    cloud.style.animationDuration=40+Math.random()*40+"s";
+    bg.appendChild(cloud);
+  }
+}
+createClouds();
+/* ===== Slut moln ===== */
+
 function feelsLike(t, ws){
   const kmh = ws*3.6;
   if(t<=10 && kmh>4.8){
@@ -166,16 +214,14 @@ function getISOWeek(date) {
 }
 
 async function updateWeather(){
+
   try{
     const wsRes = await fetch(`https://opendata-download-metobs.smhi.se/api/version/latest/parameter/1/station/${smhiStation}/period/latest-month/data.json`);
     const wsData = await wsRes.json();
     const latest = wsData.value[wsData.value.length-1];
     currentWind = latest ? latest.value : 0;
-
     wind.textContent=currentWind.toFixed(1)+" m/s ("+Math.round(currentWind*3.6)+" km/h)";
-    windArrow.style.transform=`rotate(${latest.direction||0}deg)`;
-  } catch(e){
-    currentWind=0;
+  } catch{
     wind.textContent="0 m/s (0 km/h)";
   }
 
@@ -196,9 +242,6 @@ async function updateWeather(){
 
     icon.src=`https://cdn-icons-png.flaticon.com/512/414/414825.png`;
     icon.title = `${weatherText}, ${t.toFixed(1)}°`;
-
-    const now = new Date();
-    updated.textContent = "Uppdaterad: "+now.toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"});
 
     forecast.innerHTML="";
     const daily = data.daily || {};
@@ -223,7 +266,10 @@ async function updateWeather(){
       forecast.appendChild(card);
     }
 
-  } catch(e){
+    const now = new Date();
+    updated.textContent="Uppdaterad: "+now.toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"});
+
+  } catch{
     updated.textContent="Uppdateras…";
   }
 }
