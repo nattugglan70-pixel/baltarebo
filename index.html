@@ -1,294 +1,277 @@
+<!-- VÄDER 1.6.6 - Stabil 1.6.5 + subtil bakgrundsanimation -->
 <!DOCTYPE html>
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VÄDER</title>
-<link rel="icon" href="favicon.ico" type="image/x-icon">
-
-<!-- 
-Version 1.6.6b
-Ändringar:
-- Återgång till två boxar: aktuell väder + femdygnsprognos
-- Bakgrundsanimationer (moln, snö, regn) bakom boxarna utan att påverka layout/färger
-- Vindpilen placerad korrekt bredvid vindhastighet
-- Femdygnsprognos normal bredd, inga krympningar
-- Versionsnummer i huvudboxen uppe till höger
--->
+<link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/869/869869.png" sizes="32x32">
 
 <style>
-body {
-    margin: 0;
-    font-family: sans-serif;
-    background-color: #4a7ca1;
-    position: relative;
-    overflow: hidden;
+body{
+  font-family: Arial, sans-serif;
+  background: linear-gradient(to right,#141e30,#243b55);
+  color:white;
+  margin:0;
+  padding:30px;
+  position:relative;
+  overflow-x:hidden;
 }
 
-/* Bakgrundsanimation */
-#background-animation {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: -1;
-    pointer-events: none;
+/* ===== BAKGRUND ===== */
+#bg-animation{
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  pointer-events:none;
+  z-index:0;
+  overflow:hidden;
 }
 
-.flake, .drop, .cloud {
-    position: absolute;
-    opacity: 0.5;
-    pointer-events: none;
+.cloud{
+  position:absolute;
+  background:rgba(255,255,255,0.05);
+  border-radius:50%;
+  filter:blur(12px);
+  animation:moveCloud linear infinite;
 }
 
-.flake {
-    width: 8px;
-    height: 8px;
-    background: white;
-    border-radius: 50%;
-    animation: fall linear infinite;
+@keyframes moveCloud{
+  from{ transform:translateX(-250px); }
+  to{ transform:translateX(110vw); }
+}
+/* ===== SLUT BAKGRUND ===== */
+
+.container{
+  max-width:900px;
+  margin:auto;
+  position:relative;
+  z-index:2;
 }
 
-.drop {
-    width: 2px;
-    height: 10px;
-    background: rgba(173,216,230,0.7);
-    border-radius: 50%;
-    animation: fall linear infinite;
+.card{
+  background:rgba(255,255,255,0.08);
+  backdrop-filter:blur(12px);
+  border-radius:20px;
+  padding:20px;
+  box-shadow:0 10px 25px rgba(0,0,0,0.3);
+  margin-bottom:25px;
+  position:relative;
 }
 
-.cloud {
-    width: 80px;
-    height: 50px;
-    background: rgba(255,255,255,0.7);
-    border-radius: 50%;
-    animation: glide linear infinite;
+.version{
+  position:absolute;
+  top:10px;
+  right:15px;
+  font-size:12px;
+  color:gold;
+  font-weight:bold;
 }
 
-@keyframes fall {
-    0% {transform: translateY(-10px);}
-    100% {transform: translateY(100vh);}
+.current{
+  display:flex;
+  gap:25px;
+  align-items:center;
 }
 
-@keyframes glide {
-    0% {transform: translateX(-100px);}
-    100% {transform: translateX(100vw);}
+.left{
+  flex:1.5;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.left-top{
+  display:flex;
+  align-items:center;
+  gap:15px;
+}
+.left img{width:80px; cursor:default;}
+.temp{font-size:52px;font-weight:bold;}
+.feels{display:flex;align-items:center;gap:10px;}
+.wind-arrow{
+  font-size:32px;
+  display:inline-block;
 }
 
-/* Boxar */
-.weather-box {
-    position: relative;
-    margin: 20px auto;
-    width: 400px;
-    padding: 15px;
-    background: rgba(20,35,50,0.85);
-    border-radius: 12px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.2);
-    color: white;
+.middle{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  font-size:14px;
 }
 
-/* Versionsnummer i huvudboxen */
-#version {
-    position: absolute;
-    top: 5px;
-    right: 10px;
-    font-size: 12px;
-    color: gold;
+.right{
+  flex:1;
+  font-size:14px;
 }
 
-/* Aktuell väder */
-.current-weather {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
+.forecast{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:10px;
 }
-
-.weather-icon {
-    font-size: 48px;
-    margin-right: 10px;
-    position: relative;
+.day-card{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  background:rgba(255,255,255,0.06);
+  padding:10px;
+  border-radius:16px;
+  text-align:center;
 }
-
-.weather-icon:hover::after {
-    content: attr(data-hover);
-    position: absolute;
-    top: -25px;
-    left: 0;
-    background: rgba(0,0,0,0.7);
-    color: white;
-    padding: 3px 6px;
-    border-radius: 4px;
-    font-size: 12px;
-    white-space: nowrap;
-}
-
-.wind-arrow {
-    display: inline-block;
-    width: 24px;
-    height: 24px;
-    background: black;
-    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
-    transform-origin: center center;
-    transition: transform 0.5s ease-in-out;
-}
-
-.five-day-box {
-    position: relative;
-    margin: 20px auto;
-    width: 400px;
-    padding: 10px;
-    background: rgba(20,35,50,0.85);
-    border-radius: 12px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.2);
-    display: flex;
-    justify-content: space-between;
-}
-
-.day-box {
-    width: 70px;
-    text-align: center;
-    background: rgba(30,50,70,0.7);
-    border-radius: 8px;
-    padding: 5px;
-    font-size: 12px;
-}
+.day-name{font-weight:bold;margin-bottom:5px;}
+.temp-range{font-size:14px;}
 </style>
 </head>
-<body>
-<div id="background-animation"></div>
 
-<div class="weather-box">
-  <div id="version">v1.6.6b</div>
-  <div class="current-weather">
-    <div class="weather-icon" id="main-icon" data-hover="Molnigt, 2.3°C">☁️</div>
-    <div>
-      <div>Temp: <span id="current-temp">2°C</span></div>
-      <div>Feels like: <span id="feels-like">2°C</span></div>
-      <div>Vind: <span id="wind-speed">1 m/s</span> 
-          (<span id="wind-kmh">3 km/h</span>) 
-          <span class="wind-arrow" id="wind-arrow"></span>
-      </div>
-      <div>Luftfuktighet: <span id="humidity">75%</span></div>
-      <div>Tryck: <span id="pressure">1012 hPa</span></div>
-      <div>Nederbörd: <span id="precip">0 mm</span></div>
+<body>
+
+<div id="bg-animation"></div>
+
+<div class="container">
+
+<div class="card current">
+  <div class="version">1.6.6</div>
+  <div class="left">
+    <div class="left-top">
+      <img id="icon" title="--">
+      <div class="temp" id="temp">--°</div>
     </div>
+    <div class="feels">
+      <div id="feels">Känns som --°</div>
+      <div class="wind-arrow" id="windArrow">↑</div>
+    </div>
+  </div>
+
+  <div class="middle">
+    <div>Vind: <span id="wind">--</span></div>
+    <div>Luftfuktighet: <span id="humidity">--</span></div>
+    <div>Tryck: <span id="pressure">--</span></div>
+    <div>Nederbörd (1h): <span id="precip">--</span></div>
+  </div>
+
+  <div class="right">
+    <div id="date"></div>
+    <div id="updated"></div>
   </div>
 </div>
 
-<div class="five-day-box" id="five-day">
-  <!-- Dynamiskt genererade dag-boxar -->
+<div class="card">
+  <h3>5-dygnsprognos</h3>
+  <div class="forecast" id="forecast"></div>
+</div>
+
 </div>
 
 <script>
-// Bakgrundsanimation
-const background = document.getElementById('background-animation');
-function createParticles(weather) {
-  background.innerHTML = ''; 
-  if(weather.includes('snow')) {
-    for(let i=0;i<30;i++){
-      let flake = document.createElement('div');
-      flake.className='flake';
-      flake.style.left=Math.random()*100+'%';
-      flake.style.animationDuration=(3+Math.random()*2)+'s';
-      background.appendChild(flake);
+const lat = 57.123;
+const lon = 13.952;
+const smhiStation = 97490;
+let currentWind = 0;
+
+/* ===== SKAPA SUBTILA MOLN ===== */
+function createClouds(){
+  const bg=document.getElementById("bg-animation");
+  bg.innerHTML="";
+  for(let i=0;i<6;i++){
+    const cloud=document.createElement("div");
+    cloud.className="cloud";
+    cloud.style.width=200+Math.random()*200+"px";
+    cloud.style.height=80+Math.random()*60+"px";
+    cloud.style.top=Math.random()*80+"%";
+    cloud.style.animationDuration=50+Math.random()*40+"s";
+    bg.appendChild(cloud);
+  }
+}
+createClouds();
+/* ===== SLUT MOLN ===== */
+
+function feelsLike(t, ws){
+  const kmh = ws*3.6;
+  if(t<=10 && kmh>4.8){
+    return Math.round(13.12 + 0.6215*t - 11.37*Math.pow(kmh,0.16) + 0.3965*t*Math.pow(kmh,0.16));
+  }
+  return Math.round(t);
+}
+
+function getISOWeek(date) {
+  const tmpDate = new Date(date.getTime());
+  tmpDate.setHours(0,0,0,0);
+  tmpDate.setDate(tmpDate.getDate() + 3 - (tmpDate.getDay() + 6) % 7);
+  const week1 = new Date(tmpDate.getFullYear(), 0, 4);
+  return 1 + Math.round(((tmpDate - week1) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+}
+
+async function updateWeather(){
+  try{
+    const wsRes = await fetch(`https://opendata-download-metobs.smhi.se/api/version/latest/parameter/1/station/${smhiStation}/period/latest-month/data.json`);
+    const wsData = await wsRes.json();
+    const latest = wsData.value[wsData.value.length-1];
+    currentWind = latest ? latest.value : 0;
+
+    wind.textContent=currentWind.toFixed(1)+" m/s ("+Math.round(currentWind*3.6)+" km/h)";
+    windArrow.style.transform=`rotate(${latest.direction||0}deg)`;
+  } catch(e){
+    currentWind=0;
+    wind.textContent="0 m/s (0 km/h)";
+  }
+
+  try{
+    const url=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,precipitation,pressure_msl,relativehumidity_2m&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=Europe/Stockholm`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    const t = data.current_weather.temperature;
+    temp.textContent = Math.round(t)+"°";
+    feels.textContent = "Känns som "+feelsLike(t,currentWind)+"°";
+    humidity.textContent = data.hourly.relativehumidity_2m[0]+" %";
+    pressure.textContent = data.hourly.pressure_msl[0]+" hPa";
+    precip.textContent = data.hourly.precipitation[0]+" mm";
+
+    const now = new Date();
+    updated.textContent = "Uppdaterad: "+now.toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"});
+
+    forecast.innerHTML="";
+    const daily = data.daily || {};
+    const days = ["Sön","Mån","Tis","Ons","Tor","Fre","Lör"];
+
+    for(let i=1;i<=5;i++){
+      const day = new Date();
+      day.setDate(day.getDate()+i);
+      const weekday = days[day.getDay()];
+      const tempMax = Math.round(daily.temperature_2m_max[i]||0);
+      const tempMin = Math.round(daily.temperature_2m_min[i]||0);
+
+      const card = document.createElement("div");
+      card.className="day-card";
+      card.innerHTML=`
+        <div class="day-name">${weekday}</div>
+        <div class="temp-range">${tempMin}° / ${tempMax}°</div>
+      `;
+      forecast.appendChild(card);
     }
-  } else if(weather.includes('rain')) {
-    for(let i=0;i<50;i++){
-      let drop = document.createElement('div');
-      drop.className='drop';
-      drop.style.left=Math.random()*100+'%';
-      drop.style.animationDuration=(1+Math.random()*1.5)+'s';
-      background.appendChild(drop);
-    }
-  } else if(weather.includes('cloud')) {
-    for(let i=0;i<5;i++){
-      let cloud = document.createElement('div');
-      cloud.className='cloud';
-      cloud.style.top=(10+Math.random()*30)+'%';
-      cloud.style.animationDuration=(20+Math.random()*15)+'s';
-      background.appendChild(cloud);
-    }
+
+    icon.src=`https://cdn-icons-png.flaticon.com/512/414/414825.png`;
+    icon.title = `${t.toFixed(1)}°`;
+
+  } catch(e){
+    updated.textContent="Uppdateras…";
   }
 }
 
-// Open-Meteo exempeldata
-let currentWeather = {
-  temp: 2.3,
-  feels_like: 2.3,
-  humidity: 75,
-  pressure: 1012,
-  precip: 0,
-  weather_text: 'Molnigt',
-  weather_code: 'cloudy',
-  wind_speed: 1,
-  wind_kmh: 3,
-  five_day: [
-    {day:'Ons', text:'Molnigt', min:0, max:3},
-    {day:'Tor', text:'Soligt', min:1, max:5},
-    {day:'Fre', text:'Regn', min:2, max:6},
-    {day:'Lör', text:'Molnigt', min:0, max:4},
-    {day:'Sön', text:'Snö', min:-1, max:2}
-  ]
-};
-
-// Rendera aktuell väderdata
-function updateCurrent() {
-  document.getElementById('current-temp').textContent=currentWeather.temp+'°C';
-  document.getElementById('feels-like').textContent=currentWeather.feels_like+'°C';
-  document.getElementById('humidity').textContent=currentWeather.humidity+'%';
-  document.getElementById('pressure').textContent=currentWeather.pressure+' hPa';
-  document.getElementById('precip').textContent=currentWeather.precip+' mm';
-  document.getElementById('main-icon').textContent=weatherIcon(currentWeather.weather_code);
-  document.getElementById('main-icon').setAttribute('data-hover', currentWeather.weather_text+', '+currentWeather.temp.toFixed(1)+'°C');
-  createParticles(currentWeather.weather_code);
+function init(){
+  const now=new Date();
+  const weekNum = getISOWeek(now);
+  date.textContent=now.toLocaleDateString("sv-SE",{weekday:"long",day:"numeric",month:"long",year:"numeric"}) + " ( V " + weekNum + " )";
+  updateWeather();
+  setInterval(updateWeather,600000);
 }
 
-// Femdygnsprognos
-function updateFiveDay() {
-  const container = document.getElementById('five-day');
-  container.innerHTML='';
-  currentWeather.five_day.forEach(day=>{
-    const box=document.createElement('div');
-    box.className='day-box';
-    box.innerHTML=`${day.day}<br>${day.text}<br>${day.min}° / ${day.max}°`;
-    container.appendChild(box);
-  });
-}
-
-// Vindpilen (SMHI separat)
-function updateWind() {
-  const smhiWind = { speed:1, kmh:3, direction:170 };
-  document.getElementById('wind-speed').textContent=smhiWind.speed+' m/s';
-  document.getElementById('wind-kmh').textContent=smhiWind.kmh+' km/h';
-  document.getElementById('wind-arrow').style.transform=`rotate(${smhiWind.direction}deg)`;
-  document.getElementById('feels-like').textContent=calcFeelsLike(currentWeather.temp, smhiWind.speed)+'°C';
-}
-
-// Enkel "feels like"
-function calcFeelsLike(temp, wind) {
-  return (temp - 0.7*wind).toFixed(1);
-}
-
-// Enkel ikon-logik
-function weatherIcon(code) {
-  switch(code){
-    case 'snow': return '❄️';
-    case 'rain': return '🌧️';
-    case 'cloudy': return '☁️';
-    case 'sunny': return '☀️';
-    default: return '❓';
-  }
-}
-
-// Init
-updateCurrent();
-updateFiveDay();
-updateWind();
-
-// Uppdateringsintervaller
-setInterval(updateCurrent, 600000);
-setInterval(updateFiveDay, 600000);
-setInterval(updateWind, 60000);
+init();
 </script>
 </body>
 </html>
