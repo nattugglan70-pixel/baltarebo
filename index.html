@@ -1,4 +1,4 @@
-<!-- VÄDER 1.6.3 - Femdygnsprognos korrekt lägsta/högsta, SMHI vind fixad -->
+<!-- VÄDER 1.6.4 - SMHI vind + korrekt "feels like" -->
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -98,7 +98,7 @@ body{
 <div class="container">
 
 <div class="card current">
-  <div class="version">1.6.3</div>
+  <div class="version">1.6.4</div>
   <div class="left">
     <div class="left-top">
       <img id="icon" title="--">
@@ -135,13 +135,12 @@ const lat = 57.123; // Åminne
 const lon = 13.952;
 const smhiStation = 97490; // Åminne
 
+let currentWind = 0; // global vindhastighet för "feels like"
+
 function feelsLike(t, ws){
   const kmh = ws*3.6;
   if(t<=10 && kmh>4.8){
-    return Math.round(
-      13.12 + 0.6215*t - 11.37*Math.pow(kmh,0.16)
-      + 0.3965*t*Math.pow(kmh,0.16)
-    );
+    return Math.round(13.12 + 0.6215*t - 11.37*Math.pow(kmh,0.16) + 0.3965*t*Math.pow(kmh,0.16));
   }
   return Math.round(t);
 }
@@ -165,7 +164,7 @@ async function loadOpenMeteo(updateIconOnly=false){
 
     if(!updateIconOnly){
       temp.textContent=Math.round(t)+"°";
-      feels.textContent="Känns som "+feelsLike(t,parseFloat(wind.dataset.speed||0))+"°";
+      feels.textContent="Känns som "+feelsLike(t,currentWind)+"°";
       humidity.textContent=data.hourly.relativehumidity_2m[0]+" %";
       pressure.textContent=data.hourly.pressure_msl[0]+" hPa";
       precip.textContent=data.hourly.precipitation[0]+" mm";
@@ -234,13 +233,21 @@ async function loadWindSMHI(){
     const data=await res.json();
     const latest = data.value[data.value.length-1];
     const ws = latest ? latest.value : 0;
+    currentWind = ws;
+
     wind.textContent=ws.toFixed(1)+" m/s ("+Math.round(ws*3.6)+" km/h)";
     wind.dataset.speed = ws;
     windArrow.style.transform=`rotate(${latest.direction||0}deg)`;
+
+    // uppdatera feels like direkt med korrekt vind
+    const t = parseFloat(temp.textContent) || 0;
+    feels.textContent = "Känns som "+feelsLike(t,currentWind)+"°";
+
   } catch(e){
     console.error("SMHI wind fetch error", e);
     wind.textContent="--";
     wind.dataset.speed=0;
+    currentWind = 0;
   }
 }
 
