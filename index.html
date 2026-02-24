@@ -1,11 +1,11 @@
-<!-- Komplett kod: VÄDER 1.5.3 - Snabb ikonu, hover-text och Åminne + närmaste stationer -->
+<!-- Komplett kod: Väder 1.5.3 - Multi-station fallback, uppdateras/uppdaterad -->
 <!DOCTYPE html>
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VÄDER</title>
-<link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/869/869869.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/414/414825.png" sizes="32x32">
 
 <style>
 body{
@@ -31,7 +31,7 @@ body{
   position:absolute;
   top:10px;
   right:15px;
-  font-size:12px;
+  font-size:14px;
   color:gold;
   font-weight:bold;
 }
@@ -140,21 +140,16 @@ body{
 <script>
 const lat = 57.123;
 const lon = 13.952;
-const stations = [97490, 97492, 97485]; // Åminne + närmaste stationer
+const stations = [97490, 97492, 97485]; // Åminne och närliggande stationer
 
-// ---------- FEELS LIKE ----------
 function feelsLike(t, ws){
   const kmh = ws*3.6;
   if(t<=10 && kmh>4.8){
-    return Math.round(
-      13.12 + 0.6215*t - 11.37*Math.pow(kmh,0.16)
-      + 0.3965*t*Math.pow(kmh,0.16)
-    );
+    return Math.round(13.12 + 0.6215*t - 11.37*Math.pow(kmh,0.16) + 0.3965*t*Math.pow(kmh,0.16));
   }
   return Math.round(t);
 }
 
-// ---------- ISO VECKONUMMER ----------
 function getISOWeek(date) {
   const tmpDate = new Date(date.getTime());
   tmpDate.setHours(0,0,0,0);
@@ -163,7 +158,7 @@ function getISOWeek(date) {
   return 1 + Math.round(((tmpDate - week1) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
 }
 
-// ---------- HÄMTA PROGNOS (NU + 5 DYGN) ----------
+// ---------- HÄMTA FEMDYGNSPROGNOS ----------
 async function loadForecast(){
   const url = `https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${lon}/lat/${lat}/data.json`;
   try{
@@ -177,39 +172,24 @@ async function loadForecast(){
     const params = {};
     current.parameters.forEach(p=>params[p.name]=p.values[0]);
 
-    const t = params.t;
-    const ws = params.ws;
-    const wd = params.wd;
-    const wSymbol = params.Wsymb2; // symbol för ikon
-
-    temp.textContent = Math.round(t)+"°";
-    feels.textContent = "Känns som "+feelsLike(t,ws)+"°";
-    wind.textContent = ws.toFixed(1)+" m/s (" + Math.round(ws*3.6) + " km/h)";
+    temp.textContent = Math.round(params.t)+"°";
+    feels.textContent = "Känns som "+feelsLike(params.t,params.ws)+"°";
+    wind.textContent = params.ws.toFixed(1)+" m/s (" + Math.round(params.ws*3.6) + " km/h)";
     humidity.textContent = params.r+" %";
     pressure.textContent = params.msl+" hPa";
     precip.textContent = params.pmean+" mm";
-    windArrow.style.transform=`rotate(${wd}deg)`;
+    windArrow.style.transform=`rotate(${params.wd}deg)`;
 
-    // Ikon + hover
-    let iconURL = "https://cdn-icons-png.flaticon.com/512/414/414825.png"; // standard molnigt
-    let iconTitle = "Molnigt";
-
-    switch(wSymbol){
-      case 1: iconURL="https://cdn-icons-png.flaticon.com/512/1163/1163661.png"; iconTitle="Klart"; break;
-      case 2: iconURL="https://cdn-icons-png.flaticon.com/512/1163/1163685.png"; iconTitle="Delvis molnigt"; break;
-      case 3: iconURL="https://cdn-icons-png.flaticon.com/512/1163/1163686.png"; iconTitle="Molnigt"; break;
-      case 4: iconURL="https://cdn-icons-png.flaticon.com/512/1163/1163687.png"; iconTitle="Duggregn"; break;
-      case 5: iconURL="https://cdn-icons-png.flaticon.com/512/1163/1163688.png"; iconTitle="Regn"; break;
-      // lägg till fler symboler vid behov
-    }
-
-    icon.src = iconURL;
-    icon.title = iconTitle;
+    // ikon med hover-text
+    let iconText = "Molnigt"; // default
+    if(params.t >= 15 && params.pmean < 0.2) iconText="Soligt";
+    else if(params.pmean>0.2) iconText="Duggregn";
+    icon.src="https://cdn-icons-png.flaticon.com/512/414/414825.png";
+    icon.title = iconText;
 
     updated.textContent="Uppdaterad: "+now.toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"});
     updated.style.color="white";
 
-    // DAGLIG SUMMERING
     const daily = {};
     series.forEach(ts=>{
       const d = ts.validTime.split("T")[0];
@@ -221,8 +201,7 @@ async function loadForecast(){
     Object.keys(daily).slice(1,6).forEach(d=>{
       const arr=daily[d];
       const temps=arr.map(x=>{
-        const p={};x.parameters.forEach(a=>p[a.name]=a.values[0]);
-        return p.t;
+        const p={}; x.parameters.forEach(a=>p[a.name]=a.values[0]); return p.t;
       });
       const max=Math.max(...temps);
       const min=Math.min(...temps);
@@ -246,46 +225,55 @@ async function loadForecast(){
   }
 }
 
-// ---------- HÄMTA IGÅR ----------
+// ---------- HÄMTA IGÅR - LOOP FÖR MULTIPLE STATIONS ----------
 async function loadYesterday(){
-  let found=false;
   const now = new Date();
   const yesterday = new Date(now.getTime()-86400000);
+  let ySameDone=false;
+  let yMinDone=false;
+  let yMaxDone=false;
 
-  for(let station of stations){
+  for(let s of stations){
+    if(ySameDone && yMinDone && yMaxDone) break;
     try{
-      const res=await fetch(`https://opendata-download-metobs.smhi.se/api/version/latest/parameter/1/station/${station}/period/latest-month/data.json`);
-      const data=await res.json();
-      const values=data.value;
+      const url=`https://opendata-download-metobs.smhi.se/api/version/latest/parameter/1/station/${s}/period/latest-month/data.json`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const values = data.value;
 
-      const yVals=values.filter(v=>{
-        const d=new Date(v.date);
-        return d.getDate()===yesterday.getDate() &&
-               d.getMonth()===yesterday.getMonth();
+      const yVals = values.filter(v=>{
+        const d = new Date(v.date);
+        return d.getDate()===yesterday.getDate() && d.getMonth()===yesterday.getMonth();
       });
-
       if(yVals.length){
-        const temps=yVals.map(v=>v.value);
-        yMin.textContent=Math.round(Math.min(...temps))+"°";
-        yMax.textContent=Math.round(Math.max(...temps))+"°";
+        const temps = yVals.map(v=>v.value);
+        if(!yMinDone && !yMaxDone){
+          yMin.textContent=Math.round(Math.min(...temps))+"°";
+          yMax.textContent=Math.round(Math.max(...temps))+"°";
+          yMinDone=true;
+          yMaxDone=true;
+        }
 
-        const same=yVals.reduce((prev,curr)=>{
-          const h=new Date(curr.date).getHours();
-          return Math.abs(h-now.getHours())<
-                 Math.abs(new Date(prev.date).getHours()-now.getHours())
-                 ?curr:prev;
-        });
-        ySame.textContent=Math.round(same.value)+"°";
-        found=true;
-        break; // vi har hittat data, hoppa ur loop
+        if(!ySameDone){
+          const same = yVals.reduce((prev,curr)=>{
+            const h=new Date(curr.date).getHours();
+            return Math.abs(h-now.getHours())<Math.abs(new Date(prev.date).getHours()-now.getHours())
+                   ? curr : prev;
+          });
+          ySame.textContent=Math.round(same.value)+"°";
+          ySameDone=true;
+        }
       }
+
     } catch(e){
-      console.warn("Station fetch error for "+station, e);
+      console.error(`Station fetch error ${s}`, e);
     }
   }
 
-  if(!found){
-    ySame.textContent=yMin.textContent=yMax.textContent="--";
+  if(!ySameDone || !yMinDone || !yMaxDone){
+    ySame.textContent="--";
+    yMin.textContent="--";
+    yMax.textContent="--";
     updated.textContent="Uppdateras…";
     updated.style.color="orange";
   }
@@ -293,7 +281,7 @@ async function loadYesterday(){
 
 // ---------- INIT ----------
 function init(){
-  const now=new Date();
+  const now = new Date();
   const weekNum = getISOWeek(now);
   date.textContent=now.toLocaleDateString("sv-SE",{weekday:"long",day:"numeric",month:"long",year:"numeric"}) + " ( V " + weekNum + " )";
 
