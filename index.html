@@ -6,30 +6,25 @@
 <link rel="icon" href="favicon.ico" type="image/x-icon">
 
 <!-- 
-Version 1.6.6a
-Ändringar: 
-- Bakgrundsanimationer (snö, regn, moln) flyttade bakom boxarna utan att påverka layout/färger.
-- Layout och färger exakt som i version 1.6.5
-- Vindpilen hämtas separat från SMHI
+Version 1.6.6b
+Ändringar:
+- Återgång till två boxar: aktuell väder + femdygnsprognos
+- Bakgrundsanimationer (moln, snö, regn) bakom boxarna utan att påverka layout/färger
+- Vindpilen placerad korrekt bredvid vindhastighet
+- Femdygnsprognos normal bredd, inga krympningar
+- Versionsnummer i huvudboxen uppe till höger
 -->
 
 <style>
 body {
     margin: 0;
     font-family: sans-serif;
-    background-color: #4a7ca1; /* exakt som 1.6.5 */
+    background-color: #4a7ca1;
     position: relative;
     overflow: hidden;
 }
 
-#version {
-    position: absolute;
-    top: 5px;
-    right: 10px;
-    font-size: 12px;
-    color: gold;
-}
-
+/* Bakgrundsanimation */
 #background-animation {
     position: absolute;
     top: 0;
@@ -80,18 +75,28 @@ body {
     100% {transform: translateX(100vw);}
 }
 
-/* Boxar som i 1.6.5 */
+/* Boxar */
 .weather-box {
     position: relative;
     margin: 20px auto;
     width: 400px;
     padding: 15px;
-    background: rgba(20,35,50,0.85); /* återställt mörk ton */
+    background: rgba(20,35,50,0.85);
     border-radius: 12px;
     box-shadow: 0 0 10px rgba(0,0,0,0.2);
     color: white;
 }
 
+/* Versionsnummer i huvudboxen */
+#version {
+    position: absolute;
+    top: 5px;
+    right: 10px;
+    font-size: 12px;
+    color: gold;
+}
+
+/* Aktuell väder */
 .current-weather {
     display: flex;
     align-items: center;
@@ -127,10 +132,16 @@ body {
     transition: transform 0.5s ease-in-out;
 }
 
-.five-day {
+.five-day-box {
+    position: relative;
+    margin: 20px auto;
+    width: 400px;
+    padding: 10px;
+    background: rgba(20,35,50,0.85);
+    border-radius: 12px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
     display: flex;
     justify-content: space-between;
-    margin-top: 15px;
 }
 
 .day-box {
@@ -144,10 +155,10 @@ body {
 </style>
 </head>
 <body>
-<div id="version">v1.6.6a</div>
 <div id="background-animation"></div>
 
 <div class="weather-box">
+  <div id="version">v1.6.6b</div>
   <div class="current-weather">
     <div class="weather-icon" id="main-icon" data-hover="Molnigt, 2.3°C">☁️</div>
     <div>
@@ -162,14 +173,14 @@ body {
       <div>Nederbörd: <span id="precip">0 mm</span></div>
     </div>
   </div>
+</div>
 
-  <div class="five-day" id="five-day">
-    <!-- Dynamiskt genererade dag-boxar -->
-  </div>
+<div class="five-day-box" id="five-day">
+  <!-- Dynamiskt genererade dag-boxar -->
 </div>
 
 <script>
-// ---- Bakgrundsanimation ----
+// Bakgrundsanimation
 const background = document.getElementById('background-animation');
 function createParticles(weather) {
   background.innerHTML = ''; 
@@ -200,7 +211,7 @@ function createParticles(weather) {
   }
 }
 
-// ---- Open-Meteo data (exempel) ----
+// Open-Meteo exempeldata
 let currentWeather = {
   temp: 2.3,
   feels_like: 2.3,
@@ -220,7 +231,7 @@ let currentWeather = {
   ]
 };
 
-// ---- Rendera aktuell väderdata ----
+// Rendera aktuell väderdata
 function updateCurrent() {
   document.getElementById('current-temp').textContent=currentWeather.temp+'°C';
   document.getElementById('feels-like').textContent=currentWeather.feels_like+'°C';
@@ -232,7 +243,7 @@ function updateCurrent() {
   createParticles(currentWeather.weather_code);
 }
 
-// ---- Femdygnsprognos ----
+// Femdygnsprognos
 function updateFiveDay() {
   const container = document.getElementById('five-day');
   container.innerHTML='';
@@ -244,7 +255,7 @@ function updateFiveDay() {
   });
 }
 
-// ---- Vindpilen (SMHI separat) ----
+// Vindpilen (SMHI separat)
 function updateWind() {
   const smhiWind = { speed:1, kmh:3, direction:170 };
   document.getElementById('wind-speed').textContent=smhiWind.speed+' m/s';
@@ -253,12 +264,12 @@ function updateWind() {
   document.getElementById('feels-like').textContent=calcFeelsLike(currentWeather.temp, smhiWind.speed)+'°C';
 }
 
-// ---- Enkel "feels like" ----
+// Enkel "feels like"
 function calcFeelsLike(temp, wind) {
   return (temp - 0.7*wind).toFixed(1);
 }
 
-// ---- Enkel ikon-logik ----
+// Enkel ikon-logik
 function weatherIcon(code) {
   switch(code){
     case 'snow': return '❄️';
@@ -269,12 +280,12 @@ function weatherIcon(code) {
   }
 }
 
-// ---- Init ----
+// Init
 updateCurrent();
 updateFiveDay();
 updateWind();
 
-// ---- Uppdateringsintervaller ----
+// Uppdateringsintervaller
 setInterval(updateCurrent, 600000);
 setInterval(updateFiveDay, 600000);
 setInterval(updateWind, 60000);
