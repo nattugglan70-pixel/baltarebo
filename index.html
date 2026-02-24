@@ -1,4 +1,4 @@
-<!-- Komplett kod: VÄDER 1.4 – korrekt ISO-vecka + stabil fallback -->
+<!-- Komplett kod: VÄDER 1.5 med fallback och versionsnummer -->
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -61,6 +61,7 @@ body{
 .right{
   flex:1;
   font-size:14px;
+  position:relative;
 }
 
 .forecast{
@@ -100,7 +101,7 @@ body{
   </div>
 
   <div class="middle">
-    <div>Vind: <span id="wind">--</span></div>
+    <div>Vind: <span id="wind">--</span> (<span id="windKmh">--</span> km/h)</div>
     <div>Luftfuktighet: <span id="humidity">--</span></div>
     <div>Tryck: <span id="pressure">--</span></div>
     <div>Nederbörd (1h): <span id="precip">--</span></div>
@@ -109,8 +110,10 @@ body{
   </div>
 
   <div class="right">
+    <div id="week">( V 9 )</div>
     <div id="date"></div>
     <div id="updated"></div>
+    <div id="version" style="position:absolute; top:10px; right:10px; color:orange; font-weight:bold;">1.5</div>
   </div>
 </div>
 
@@ -126,15 +129,6 @@ const lat = 57.173;
 const lon = 14.040;
 const station = 2556;
 
-// ---------- ISO VECKA ----------
-function getISOWeek(date){
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-  return Math.ceil((((d - yearStart) / 86400000) + 1)/7);
-}
-
 // ---------- FEELS LIKE ----------
 function feelsLike(t, ws){
   const kmh = ws*3.6;
@@ -147,13 +141,14 @@ function feelsLike(t, ws){
   return Math.round(t);
 }
 
-// ---------- HÄMTA PROGNOS ----------
+// ---------- HÄMTA PROGNOS (NU + 5 DYGN) ----------
 async function loadForecast(){
   const url = `https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${lon}/lat/${lat}/data.json`;
   const res = await fetch(url);
   const data = await res.json();
   const series = data.timeSeries;
 
+  // närmaste framtida tid
   const now = new Date();
   const current = series.find(ts => new Date(ts.validTime) >= now) || series[0];
 
@@ -167,13 +162,19 @@ async function loadForecast(){
   temp.textContent = Math.round(t)+"°";
   feels.textContent = "Känns som "+feelsLike(t,ws)+"°";
   wind.textContent = ws.toFixed(1)+" m/s";
+
+  const kmh = Math.round(ws*3.6);
+  windKmh.textContent = kmh;
+
   humidity.textContent = params.r+" %";
   pressure.textContent = params.msl+" hPa";
   precip.textContent = params.pmean+" mm";
   windArrow.style.transform=`rotate(${wd}deg)`;
 
+  // ikon
   icon.src="https://cdn-icons-png.flaticon.com/512/414/414825.png";
 
+  // ---- DAGLIG SUMMERING ----
   const daily = {};
   series.forEach(ts=>{
     const d = ts.validTime.split("T")[0];
@@ -182,7 +183,7 @@ async function loadForecast(){
   });
 
   forecast.innerHTML="";
-  Object.keys(daily).slice(1,6).forEach(d=>{
+  Object.keys(daily).slice(1,6).forEach(d=>{ // börjar från nästa dag
     const arr=daily[d];
     const temps=arr.map(x=>{
       const p={};x.parameters.forEach(a=>p[a.name]=a.values[0]);
@@ -206,23 +207,21 @@ async function loadForecast(){
 
 // ---------- HÄMTA IGÅR ----------
 async function loadYesterday(){
-  try{
-    const url=`https://opendata-download-metobs.smhi.se/api/version/latest/parameter/1/station/${station}/period/latest-month/data.json`;
-    const res=await fetch(url);
-    const data=await res.json();
-    const values=data.value;
+  const url=`https://opendata-download-metobs.smhi.se/api/version/latest/parameter/1/station/${station}/period/latest-month/data.json`;
+  const res=await fetch(url);
+  const data=await res.json();
+  const values=data.value;
 
-    const now=new Date();
-    const yesterday=new Date(now.getTime()-86400000);
+  const now=new Date();
+  const yesterday=new Date(now.getTime()-86400000);
 
-    const yVals=values.filter(v=>{
-      const d=new Date(v.date);
-      return d.getDate()===yesterday.getDate() &&
-             d.getMonth()===yesterday.getMonth();
-    });
+  const yVals=values.filter(v=>{
+    const d=new Date(v.date);
+    return d.getDate()===yesterday.getDate() &&
+           d.getMonth()===yesterday.getMonth();
+  });
 
-    if(!yVals.length) throw new Error("Ingen data");
-
+  if(yVals.length){
     const temps=yVals.map(v=>v.value);
     yMin.textContent=Math.round(Math.min(...temps))+"°";
     yMax.textContent=Math.round(Math.max(...temps))+"°";
@@ -235,27 +234,27 @@ async function loadYesterday(){
     });
     ySame.textContent=Math.round(same.value)+"°";
 
+    // normal uppdaterad
     const nowTime = new Date();
     updated.textContent="Uppdaterad: "+nowTime.toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"});
     updated.style.color="white";
 
-  }catch{
+  } else {
+    // fallback: ingen data, visa "Uppdateras…"
     updated.textContent="Uppdateras…";
-    updated.style.color="#ffcc00";
+    updated.style.color="orange";
   }
 }
 
 // ---------- INIT ----------
 function init(){
   const now=new Date();
-  const weekNr = getISOWeek(now);
-
-  date.textContent=
-    now.toLocaleDateString("sv-SE",{weekday:"long",day:"numeric",month:"long",year:"numeric"})
-    + " (V" + weekNr + ")";
-
+  date.textContent=now.toLocaleDateString("sv-SE",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
   loadForecast();
   loadYesterday();
+
+  // uppdatera automatiskt var 10:e minut
+  setInterval(()=>{loadForecast(); loadYesterday();},10*60*1000);
 }
 init();
 </script>
