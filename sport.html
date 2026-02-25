@@ -1,16 +1,15 @@
 <!-- 
 ========================================================
-IFK VÄRNAMO SPORTBAR – VERSION 1.7
+IFK VÄRNAMO SPORTBAR – VERSION 1.8
 ========================================================
 Senaste uppdatering:
-- Stabil fungerande IFK-nyheter (3 senaste)
-- Guld "Superettan 2026"
-- IFK-bakgrund med starkare synlighet
-- Klassisk tabell
-- IFK guld + glow i tabell
-- Optimerad layout för TV
+- Bollsvenskan IFK-nyheter (fungerande)
+- Tabell visar ALLTID 16 lag
+- IFK Värnamo överst innan säsong
+- API-tabell tar över automatiskt när komplett
+- Stabil sportbar-version
 
-Denna är nu huvudversion.
+Detta är nu huvudversion.
 ========================================================
 --><!DOCTYPE html><html lang="sv">
 <head>
@@ -24,7 +23,7 @@ font-family:Arial, Helvetica, sans-serif;
 overflow-x:hidden;
 }
 
-/* BAKGRUND IFK */
+/* IFK BAKGRUND */
 body::before{
 content:"";
 position:fixed;
@@ -41,7 +40,6 @@ pointer-events:none;
 z-index:0;
 }
 
-/* HEADER */
 .topbar{
 display:grid;
 grid-template-columns: 1fr auto 1fr;
@@ -61,7 +59,7 @@ overflow:hidden;
 .newsTicker a{
 color:#ccc;
 text-decoration:none;
-margin-right:24px;
+margin-right:26px;
 }
 .newsTicker a:hover{color:gold;}
 
@@ -146,77 +144,103 @@ z-index:2;
 </div>
 <div></div>
 </div><div class="sub">Superettan 2026</div><div class="container"><div class="panel">
-<div class="big" id="nextMatch">Väntar på spelschema…</div>
-<div class="countdown" id="countdown">--</div>
-<div class="info" id="status">Matchschema fastställs</div>
+<div class="big">Säsongen laddas…</div>
+<div class="countdown">⚽</div>
+<div class="info">Matcher visas när schema släpps</div>
 </div><div class="panel">
-<div class="version">v1.7</div>
+<div class="version">v1.8</div>
 <h2>Tabell</h2>
 <table id="table"></table>
 </div></div><div class="footer">Sportbar aktiv</div><script>
 const TEAM="IFK Värnamo";
 const LEAGUE="4403";
 
-const teams=[
+/* STARTTABELL MED IFK ÖVERST */
+const baseTeams=[
 "IFK Värnamo","Helsingborgs IF","GIF Sundsvall","Östers IF",
 "Utsiktens BK","Trelleborgs FF","Östersunds FK","Gefle IF",
 "Skövde AIK","Varbergs BoIS","IK Brage","Landskrona BoIS",
 "Örgryte IS","Sandvikens IF","Falkenbergs FF","Oddevold"
 ];
 
-function showTeams(){
+function showBaseTable(){
 let html="<tr><th>#</th><th>Lag</th><th>P</th><th>+/-</th></tr>";
-teams.forEach((t,i)=>{
+baseTeams.forEach((t,i)=>{
 let rowClass=t===TEAM?"class='ifkRow'":"";
-html+=`<tr ${rowClass}><td>${i+1}</td><td>${t}</td><td>0</td><td>0</td></tr>`;
+html+=`<tr ${rowClass}>
+<td>${i+1}</td>
+<td>${t}</td>
+<td>0</td>
+<td>0</td>
+</tr>`;
 });
 document.getElementById("table").innerHTML=html;
 }
 
-async function loadTable(){
+async function loadRealTable(){
 const year=new Date().getFullYear();
 try{
 const res=await fetch(`https://www.thesportsdb.com/api/v1/json/3/lookuptable.php?l=${LEAGUE}&s=${year}`);
 const data=await res.json();
-if(!data.table){showTeams();return;}
+
+if(!data.table || data.table.length<16){
+showBaseTable();
+return;
+}
 
 let html="<tr><th>#</th><th>Lag</th><th>P</th><th>+/-</th></tr>";
+
 data.table.forEach(t=>{
 let rowClass=t.strTeam===TEAM?"class='ifkRow'":"";
 let diff=(parseInt(t.intGoalsFor||0)-parseInt(t.intGoalsAgainst||0));
-html+=`<tr ${rowClass}><td>${t.intRank}</td><td>${t.strTeam}</td><td>${t.intPoints}</td><td>${diff}</td></tr>`;
+
+html+=`<tr ${rowClass}>
+<td>${t.intRank}</td>
+<td>${t.strTeam}</td>
+<td>${t.intPoints}</td>
+<td>${diff}</td>
+</tr>`;
 });
+
 document.getElementById("table").innerHTML=html;
-}catch{showTeams();}
+
+}catch{
+showBaseTable();
+}
 }
 
-/* STABIL NYHETER */
+/* NYHETER BOLLSVENSKAN */
 async function loadNews(){
 try{
-const res=await fetch("https://api.allorigins.win/raw?url="+encodeURIComponent("https://ifkvarnamo.se/feed/"));
+const res=await fetch("https://api.allorigins.win/raw?url="+encodeURIComponent("https://bollsvenskan.se/feed/ifk-varnamo"));
 const text=await res.text();
+
 const parser=new DOMParser();
 const xml=parser.parseFromString(text,"text/xml");
 const items=xml.querySelectorAll("item");
 
 let html="";
-for(let i=0;i<3;i++){
+let max=Math.min(items.length,5);
+
+for(let i=0;i<max;i++){
 const title=items[i].querySelector("title").textContent;
 const link=items[i].querySelector("link").textContent;
 html+=`<a href="${link}" target="_blank">${title}</a>`;
 }
+
 document.getElementById("news").innerHTML=html;
 
 }catch{
-document.getElementById("news").innerHTML="IFK Värnamo";
+document.getElementById("news").innerHTML="IFK Värnamo nyheter";
 }
 }
 
 function init(){
-showTeams();
-loadTable();
+showBaseTable();
+loadRealTable();
 loadNews();
 }
+
 init();
 setInterval(init,300000);
 </script></body>
