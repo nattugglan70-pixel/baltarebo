@@ -1,33 +1,17 @@
 <!-- 
 ========================================================
-IFK VÄRNAMO SPORTBAR – OFFICIELL VERSION 1.5
+IFK VÄRNAMO SPORTBAR – OFFICIELL VERSION 1.6
 ========================================================
 
-Bas: v1.4
-Plats: Baltarebo / sport.html
-Status: Stabil huvudversion
+v1.6
+- Starkare IFK-bakgrund (0.22 opacity)
+- Låst storlek på bakgrund (ingen "växer"-effekt)
+- Superettan-rubrik i guld
+- Stabil RSS-nyhetslösning (fixad)
+- Klassisk tabell
+- IFK markeras i guld + glow
 
-NYTT I v1.5
-- Klassisk tabell (placering, poäng, målskillnad)
-- IFK Värnamo markeras i guld + glow
-- Tabellrubrik förenklad till "Tabell"
-- IFK-bakgrund (IFK.png) integrerad
-- Stabil nyhetsrad
-- Premium IFK-rubrik
-
-v1.4
-- IFK bakgrundsgrafik
-- Layoutstabilisering
-
-v1.3
-- Modern IFK textstil
-- RSS nyheter stabila
-
-KOMMANDE
-v1.6 Live matchläge
-v2.0 Komplett infotainment-system
-
-Skapad: 2026
+Bas: v1.5 stabil
 ========================================================
 --><!DOCTYPE html><html lang="sv">
 <head>
@@ -41,19 +25,19 @@ font-family:Arial, Helvetica, sans-serif;
 overflow-x:hidden;
 }
 
-/* IFK BAKGRUND */
+/* === IFK BAKGRUND === */
 body::before{
 content:"";
 position:fixed;
 top:50%;
 left:50%;
 transform:translate(-50%,-50%);
-width:900px;
-height:900px;
+width:950px;
+height:950px;
 background:url("IFK.png") no-repeat center;
 background-size:contain;
 opacity:0.22;
-filter:blur(1px);
+filter:blur(0.6px);
 pointer-events:none;
 z-index:0;
 }
@@ -71,7 +55,7 @@ z-index:2;
 /* NEWS */
 .newsTicker{
 font-size:15px;
-opacity:0.9;
+opacity:0.95;
 white-space:nowrap;
 overflow:hidden;
 }
@@ -79,10 +63,10 @@ overflow:hidden;
 .newsTicker a{
 color:#ccc;
 text-decoration:none;
-margin-right:18px;
+margin-right:22px;
 }
 
-.newsTicker a:hover{color:#00ff88;}
+.newsTicker a:hover{color:gold;}
 
 /* CENTER TITLE */
 .centerHead{
@@ -93,22 +77,24 @@ justify-content:center;
 
 .header{
 font-family:'Orbitron', sans-serif;
-font-size:48px;
+font-size:50px;
 font-weight:700;
 letter-spacing:4px;
-color:#e5e5e5;
-text-shadow:0 0 12px rgba(0,255,150,0.25);
+color:#f1f1f1;
+text-shadow:0 0 14px rgba(0,255,150,0.25);
 }
 
 .rightBox{text-align:right;}
 
+/* SUB */
 .sub{
 text-align:center;
-font-size:20px;
-color:#00ff88;
-margin-bottom:15px;
+font-size:22px;
+color:gold;
+margin-bottom:18px;
 position:relative;
 z-index:2;
+letter-spacing:2px;
 }
 
 /* GRID */
@@ -136,7 +122,7 @@ top:12px;
 right:18px;
 color:gold;
 font-size:14px;
-opacity:0.9;
+opacity:0.95;
 }
 
 .big{font-size:28px;margin-bottom:15px;}
@@ -150,7 +136,7 @@ th{text-align:left;}
 .ifkRow{
 color:gold;
 font-weight:bold;
-text-shadow:0 0 10px rgba(255,215,0,0.7);
+text-shadow:0 0 10px rgba(255,215,0,0.8);
 }
 
 .footer{
@@ -170,7 +156,7 @@ Laddar IFK-nyheter…
 <div class="countdown" id="countdown">--</div>
 <div class="info" id="status">Matchschema fastställs av förbundet</div>
 </div><div class="panel">
-<div class="version">v1.5</div>
+<div class="version">v1.6</div>
 <h2>Tabell</h2>
 <table id="table"></table>
 </div></div><div class="footer">Sportbar aktiv</div><script>
@@ -274,19 +260,26 @@ showTeams();
 }
 }
 
+/* STABIL NYHETER */
 async function loadNews(){
 try{
-const res=await fetch("https://api.rss2json.com/v1/api.json?rss_url=https://ifkvarnamo.se/feed/");
-const data=await res.json();
+const res = await fetch("https://api.rss2json.com/v1/api.json?rss_url=https://ifkvarnamo.se/feed/");
+const data = await res.json();
+
+if(!data.items){
+document.getElementById("news").innerHTML="IFK Värnamo";
+return;
+}
 
 let html="";
 data.items.slice(0,3).forEach(n=>{
-html+=`<a href="${n.link}" target="_blank">${n.title}</a>`;
+html += `<a href="${n.link}" target="_blank">${n.title}</a>`;
 });
-document.getElementById("news").innerHTML=html;
+
+document.getElementById("news").innerHTML = html;
 
 }catch{
-document.getElementById("news").innerHTML="IFK-nyheter uppdateras…";
+document.getElementById("news").innerHTML="IFK Värnamo";
 }
 }
 
