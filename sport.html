@@ -3,56 +3,77 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IFK Värnamo – Matchcenter</title>
+<title>IFK Värnamo – Sportbar</title>
 
 <style>
 body{
     margin:0;
-    background:linear-gradient(180deg,#0b0f14,#111827);
+    background:radial-gradient(circle at top,#111827,#05070a);
     color:white;
     font-family:Arial, Helvetica, sans-serif;
+    overflow:hidden;
 }
 
 .header{
     text-align:center;
-    font-size:44px;
-    padding:25px 0 10px 0;
+    font-size:54px;
     font-weight:bold;
+    padding-top:20px;
+    letter-spacing:2px;
 }
 
 .sub{
     text-align:center;
-    color:#00ff88;
     font-size:22px;
-    margin-bottom:20px;
+    color:#00ff88;
+    margin-bottom:15px;
+}
+
+.matchAlert{
+    text-align:center;
+    font-size:38px;
+    color:#ff3b3b;
+    font-weight:bold;
+    margin:10px 0;
+    display:none;
+    animation:blink 1.2s infinite;
+}
+
+@keyframes blink{
+    50%{opacity:0.3}
 }
 
 .container{
     display:grid;
-    grid-template-columns: 1.2fr 1fr;
-    gap:30px;
-    padding:25px;
+    grid-template-columns: 1.4fr 1fr;
+    gap:25px;
+    padding:20px 40px;
 }
 
 .panel{
-    background:#111827;
+    background:#0c1118;
+    border-radius:18px;
     padding:25px;
-    border-radius:16px;
-    box-shadow:0 0 25px rgba(0,0,0,0.6);
+    box-shadow:0 0 40px rgba(0,0,0,0.7);
 }
 
-h2{
-    margin-top:0;
-    border-bottom:1px solid #333;
-    padding-bottom:8px;
-    font-size:26px;
+.bigMatch{
+    font-size:30px;
+    margin-bottom:10px;
 }
 
-.match{
-    margin-bottom:16px;
+.countdown{
+    font-size:46px;
+    color:#00ff88;
+    font-weight:bold;
+    margin:15px 0 25px 0;
+}
+
+.listMatch{
+    font-size:20px;
+    margin-bottom:14px;
     padding-bottom:10px;
     border-bottom:1px solid #222;
-    font-size:19px;
 }
 
 .date{
@@ -60,19 +81,14 @@ h2{
     font-weight:bold;
 }
 
-.countdown{
-    font-size:28px;
-    color:#00ff88;
-    margin-bottom:15px;
-}
-
 table{
     width:100%;
     border-collapse:collapse;
+    font-size:18px;
 }
 
-td, th{
-    padding:8px;
+td,th{
+    padding:10px;
     border-bottom:1px solid #222;
 }
 
@@ -80,139 +96,160 @@ td, th{
     color:#00ff88;
     font-weight:bold;
 }
+
+.footer{
+    position:fixed;
+    bottom:8px;
+    width:100%;
+    text-align:center;
+    opacity:0.25;
+    font-size:12px;
+}
 </style>
 </head>
 
 <body>
 
-<div class="header">⚽ IFK Värnamo</div>
-<div class="sub">Superettan 2026</div>
+<div class="header">⚽ IFK VÄRNAMO</div>
+<div class="sub">Matchcenter 2026</div>
+<div class="matchAlert" id="matchAlert">🚨 MATCH IDAG 🚨</div>
 
 <div class="container">
 
 <div class="panel">
-<h2>⏳ Nästa match</h2>
-<div id="countdown" class="countdown">Laddar...</div>
+<div class="bigMatch" id="nextMatch">Laddar nästa match...</div>
+<div class="countdown" id="countdown">...</div>
 
-<h2>📅 Kommande matcher</h2>
-<div id="next">Laddar matcher...</div>
+<h2>Kommande matcher</h2>
+<div id="nextList"></div>
 </div>
 
 <div class="panel">
-<h2>📊 Tabell</h2>
+<h2>Superettan tabell</h2>
 <table id="table"></table>
 </div>
 
 </div>
 
+<div class="footer">Uppdateras automatiskt</div>
+
 <script>
-// ===== MANUELL BACKUP 2026 =====
-// Uppdaterar denna när spelschema släpps
-const backupMatches = [
-{date:"2026-04-05", home:"IFK Värnamo", away:"Östersund"},
-{date:"2026-04-12", home:"Helsingborg", away:"IFK Värnamo"},
-{date:"2026-04-20", home:"IFK Värnamo", away:"Utsikten"},
-{date:"2026-04-27", home:"Trelleborg", away:"IFK Värnamo"}
+const TEAM="IFK Värnamo";
+const LEAGUE="4403";
+
+// fallback schema (ändra själv när klart)
+const backup=[
+{date:"2026-04-05",home:"IFK Värnamo",away:"Östersund"},
+{date:"2026-04-12",home:"Helsingborg",away:"IFK Värnamo"},
+{date:"2026-04-20",home:"IFK Värnamo",away:"Utsikten"},
+{date:"2026-04-27",home:"Trelleborg",away:"IFK Värnamo"}
 ];
 
-const TEAM_NAME="IFK Värnamo";
-const LEAGUE_ID="4403";
+let firstMatchDate=null;
 
-// ===== COUNTDOWN =====
+// countdown + match idag
 function startCountdown(dateStr){
     function update(){
-        const matchTime = new Date(dateStr+"T19:00:00").getTime();
-        const now = new Date().getTime();
-        const diff = matchTime-now;
+        const match=new Date(dateStr+"T19:00:00").getTime();
+        const now=new Date().getTime();
+        const diff=match-now;
 
-        if(diff<=0){
-            document.getElementById("countdown").innerHTML="Matchdag!";
+        if(diff<0){
+            document.getElementById("countdown").innerHTML="Match spelad/pågår";
             return;
         }
 
-        const d=Math.floor(diff/(1000*60*60*24));
-        const h=Math.floor((diff/(1000*60*60))%24);
-        const m=Math.floor((diff/(1000*60))%60);
+        const d=Math.floor(diff/86400000);
+        const h=Math.floor((diff%86400000)/3600000);
+        const m=Math.floor((diff%3600000)/60000);
 
         document.getElementById("countdown").innerHTML=
-        d+" dagar "+h+"h "+m+"m";
+        d+"d "+h+"h "+m+"m";
+
+        if(d===0){
+            document.getElementById("matchAlert").style.display="block";
+        }
     }
     update();
     setInterval(update,60000);
 }
 
-// ===== VISA BACKUP =====
-function showBackup(){
+// visa matcher
+function renderMatches(list){
     let html="";
-    backupMatches.forEach((m,i)=>{
-        if(i===0) startCountdown(m.date);
+    list.forEach((m,i)=>{
+        if(i===0){
+            firstMatchDate=m.date;
+            document.getElementById("nextMatch").innerHTML=
+            m.home+" vs "+m.away+" ("+m.date+")";
+            startCountdown(m.date);
+        }
+
         html+=`
-        <div class="match">
-        <div class="date">${m.date}</div>
+        <div class="listMatch">
+        <span class="date">${m.date}</span><br>
         ${m.home} vs ${m.away}
         </div>`;
     });
-    document.getElementById("next").innerHTML=html;
+
+    document.getElementById("nextList").innerHTML=html;
 }
 
-// ===== API MATCHER =====
-async function loadAPI(){
+// hämta API matcher
+async function loadMatches(){
     try{
-        const resTeam=await fetch(`https://www.thesportsdb.com/api/v1/json/3/searchteams.php?t=${TEAM_NAME}`);
-        const teamData=await resTeam.json();
-        const id=teamData.teams[0].idTeam;
+        const t=await fetch(`https://www.thesportsdb.com/api/v1/json/3/searchteams.php?t=${TEAM}`);
+        const td=await t.json();
+        const id=td.teams[0].idTeam;
 
         const res=await fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsnext.php?id=${id}`);
         const data=await res.json();
 
         if(!data.events){
-            showBackup();
+            renderMatches(backup);
             return;
         }
 
-        let html="";
-        data.events.slice(0,8).forEach((m,i)=>{
-            if(i===0) startCountdown(m.dateEvent);
-            html+=`
-            <div class="match">
-            <div class="date">${m.dateEvent}</div>
-            ${m.strHomeTeam} vs ${m.strAwayTeam}
-            </div>`;
-        });
+        let arr=data.events.map(m=>({
+            date:m.dateEvent,
+            home:m.strHomeTeam,
+            away:m.strAwayTeam
+        }));
 
-        document.getElementById("next").innerHTML=html;
+        renderMatches(arr);
 
     }catch{
-        showBackup();
+        renderMatches(backup);
     }
 }
 
-// ===== TABELL =====
+// tabell
 async function loadTable(){
     const year=new Date().getFullYear();
     try{
-        const res=await fetch(`https://www.thesportsdb.com/api/v1/json/3/lookuptable.php?l=${LEAGUE_ID}&s=${year}`);
+        const res=await fetch(`https://www.thesportsdb.com/api/v1/json/3/lookuptable.php?l=${LEAGUE}&s=${year}`);
         const data=await res.json();
 
         if(!data.table){
-            document.getElementById("table").innerHTML="Tabell visas när serien startar";
+            document.getElementById("table").innerHTML="Tabell kommer vid säsongsstart";
             return;
         }
 
         let html="<tr><th>#</th><th>Lag</th><th>P</th></tr>";
         data.table.forEach(t=>{
-            let hl=t.strTeam===TEAM_NAME?"class='highlight'":"";
+            let hl=t.strTeam===TEAM?"class='highlight'":"";
             html+=`<tr ${hl}><td>${t.intRank}</td><td>${t.strTeam}</td><td>${t.intPoints}</td></tr>`;
         });
+
         document.getElementById("table").innerHTML=html;
     }catch{}
 }
 
-// ===== START =====
 function init(){
-    loadAPI();
+    loadMatches();
     loadTable();
 }
+
 init();
 setInterval(init,300000);
 </script>
