@@ -1,17 +1,16 @@
 <!-- 
 ========================================================
-IFK VÄRNAMO SPORTBAR – OFFICIELL VERSION 1.6
+IFK VÄRNAMO SPORTBAR – VERSION 1.7
 ========================================================
-
-v1.6
-- Starkare IFK-bakgrund (0.22 opacity)
-- Låst storlek på bakgrund (ingen "växer"-effekt)
-- Superettan-rubrik i guld
-- Stabil RSS-nyhetslösning (fixad)
+Senaste uppdatering:
+- Stabil fungerande IFK-nyheter (3 senaste)
+- Guld "Superettan 2026"
+- IFK-bakgrund med starkare synlighet
 - Klassisk tabell
-- IFK markeras i guld + glow
+- IFK guld + glow i tabell
+- Optimerad layout för TV
 
-Bas: v1.5 stabil
+Denna är nu huvudversion.
 ========================================================
 --><!DOCTYPE html><html lang="sv">
 <head>
@@ -25,7 +24,7 @@ font-family:Arial, Helvetica, sans-serif;
 overflow-x:hidden;
 }
 
-/* === IFK BAKGRUND === */
+/* BAKGRUND IFK */
 body::before{
 content:"";
 position:fixed;
@@ -42,7 +41,7 @@ pointer-events:none;
 z-index:0;
 }
 
-/* HEADER GRID */
+/* HEADER */
 .topbar{
 display:grid;
 grid-template-columns: 1fr auto 1fr;
@@ -52,7 +51,6 @@ position:relative;
 z-index:2;
 }
 
-/* NEWS */
 .newsTicker{
 font-size:15px;
 opacity:0.95;
@@ -63,12 +61,10 @@ overflow:hidden;
 .newsTicker a{
 color:#ccc;
 text-decoration:none;
-margin-right:22px;
+margin-right:24px;
 }
-
 .newsTicker a:hover{color:gold;}
 
-/* CENTER TITLE */
 .centerHead{
 display:flex;
 align-items:center;
@@ -77,16 +73,13 @@ justify-content:center;
 
 .header{
 font-family:'Orbitron', sans-serif;
-font-size:50px;
+font-size:52px;
 font-weight:700;
 letter-spacing:4px;
 color:#f1f1f1;
 text-shadow:0 0 14px rgba(0,255,150,0.25);
 }
 
-.rightBox{text-align:right;}
-
-/* SUB */
 .sub{
 text-align:center;
 font-size:22px;
@@ -97,7 +90,6 @@ z-index:2;
 letter-spacing:2px;
 }
 
-/* GRID */
 .container{
 display:grid;
 grid-template-columns: 1.4fr 1fr;
@@ -147,16 +139,18 @@ padding:8px;
 position:relative;
 z-index:2;
 }
-</style></head><body><div class="topbar"><div class="newsTicker" id="news">
-Laddar IFK-nyheter…
-</div><div class="centerHead">
+</style></head><body><div class="topbar">
+<div class="newsTicker" id="news">Laddar IFK-nyheter…</div>
+<div class="centerHead">
 <div class="header">IFK VÄRNAMO</div>
-</div><div class="rightBox"></div></div><div class="sub">Superettan 2026</div><div class="container"><div class="panel">
+</div>
+<div></div>
+</div><div class="sub">Superettan 2026</div><div class="container"><div class="panel">
 <div class="big" id="nextMatch">Väntar på spelschema…</div>
 <div class="countdown" id="countdown">--</div>
-<div class="info" id="status">Matchschema fastställs av förbundet</div>
+<div class="info" id="status">Matchschema fastställs</div>
 </div><div class="panel">
-<div class="version">v1.6</div>
+<div class="version">v1.7</div>
 <h2>Tabell</h2>
 <table id="table"></table>
 </div></div><div class="footer">Sportbar aktiv</div><script>
@@ -172,60 +166,11 @@ const teams=[
 
 function showTeams(){
 let html="<tr><th>#</th><th>Lag</th><th>P</th><th>+/-</th></tr>";
-
 teams.forEach((t,i)=>{
-let rowClass = t===TEAM ? "class='ifkRow'" : "";
-html+=`<tr ${rowClass}>
-<td>${i+1}</td>
-<td>${t}</td>
-<td>0</td>
-<td>0</td>
-</tr>`;
+let rowClass=t===TEAM?"class='ifkRow'":"";
+html+=`<tr ${rowClass}><td>${i+1}</td><td>${t}</td><td>0</td><td>0</td></tr>`;
 });
-
 document.getElementById("table").innerHTML=html;
-}
-
-function startCountdown(dateStr){
-function update(){
-const match=new Date(dateStr+"T19:00:00").getTime();
-const now=new Date().getTime();
-const diff=match-now;
-if(diff<0)return;
-
-const d=Math.floor(diff/86400000);
-const h=Math.floor((diff%86400000)/3600000);
-const m=Math.floor((diff%3600000)/60000);
-
-document.getElementById("countdown").innerHTML=
-d+"d "+h+"h "+m+"m";
-}
-update();
-setInterval(update,60000);
-}
-
-async function loadMatches(){
-try{
-const t=await fetch(`https://www.thesportsdb.com/api/v1/json/3/searchteams.php?t=${TEAM}`);
-const td=await t.json();
-const id=td.teams[0].idTeam;
-
-const res=await fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsnext.php?id=${id}`);
-const data=await res.json();
-
-if(!data.events)return;
-
-const m=data.events[0];
-
-document.getElementById("nextMatch").innerHTML=
-m.strHomeTeam+" vs "+m.strAwayTeam;
-
-document.getElementById("status").innerHTML=
-"Nästa match: "+m.dateEvent;
-
-startCountdown(m.dateEvent);
-
-}catch{}
 }
 
 async function loadTable(){
@@ -233,50 +178,34 @@ const year=new Date().getFullYear();
 try{
 const res=await fetch(`https://www.thesportsdb.com/api/v1/json/3/lookuptable.php?l=${LEAGUE}&s=${year}`);
 const data=await res.json();
-
-if(!data.table || data.table.length<10){
-showTeams();
-return;
-}
+if(!data.table){showTeams();return;}
 
 let html="<tr><th>#</th><th>Lag</th><th>P</th><th>+/-</th></tr>";
-
 data.table.forEach(t=>{
-let rowClass = t.strTeam===TEAM ? "class='ifkRow'" : "";
-let diff = (parseInt(t.intGoalsFor||0) - parseInt(t.intGoalsAgainst||0));
-
-html+=`<tr ${rowClass}>
-<td>${t.intRank}</td>
-<td>${t.strTeam}</td>
-<td>${t.intPoints}</td>
-<td>${diff}</td>
-</tr>`;
+let rowClass=t.strTeam===TEAM?"class='ifkRow'":"";
+let diff=(parseInt(t.intGoalsFor||0)-parseInt(t.intGoalsAgainst||0));
+html+=`<tr ${rowClass}><td>${t.intRank}</td><td>${t.strTeam}</td><td>${t.intPoints}</td><td>${diff}</td></tr>`;
 });
-
 document.getElementById("table").innerHTML=html;
-
-}catch{
-showTeams();
-}
+}catch{showTeams();}
 }
 
 /* STABIL NYHETER */
 async function loadNews(){
 try{
-const res = await fetch("https://api.rss2json.com/v1/api.json?rss_url=https://ifkvarnamo.se/feed/");
-const data = await res.json();
-
-if(!data.items){
-document.getElementById("news").innerHTML="IFK Värnamo";
-return;
-}
+const res=await fetch("https://api.allorigins.win/raw?url="+encodeURIComponent("https://ifkvarnamo.se/feed/"));
+const text=await res.text();
+const parser=new DOMParser();
+const xml=parser.parseFromString(text,"text/xml");
+const items=xml.querySelectorAll("item");
 
 let html="";
-data.items.slice(0,3).forEach(n=>{
-html += `<a href="${n.link}" target="_blank">${n.title}</a>`;
-});
-
-document.getElementById("news").innerHTML = html;
+for(let i=0;i<3;i++){
+const title=items[i].querySelector("title").textContent;
+const link=items[i].querySelector("link").textContent;
+html+=`<a href="${link}" target="_blank">${title}</a>`;
+}
+document.getElementById("news").innerHTML=html;
 
 }catch{
 document.getElementById("news").innerHTML="IFK Värnamo";
@@ -285,11 +214,9 @@ document.getElementById("news").innerHTML="IFK Värnamo";
 
 function init(){
 showTeams();
-loadMatches();
 loadTable();
 loadNews();
 }
-
 init();
 setInterval(init,300000);
 </script></body>
