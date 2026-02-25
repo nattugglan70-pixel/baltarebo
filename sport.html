@@ -1,1 +1,161 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IFK Värnamo & Superettan</title>
 
+<style>
+body {
+    margin:0;
+    background:#0b0f14;
+    color:white;
+    font-family:Arial, Helvetica, sans-serif;
+}
+
+.container{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:20px;
+    padding:20px;
+}
+
+.panel{
+    background:#111827;
+    padding:20px;
+    border-radius:12px;
+    box-shadow:0 0 15px rgba(0,0,0,0.5);
+}
+
+h1{
+    text-align:center;
+    margin:10px 0 25px 0;
+    font-size:40px;
+}
+
+h2{
+    margin-bottom:10px;
+    border-bottom:1px solid #333;
+    padding-bottom:5px;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+td, th{
+    padding:6px;
+    text-align:left;
+    border-bottom:1px solid #222;
+    font-size:15px;
+}
+
+.highlight{
+    color:#00ff88;
+    font-weight:bold;
+}
+
+.footer{
+    text-align:center;
+    margin-top:20px;
+    opacity:0.5;
+    font-size:12px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>⚽ IFK Värnamo & Superettan</h1>
+
+<div class="container">
+
+<div class="panel">
+<h2>📊 Tabell Superettan</h2>
+<table id="table"></table>
+</div>
+
+<div class="panel">
+<h2>🟢 IFK Värnamo – senaste matcher</h2>
+<div id="results">Laddar...</div>
+
+<h2 style="margin-top:20px;">📅 Kommande matcher</h2>
+<div id="next">Laddar...</div>
+</div>
+
+</div>
+
+<div class="footer">
+Auto uppdaterar var 5:e minut
+</div>
+
+<script>
+// ===== TABELL =====
+async function loadTable(){
+    const res = await fetch("https://www.thesportsdb.com/api/v1/json/3/lookuptable.php?l=4403&s=2025");
+    const data = await res.json();
+    const table = data.table;
+
+    let html = "<tr><th>#</th><th>Lag</th><th>P</th></tr>";
+
+    table.forEach(team=>{
+        let highlight = team.name.includes("Värnamo") ? "class='highlight'" : "";
+        html += `<tr ${highlight}>
+            <td>${team.intRank}</td>
+            <td>${team.strTeam}</td>
+            <td>${team.intPoints}</td>
+        </tr>`;
+    });
+
+    document.getElementById("table").innerHTML = html;
+}
+
+// ===== SENASTE MATCHER =====
+async function loadResults(){
+    const res = await fetch("https://www.thesportsdb.com/api/v1/json/3/eventslast.php?id=133604");
+    const data = await res.json();
+    const matches = data.results.slice(0,5);
+
+    let html="";
+    matches.forEach(m=>{
+        html += `${m.dateEvent} <br>
+        ${m.strHomeTeam} ${m.intHomeScore}-${m.intAwayScore} ${m.strAwayTeam}
+        <hr>`;
+    });
+
+    document.getElementById("results").innerHTML = html;
+}
+
+// ===== KOMMANDE MATCHER =====
+async function loadNext(){
+    const res = await fetch("https://www.thesportsdb.com/api/v1/json/3/eventsnext.php?id=133604");
+    const data = await res.json();
+    const matches = data.events.slice(0,5);
+
+    let html="";
+    matches.forEach(m=>{
+        html += `${m.dateEvent} <br>
+        ${m.strHomeTeam} vs ${m.strAwayTeam}
+        <hr>`;
+    });
+
+    document.getElementById("next").innerHTML = html;
+}
+
+// starta
+loadTable();
+loadResults();
+loadNext();
+
+// auto refresh 5 min
+setInterval(()=>{
+    loadTable();
+    loadResults();
+    loadNext();
+},300000);
+
+</script>
+
+</body>
+</html>
