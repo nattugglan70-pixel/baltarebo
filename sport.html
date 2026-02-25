@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IFK Värnamo – Sportbar</title>
+<title>IFK Värnamo Sportbar</title>
 
 <style>
 body{
@@ -11,15 +11,13 @@ body{
     background:radial-gradient(circle at top,#111827,#05070a);
     color:white;
     font-family:Arial, Helvetica, sans-serif;
-    overflow:hidden;
 }
 
 .header{
     text-align:center;
-    font-size:54px;
+    font-size:52px;
     font-weight:bold;
-    padding-top:20px;
-    letter-spacing:2px;
+    padding:20px 0 5px 0;
 }
 
 .sub{
@@ -27,20 +25,6 @@ body{
     font-size:22px;
     color:#00ff88;
     margin-bottom:15px;
-}
-
-.matchAlert{
-    text-align:center;
-    font-size:38px;
-    color:#ff3b3b;
-    font-weight:bold;
-    margin:10px 0;
-    display:none;
-    animation:blink 1.2s infinite;
-}
-
-@keyframes blink{
-    50%{opacity:0.3}
 }
 
 .container{
@@ -57,28 +41,21 @@ body{
     box-shadow:0 0 40px rgba(0,0,0,0.7);
 }
 
-.bigMatch{
-    font-size:30px;
-    margin-bottom:10px;
+.big{
+    font-size:32px;
+    margin-bottom:15px;
 }
 
 .countdown{
-    font-size:46px;
+    font-size:44px;
     color:#00ff88;
+    margin-bottom:25px;
     font-weight:bold;
-    margin:15px 0 25px 0;
 }
 
-.listMatch{
-    font-size:20px;
-    margin-bottom:14px;
-    padding-bottom:10px;
-    border-bottom:1px solid #222;
-}
-
-.date{
-    color:#00ff88;
-    font-weight:bold;
+.info{
+    font-size:22px;
+    color:#aaa;
 }
 
 table{
@@ -98,12 +75,10 @@ td,th{
 }
 
 .footer{
-    position:fixed;
-    bottom:8px;
-    width:100%;
     text-align:center;
-    opacity:0.25;
+    opacity:0.3;
     font-size:12px;
+    padding:8px;
 }
 </style>
 </head>
@@ -111,21 +86,18 @@ td,th{
 <body>
 
 <div class="header">⚽ IFK VÄRNAMO</div>
-<div class="sub">Matchcenter 2026</div>
-<div class="matchAlert" id="matchAlert">🚨 MATCH IDAG 🚨</div>
+<div class="sub">Superettan 2026</div>
 
 <div class="container">
 
 <div class="panel">
-<div class="bigMatch" id="nextMatch">Laddar nästa match...</div>
-<div class="countdown" id="countdown">...</div>
-
-<h2>Kommande matcher</h2>
-<div id="nextList"></div>
+<div class="big" id="nextMatch">Väntar på spelschema…</div>
+<div class="countdown" id="countdown">--</div>
+<div class="info" id="status">Matchschema fastställs av förbundet</div>
 </div>
 
 <div class="panel">
-<h2>Superettan tabell</h2>
+<h2>Superettan lag 2026</h2>
 <table id="table"></table>
 </div>
 
@@ -137,17 +109,37 @@ td,th{
 const TEAM="IFK Värnamo";
 const LEAGUE="4403";
 
-// fallback schema (ändra själv när klart)
-const backup=[
-{date:"2026-04-05",home:"IFK Värnamo",away:"Östersund"},
-{date:"2026-04-12",home:"Helsingborg",away:"IFK Värnamo"},
-{date:"2026-04-20",home:"IFK Värnamo",away:"Utsikten"},
-{date:"2026-04-27",home:"Trelleborg",away:"IFK Värnamo"}
+// alla lag 2026
+const teams=[
+"IFK Värnamo",
+"Helsingborgs IF",
+"GIF Sundsvall",
+"Östers IF",
+"Utsiktens BK",
+"Trelleborgs FF",
+"Östersunds FK",
+"Gefle IF",
+"Skövde AIK",
+"Varbergs BoIS",
+"IK Brage",
+"Landskrona BoIS",
+"Örgryte IS",
+"Sandvikens IF",
+"Falkenbergs FF",
+"Oddevold"
 ];
 
-let firstMatchDate=null;
+// visa laglista innan tabell finns
+function showTeams(){
+    let html="<tr><th>Lag</th></tr>";
+    teams.forEach(t=>{
+        let hl=t===TEAM?"class='highlight'":"";
+        html+=`<tr ${hl}><td>${t}</td></tr>`;
+    });
+    document.getElementById("table").innerHTML=html;
+}
 
-// countdown + match idag
+// countdown
 function startCountdown(dateStr){
     function update(){
         const match=new Date(dateStr+"T19:00:00").getTime();
@@ -155,7 +147,7 @@ function startCountdown(dateStr){
         const diff=match-now;
 
         if(diff<0){
-            document.getElementById("countdown").innerHTML="Match spelad/pågår";
+            document.getElementById("countdown").innerHTML="Match pågår/spelad";
             return;
         }
 
@@ -165,37 +157,12 @@ function startCountdown(dateStr){
 
         document.getElementById("countdown").innerHTML=
         d+"d "+h+"h "+m+"m";
-
-        if(d===0){
-            document.getElementById("matchAlert").style.display="block";
-        }
     }
     update();
     setInterval(update,60000);
 }
 
-// visa matcher
-function renderMatches(list){
-    let html="";
-    list.forEach((m,i)=>{
-        if(i===0){
-            firstMatchDate=m.date;
-            document.getElementById("nextMatch").innerHTML=
-            m.home+" vs "+m.away+" ("+m.date+")";
-            startCountdown(m.date);
-        }
-
-        html+=`
-        <div class="listMatch">
-        <span class="date">${m.date}</span><br>
-        ${m.home} vs ${m.away}
-        </div>`;
-    });
-
-    document.getElementById("nextList").innerHTML=html;
-}
-
-// hämta API matcher
+// hämta matcher från API
 async function loadMatches(){
     try{
         const t=await fetch(`https://www.thesportsdb.com/api/v1/json/3/searchteams.php?t=${TEAM}`);
@@ -206,32 +173,31 @@ async function loadMatches(){
         const data=await res.json();
 
         if(!data.events){
-            renderMatches(backup);
-            return;
+            return; // fortsätt visa väntläge
         }
 
-        let arr=data.events.map(m=>({
-            date:m.dateEvent,
-            home:m.strHomeTeam,
-            away:m.strAwayTeam
-        }));
+        const m=data.events[0];
 
-        renderMatches(arr);
+        document.getElementById("nextMatch").innerHTML=
+        m.strHomeTeam+" vs "+m.strAwayTeam;
 
-    }catch{
-        renderMatches(backup);
-    }
+        document.getElementById("status").innerHTML=
+        "Nästa match: "+m.dateEvent;
+
+        startCountdown(m.dateEvent);
+
+    }catch{}
 }
 
-// tabell
+// riktig tabell när den finns
 async function loadTable(){
     const year=new Date().getFullYear();
     try{
         const res=await fetch(`https://www.thesportsdb.com/api/v1/json/3/lookuptable.php?l=${LEAGUE}&s=${year}`);
         const data=await res.json();
 
-        if(!data.table){
-            document.getElementById("table").innerHTML="Tabell kommer vid säsongsstart";
+        if(!data.table || data.table.length<10){
+            showTeams();
             return;
         }
 
@@ -242,10 +208,14 @@ async function loadTable(){
         });
 
         document.getElementById("table").innerHTML=html;
-    }catch{}
+
+    }catch{
+        showTeams();
+    }
 }
 
 function init(){
+    showTeams();
     loadMatches();
     loadTable();
 }
