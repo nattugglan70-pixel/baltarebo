@@ -61,13 +61,13 @@ padding:18px 10px;
 border-bottom:1px solid #1f2630;
 }
 .matchTeams{
-font-size:26px;
+font-size:24px;
 font-weight:bold;
 }
 .matchTime{
-font-size:34px;
-color:gold;
-margin-top:6px;
+font-size:20px;
+color:#aaa;
+margin-top:4px;
 }
 
 /* TABELL */
@@ -89,18 +89,12 @@ padding:10px;
 <div class="container">
 
 <div class="panel">
-<div id="matches">
-<div class="matchCard">
-<div class="matchTeams">Matchschema laddas…</div>
-<div class="matchTime">⚽</div>
-</div>
-</div>
+<div id="matches"></div>
 </div>
 
 <div class="panel">
-<div class="version">v2.3</div>
+<div class="version">v3.0</div>
 <h2>Tabell</h2>
-
 <table>
 <tr><th>#</th><th>Lag</th><th>P</th><th>+/-</th></tr>
 <tr class="ifkRow"><td>1</td><td>IFK Värnamo</td><td>0</td><td>0</td></tr>
@@ -127,9 +121,56 @@ padding:10px;
 <div class="footer">Sportbar aktiv</div>
 
 <script>
-const TEAM="IFK Värnamo";
+const TEAM = "IFK Värnamo";
 
-async function loadMatches(){
+/* MANUELLT SCHEMA */
+const manualMatches = [
+["04/04-07/04","IFK Norrköping (borta)"],
+["11/04-14/04","GIF Sundsvall (hemma)"],
+["18-21/4","Sandvikens IF (borta)"],
+["25-28/4","IK Oddevold (hemma)"],
+["2-5/5","Östersunds FK (borta)"],
+["9-11/5","Varbergs BoIS FC (borta)"],
+["13-14/5","Örebro SK (hemma)"],
+["16-19/5","Norrby IF (hemma)"],
+["23-26/5","Falkenbergs FF (borta)"],
+["30-31/5","Nordic United FC (hemma)"],
+["10-11/6","Östers IF (borta)"],
+["13-16/6","Helsingborgs IF (hemma)"],
+["20-23/6","IK Brage (borta)"],
+["27-30/6","Landskrona BoIS (borta)"],
+["18-21/7","Ljungskile SK (hemma)"],
+["25-28/7","IK Brage (hemma)"],
+["1-4/8","Örebro SK (borta)"],
+["8-12/8","Helsingborgs IF (borta)"],
+["15-18/8","Östersunds FK (hemma)"],
+["22-25/8","Landskrona BoIS (hemma)"],
+["29/8-1/9","Ljungskile SK (borta)"],
+["5-7/9","Varbergs BoIS FC (hemma)"],
+["9-10/9","Nordic United FC (borta)"],
+["12-15/9","Östers IF (hemma)"],
+["19-20/9","IK Oddevold (borta)"],
+["10-13/10","Falkenbergs FF (hemma)"],
+["17-20/10","GIF Sundsvall (borta)"],
+["24-27/10","Sandvikens IF (hemma)"],
+["31/10-2/11","Norrby IF (borta)"],
+["7/11","IFK Norrköping (hemma)"]
+];
+
+function showManual(){
+let html="";
+manualMatches.forEach(m=>{
+html+=`
+<div class="matchCard">
+<div class="matchTeams">${TEAM} – ${m[1]}</div>
+<div class="matchTime">${m[0]}</div>
+</div>`;
+});
+document.getElementById("matches").innerHTML = html;
+}
+
+/* API TAR ÖVER AUTOMATISKT */
+async function loadFromAPI(){
 try{
 const t=await fetch(`https://www.thesportsdb.com/api/v1/json/3/searchteams.php?t=${TEAM}`);
 const td=await t.json();
@@ -138,21 +179,14 @@ const id=td.teams[0].idTeam;
 const res=await fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsnext.php?id=${id}`);
 const data=await res.json();
 
-if(!data.events){
-document.getElementById("matches").innerHTML=
-`<div class="matchCard">
-<div class="matchTeams">Matchschema ej släppt</div>
-<div class="matchTime">⚽</div>
-</div>`;
-return;
-}
+if(!data.events) return;
 
 let html="";
 data.events.forEach(m=>{
 html+=`
 <div class="matchCard">
 <div class="matchTeams">${m.strHomeTeam} – ${m.strAwayTeam}</div>
-<div class="matchTime">${m.strTime ? m.strTime.substring(0,5) : ""}</div>
+<div class="matchTime">${m.dateEvent}</div>
 </div>`;
 });
 
@@ -161,8 +195,9 @@ document.getElementById("matches").innerHTML=html;
 }catch{}
 }
 
-loadMatches();
-setInterval(loadMatches,600000);
+showManual();
+loadFromAPI();
+setInterval(loadFromAPI,600000);
 </script>
 
 </body>
