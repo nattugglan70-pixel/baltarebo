@@ -3,52 +3,66 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IFK Värnamo & Superettan</title>
+<title>IFK Värnamo – Superettan</title>
 
 <style>
-body {
+body{
     margin:0;
     background:#0b0f14;
     color:white;
     font-family:Arial, Helvetica, sans-serif;
 }
 
+.header{
+    text-align:center;
+    font-size:42px;
+    padding:20px 0 10px 0;
+    font-weight:bold;
+}
+
 .container{
     display:grid;
     grid-template-columns: 1fr 1fr;
-    gap:20px;
+    gap:25px;
     padding:20px;
 }
 
 .panel{
     background:#111827;
-    padding:20px;
-    border-radius:12px;
-    box-shadow:0 0 15px rgba(0,0,0,0.5);
-}
-
-h1{
-    text-align:center;
-    margin:10px 0 25px 0;
-    font-size:40px;
+    padding:25px;
+    border-radius:14px;
+    box-shadow:0 0 20px rgba(0,0,0,0.5);
+    min-height:500px;
 }
 
 h2{
-    margin-bottom:10px;
+    margin-top:0;
     border-bottom:1px solid #333;
-    padding-bottom:5px;
+    padding-bottom:8px;
+    font-size:24px;
+}
+
+.match{
+    margin-bottom:18px;
+    padding-bottom:10px;
+    border-bottom:1px solid #222;
+    font-size:18px;
+}
+
+.date{
+    color:#00ff88;
+    font-weight:bold;
 }
 
 table{
     width:100%;
     border-collapse:collapse;
+    font-size:16px;
 }
 
 td, th{
-    padding:6px;
-    text-align:left;
+    padding:8px;
     border-bottom:1px solid #222;
-    font-size:15px;
 }
 
 .highlight{
@@ -58,8 +72,8 @@ td, th{
 
 .footer{
     text-align:center;
-    margin-top:20px;
-    opacity:0.5;
+    opacity:0.4;
+    padding:10px;
     font-size:12px;
 }
 </style>
@@ -67,94 +81,103 @@ td, th{
 
 <body>
 
-<h1>⚽ IFK Värnamo & Superettan</h1>
+<div class="header">⚽ IFK Värnamo – Superettan 2026</div>
 
 <div class="container">
 
 <div class="panel">
-<h2>📊 Tabell Superettan</h2>
-<table id="table"></table>
+<h2>📅 Kommande matcher</h2>
+<div id="next">Laddar matcher...</div>
 </div>
 
 <div class="panel">
-<h2>🟢 IFK Värnamo – senaste matcher</h2>
-<div id="results">Laddar...</div>
-
-<h2 style="margin-top:20px;">📅 Kommande matcher</h2>
-<div id="next">Laddar...</div>
+<h2>📊 Tabell</h2>
+<table id="table"></table>
 </div>
 
 </div>
 
-<div class="footer">
-Auto uppdaterar var 5:e minut
-</div>
+<div class="footer">Uppdateras automatiskt</div>
 
 <script>
-// ===== TABELL =====
-async function loadTable(){
-    const res = await fetch("https://www.thesportsdb.com/api/v1/json/3/lookuptable.php?l=4403&s=2025");
+const TEAM_NAME = "IFK Värnamo";
+const LEAGUE_ID = "4403"; // Superettan
+
+// ===== HÄMTA TEAM ID =====
+async function getTeamId(){
+    const res = await fetch(`https://www.thesportsdb.com/api/v1/json/3/searchteams.php?t=${encodeURIComponent(TEAM_NAME)}`);
     const data = await res.json();
-    const table = data.table;
-
-    let html = "<tr><th>#</th><th>Lag</th><th>P</th></tr>";
-
-    table.forEach(team=>{
-        let highlight = team.name.includes("Värnamo") ? "class='highlight'" : "";
-        html += `<tr ${highlight}>
-            <td>${team.intRank}</td>
-            <td>${team.strTeam}</td>
-            <td>${team.intPoints}</td>
-        </tr>`;
-    });
-
-    document.getElementById("table").innerHTML = html;
-}
-
-// ===== SENASTE MATCHER =====
-async function loadResults(){
-    const res = await fetch("https://www.thesportsdb.com/api/v1/json/3/eventslast.php?id=133604");
-    const data = await res.json();
-    const matches = data.results.slice(0,5);
-
-    let html="";
-    matches.forEach(m=>{
-        html += `${m.dateEvent} <br>
-        ${m.strHomeTeam} ${m.intHomeScore}-${m.intAwayScore} ${m.strAwayTeam}
-        <hr>`;
-    });
-
-    document.getElementById("results").innerHTML = html;
+    return data.teams[0].idTeam;
 }
 
 // ===== KOMMANDE MATCHER =====
-async function loadNext(){
-    const res = await fetch("https://www.thesportsdb.com/api/v1/json/3/eventsnext.php?id=133604");
-    const data = await res.json();
-    const matches = data.events.slice(0,5);
+async function loadNext(teamId){
+    try{
+        const res = await fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsnext.php?id=${teamId}`);
+        const data = await res.json();
 
-    let html="";
-    matches.forEach(m=>{
-        html += `${m.dateEvent} <br>
-        ${m.strHomeTeam} vs ${m.strAwayTeam}
-        <hr>`;
-    });
+        let html="";
 
-    document.getElementById("next").innerHTML = html;
+        if(!data.events){
+            html = "Inga matcher inlagda ännu för 2026.";
+        } else {
+            data.events.slice(0,8).forEach(m=>{
+                html += `
+                <div class="match">
+                <div class="date">${m.dateEvent}</div>
+                ${m.strHomeTeam} vs ${m.strAwayTeam}<br>
+                ${m.strVenue || ""}
+                </div>`;
+            });
+        }
+
+        document.getElementById("next").innerHTML = html;
+
+    }catch{
+        document.getElementById("next").innerHTML="Kunde inte hämta matcher";
+    }
 }
 
-// starta
-loadTable();
-loadResults();
-loadNext();
+// ===== TABELL =====
+async function loadTable(){
+    const year = new Date().getFullYear();
 
-// auto refresh 5 min
-setInterval(()=>{
+    try{
+        const res = await fetch(`https://www.thesportsdb.com/api/v1/json/3/lookuptable.php?l=${LEAGUE_ID}&s=${year}`);
+        const data = await res.json();
+
+        if(!data.table){
+            document.getElementById("table").innerHTML = "Tabell visas när säsongen startar.";
+            return;
+        }
+
+        let html="<tr><th>#</th><th>Lag</th><th>P</th></tr>";
+
+        data.table.forEach(team=>{
+            let highlight = team.strTeam === TEAM_NAME ? "class='highlight'" : "";
+            html += `<tr ${highlight}>
+            <td>${team.intRank}</td>
+            <td>${team.strTeam}</td>
+            <td>${team.intPoints}</td>
+            </tr>`;
+        });
+
+        document.getElementById("table").innerHTML = html;
+
+    }catch{
+        document.getElementById("table").innerHTML="Tabell ej tillgänglig ännu";
+    }
+}
+
+// ===== START =====
+async function init(){
+    const teamId = await getTeamId();
+    loadNext(teamId);
     loadTable();
-    loadResults();
-    loadNext();
-},300000);
+}
 
+init();
+setInterval(init, 300000); // var 5 min
 </script>
 
 </body>
