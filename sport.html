@@ -1,15 +1,31 @@
 <!-- 
 ========================================================
-IFK VÄRNAMO SPORTBAR – VERSION 1.1
+IFK VÄRNAMO SPORTBAR – OFFICIELL VERSION 1.2
 ========================================================
 
-Version: 1.1
-Nyheter:
-- Senaste 3 IFK Värnamo-nyheter (RSS)
-- Klickbara rubriker
-- Versionsnummer i guld på sidan
-- Stabil försäsongsvy
-- API redo för matcher & tabell
+Bas: Version 1.1
+Plats: Baltarebo / sport.html
+Status: Stabil
+
+NYTT I v1.2
+- Nyhetsrad vänster i header
+- IFK + logga centrerad
+- Höger header reserverad för framtida moduler
+- Stabil RSS-hämtning
+- Fungerande IFK-logga
+- Versionsnummer visas på sidan (guld)
+
+v1.1
+- Versionsvisning i guld
+- RSS nyheter
+- Stabil grundlayout
+- API redo matcher/tabell
+
+KOMMANDE
+v1.3 Live matchläge
+v2.0 Mega-dashboard
+
+Skapad: 2026
 ========================================================
 --><!DOCTYPE html><html lang="sv">
 <head>
@@ -23,32 +39,48 @@ color:white;
 font-family:Arial, Helvetica, sans-serif;
 }
 
-.headerWrap{
+/* HEADER GRID */
+.topbar{
+display:grid;
+grid-template-columns: 1fr auto 1fr;
+align-items:center;
+padding:18px 30px 10px 30px;
+}
+
+/* LEFT NEWS */
+.newsTicker{
+font-size:15px;
+opacity:0.9;
+white-space:nowrap;
+overflow:hidden;
+}
+
+.newsTicker a{
+color:#ccc;
+text-decoration:none;
+margin-right:18px;
+}
+
+.newsTicker a:hover{color:#00ff88;}
+
+/* CENTER LOGO */
+.centerHead{
 display:flex;
 align-items:center;
-justify-content:center;
 gap:18px;
-padding:18px 0 5px 0;
+justify-content:center;
 }
 
-.logo{
-width:55px;
-height:55px;
-}
+.logo{width:55px;}
+.header{font-size:44px;font-weight:bold;letter-spacing:1px;}
 
-.header{
-font-size:46px;
-font-weight:bold;
-letter-spacing:1px;
-}
+/* RIGHT EMPTY (future modules) */
+.rightBox{text-align:right;}
 
-.sub{
-text-align:center;
-font-size:20px;
-color:#00ff88;
-margin-bottom:15px;
-}
+/* SUB */
+.sub{text-align:center;font-size:20px;color:#00ff88;margin-bottom:15px;}
 
+/* GRID */
 .container{
 display:grid;
 grid-template-columns: 1.4fr 1fr;
@@ -70,78 +102,38 @@ top:12px;
 right:18px;
 color:gold;
 font-size:14px;
-opacity:0.85;
+opacity:0.9;
 }
 
-.big{
-font-size:28px;
-margin-bottom:15px;
-}
+.big{font-size:28px;margin-bottom:15px;}
+.countdown{font-size:42px;color:#00ff88;margin-bottom:20px;font-weight:bold;}
+.info{font-size:20px;color:#aaa;}
 
-.countdown{
-font-size:42px;
-color:#00ff88;
-margin-bottom:20px;
-font-weight:bold;
-}
+table{width:100%;border-collapse:collapse;font-size:18px;}
+td,th{padding:10px;border-bottom:1px solid #222;}
+.highlight{color:#00ff88;font-weight:bold;}
 
-.info{
-font-size:20px;
-color:#aaa;
-}
-
-.newsItem{
-margin-bottom:12px;
-font-size:16px;
-}
-
-.newsItem a{
-color:#ddd;
-text-decoration:none;
-}
-
-.newsItem a:hover{
-color:#00ff88;
-}
-
-table{
-width:100%;
-border-collapse:collapse;
-font-size:18px;
-}
-
-td,th{
-padding:10px;
-border-bottom:1px solid #222;
-}
-
-.highlight{
-color:#00ff88;
-font-weight:bold;
-}
-
-.footer{
-text-align:center;
-opacity:0.3;
-font-size:12px;
-padding:8px;
-}
-</style></head><body><div class="headerWrap">
-<img class="logo" src="https://upload.wikimedia.org/wikipedia/en/7/7c/IFK_Varnamo_logo.png">
+.footer{text-align:center;opacity:0.3;font-size:12px;padding:8px;}
+</style></head><body><div class="topbar"><div class="newsTicker" id="news">
+Laddar IFK-nyheter…
+</div><div class="centerHead">
+<img class="logo" src="https://upload.wikimedia.org/wikipedia/sv/thumb/5/5f/IFK_V%C3%A4rnamo_logo.svg/512px-IFK_V%C3%A4rnamo_logo.svg.png">
 <div class="header">IFK VÄRNAMO</div>
-</div><div class="sub">Superettan 2026</div><div class="container"><div class="panel">
+</div><div class="rightBox">
+<!-- framtida moduler -->
+</div></div><div class="sub">Superettan 2026</div><div class="container"><div class="panel">
 <div class="big" id="nextMatch">Väntar på spelschema…</div>
 <div class="countdown" id="countdown">--</div>
-<div class="info" id="status">Matchschema fastställs av förbundet</div><h3>Senaste nytt</h3>
-<div id="news">Laddar nyheter…</div>
+<div class="info" id="status">Matchschema fastställs av förbundet</div>
 </div><div class="panel">
-<div class="version">v1.1</div>
+<div class="version">v1.2</div>
 <h2>Superettan lag 2026</h2>
 <table id="table"></table>
 </div></div><div class="footer">Sportbar aktiv</div><script>
 const TEAM="IFK Värnamo";
 const LEAGUE="4403";
 
+/* lag */
 const teams=[
 "IFK Värnamo","Helsingborgs IF","GIF Sundsvall","Östers IF",
 "Utsiktens BK","Trelleborgs FF","Östersunds FK","Gefle IF",
@@ -158,6 +150,7 @@ html+=`<tr ${hl}><td>${t}</td></tr>`;
 document.getElementById("table").innerHTML=html;
 }
 
+/* countdown */
 function startCountdown(dateStr){
 function update(){
 const match=new Date(dateStr+"T19:00:00").getTime();
@@ -176,6 +169,7 @@ update();
 setInterval(update,60000);
 }
 
+/* matcher */
 async function loadMatches(){
 try{
 const t=await fetch(`https://www.thesportsdb.com/api/v1/json/3/searchteams.php?t=${TEAM}`);
@@ -200,6 +194,7 @@ startCountdown(m.dateEvent);
 }catch{}
 }
 
+/* tabell */
 async function loadTable(){
 const year=new Date().getFullYear();
 try{
@@ -219,27 +214,26 @@ html+=`<tr ${hl}><td>${t.intRank}</td><td>${t.strTeam}</td><td>${t.intPoints}</t
 
 document.getElementById("table").innerHTML=html;
 
-}catch{
-showTeams();
-}
+}catch{showTeams();}
 }
 
+/* NYHETER */
 async function loadNews(){
 try{
-const res=await fetch("https://api.rss2json.com/v1/api.json?rss_url=https://ifkvarnamo.se/feed/");
+const res=await fetch("https://api.allorigins.win/get?url="+encodeURIComponent("https://ifkvarnamo.se/feed/"));
 const data=await res.json();
+const xml=new window.DOMParser().parseFromString(data.contents,"text/xml");
+const items=xml.querySelectorAll("item");
 
 let html="";
-data.items.slice(0,3).forEach(n=>{
-html+=`<div class="newsItem">
-<a href="${n.link}" target="_blank">${n.title}</a>
-</div>`;
-});
-
+for(let i=0;i<3;i++){
+const title=items[i].querySelector("title").textContent;
+const link=items[i].querySelector("link").textContent;
+html+=`<a href="${link}" target="_blank">${title}</a>`;
+}
 document.getElementById("news").innerHTML=html;
-
 }catch{
-document.getElementById("news").innerHTML="Kunde inte hämta nyheter";
+document.getElementById("news").innerHTML="IFK-nyheter laddas…";
 }
 }
 
