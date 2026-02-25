@@ -14,7 +14,6 @@ font-family:Arial, Helvetica, sans-serif;
 overflow-x:hidden;
 }
 
-/* IFK BAKGRUND */
 body::before{
 content:"";
 position:fixed;
@@ -55,7 +54,6 @@ color:gold;
 font-size:14px;
 }
 
-/* MATCHKORT */
 .matchCard{
 padding:18px 10px;
 border-bottom:1px solid #1f2630;
@@ -70,7 +68,6 @@ color:#aaa;
 margin-top:4px;
 }
 
-/* TABELL */
 table{width:100%;border-collapse:collapse;font-size:18px;}
 td,th{padding:10px;border-bottom:1px solid #222;}
 .ifkRow{color:gold;font-weight:bold;}
@@ -93,7 +90,7 @@ padding:10px;
 </div>
 
 <div class="panel">
-<div class="version">v3.0</div>
+<div class="version">v3.1</div>
 <h2>Tabell</h2>
 <table>
 <tr><th>#</th><th>Lag</th><th>P</th><th>+/-</th></tr>
@@ -123,38 +120,38 @@ padding:10px;
 <script>
 const TEAM = "IFK Värnamo";
 
-/* MANUELLT SCHEMA */
+/* MANUELLT SCHEMA MED RÄTT HEMMA/BORTA */
 const manualMatches = [
-["04/04-07/04","IFK Norrköping (borta)"],
-["11/04-14/04","GIF Sundsvall (hemma)"],
-["18-21/4","Sandvikens IF (borta)"],
-["25-28/4","IK Oddevold (hemma)"],
-["2-5/5","Östersunds FK (borta)"],
-["9-11/5","Varbergs BoIS FC (borta)"],
-["13-14/5","Örebro SK (hemma)"],
-["16-19/5","Norrby IF (hemma)"],
-["23-26/5","Falkenbergs FF (borta)"],
-["30-31/5","Nordic United FC (hemma)"],
-["10-11/6","Östers IF (borta)"],
-["13-16/6","Helsingborgs IF (hemma)"],
-["20-23/6","IK Brage (borta)"],
-["27-30/6","Landskrona BoIS (borta)"],
-["18-21/7","Ljungskile SK (hemma)"],
-["25-28/7","IK Brage (hemma)"],
-["1-4/8","Örebro SK (borta)"],
-["8-12/8","Helsingborgs IF (borta)"],
-["15-18/8","Östersunds FK (hemma)"],
-["22-25/8","Landskrona BoIS (hemma)"],
-["29/8-1/9","Ljungskile SK (borta)"],
-["5-7/9","Varbergs BoIS FC (hemma)"],
-["9-10/9","Nordic United FC (borta)"],
-["12-15/9","Östers IF (hemma)"],
-["19-20/9","IK Oddevold (borta)"],
-["10-13/10","Falkenbergs FF (hemma)"],
-["17-20/10","GIF Sundsvall (borta)"],
-["24-27/10","Sandvikens IF (hemma)"],
-["31/10-2/11","Norrby IF (borta)"],
-["7/11","IFK Norrköping (hemma)"]
+["04/04-07/04","IFK Norrköping – IFK Värnamo"],
+["11/04-14/04","IFK Värnamo – GIF Sundsvall"],
+["18-21/4","Sandvikens IF – IFK Värnamo"],
+["25-28/4","IFK Värnamo – IK Oddevold"],
+["2-5/5","Östersunds FK – IFK Värnamo"],
+["9-11/5","Varbergs BoIS FC – IFK Värnamo"],
+["13-14/5","IFK Värnamo – Örebro SK"],
+["16-19/5","IFK Värnamo – Norrby IF"],
+["23-26/5","Falkenbergs FF – IFK Värnamo"],
+["30-31/5","IFK Värnamo – Nordic United FC"],
+["10-11/6","Östers IF – IFK Värnamo"],
+["13-16/6","IFK Värnamo – Helsingborgs IF"],
+["20-23/6","IK Brage – IFK Värnamo"],
+["27-30/6","Landskrona BoIS – IFK Värnamo"],
+["18-21/7","IFK Värnamo – Ljungskile SK"],
+["25-28/7","IFK Värnamo – IK Brage"],
+["1-4/8","Örebro SK – IFK Värnamo"],
+["8-12/8","Helsingborgs IF – IFK Värnamo"],
+["15-18/8","IFK Värnamo – Östersunds FK"],
+["22-25/8","IFK Värnamo – Landskrona BoIS"],
+["29/8-1/9","Ljungskile SK – IFK Värnamo"],
+["5-7/9","IFK Värnamo – Varbergs BoIS FC"],
+["9-10/9","Nordic United FC – IFK Värnamo"],
+["12-15/9","IFK Värnamo – Östers IF"],
+["19-20/9","IK Oddevold – IFK Värnamo"],
+["10-13/10","IFK Värnamo – Falkenbergs FF"],
+["17-20/10","GIF Sundsvall – IFK Värnamo"],
+["24-27/10","IFK Värnamo – Sandvikens IF"],
+["31/10-2/11","Norrby IF – IFK Värnamo"],
+["7/11","IFK Värnamo – IFK Norrköping"]
 ];
 
 function showManual(){
@@ -162,14 +159,14 @@ let html="";
 manualMatches.forEach(m=>{
 html+=`
 <div class="matchCard">
-<div class="matchTeams">${TEAM} – ${m[1]}</div>
+<div class="matchTeams">${m[1]}</div>
 <div class="matchTime">${m[0]}</div>
 </div>`;
 });
 document.getElementById("matches").innerHTML = html;
 }
 
-/* API TAR ÖVER AUTOMATISKT */
+/* API TAR ÖVER SEN */
 async function loadFromAPI(){
 try{
 const t=await fetch(`https://www.thesportsdb.com/api/v1/json/3/searchteams.php?t=${TEAM}`);
