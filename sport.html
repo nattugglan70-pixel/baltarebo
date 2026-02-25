@@ -1,228 +1,256 @@
-<!DOCTYPE html>
-<html lang="sv">
+<!-- 
+========================================================
+IFK VÄRNAMO SPORTBAR – VERSION 1.1
+========================================================
+
+Version: 1.1
+Nyheter:
+- Senaste 3 IFK Värnamo-nyheter (RSS)
+- Klickbara rubriker
+- Versionsnummer i guld på sidan
+- Stabil försäsongsvy
+- API redo för matcher & tabell
+========================================================
+--><!DOCTYPE html><html lang="sv">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IFK Värnamo Sportbar</title>
-
-<style>
+<title>IFK Värnamo Sportbar</title><style>
 body{
-    margin:0;
-    background:radial-gradient(circle at top,#111827,#05070a);
-    color:white;
-    font-family:Arial, Helvetica, sans-serif;
+margin:0;
+background:radial-gradient(circle at top,#111827,#05070a);
+color:white;
+font-family:Arial, Helvetica, sans-serif;
+}
+
+.headerWrap{
+display:flex;
+align-items:center;
+justify-content:center;
+gap:18px;
+padding:18px 0 5px 0;
+}
+
+.logo{
+width:55px;
+height:55px;
 }
 
 .header{
-    text-align:center;
-    font-size:52px;
-    font-weight:bold;
-    padding:20px 0 5px 0;
+font-size:46px;
+font-weight:bold;
+letter-spacing:1px;
 }
 
 .sub{
-    text-align:center;
-    font-size:22px;
-    color:#00ff88;
-    margin-bottom:15px;
+text-align:center;
+font-size:20px;
+color:#00ff88;
+margin-bottom:15px;
 }
 
 .container{
-    display:grid;
-    grid-template-columns: 1.4fr 1fr;
-    gap:25px;
-    padding:20px 40px;
+display:grid;
+grid-template-columns: 1.4fr 1fr;
+gap:25px;
+padding:20px 40px;
 }
 
 .panel{
-    background:#0c1118;
-    border-radius:18px;
-    padding:25px;
-    box-shadow:0 0 40px rgba(0,0,0,0.7);
+background:#0c1118;
+border-radius:18px;
+padding:25px;
+box-shadow:0 0 40px rgba(0,0,0,0.7);
+position:relative;
+}
+
+.version{
+position:absolute;
+top:12px;
+right:18px;
+color:gold;
+font-size:14px;
+opacity:0.85;
 }
 
 .big{
-    font-size:32px;
-    margin-bottom:15px;
+font-size:28px;
+margin-bottom:15px;
 }
 
 .countdown{
-    font-size:44px;
-    color:#00ff88;
-    margin-bottom:25px;
-    font-weight:bold;
+font-size:42px;
+color:#00ff88;
+margin-bottom:20px;
+font-weight:bold;
 }
 
 .info{
-    font-size:22px;
-    color:#aaa;
+font-size:20px;
+color:#aaa;
+}
+
+.newsItem{
+margin-bottom:12px;
+font-size:16px;
+}
+
+.newsItem a{
+color:#ddd;
+text-decoration:none;
+}
+
+.newsItem a:hover{
+color:#00ff88;
 }
 
 table{
-    width:100%;
-    border-collapse:collapse;
-    font-size:18px;
+width:100%;
+border-collapse:collapse;
+font-size:18px;
 }
 
 td,th{
-    padding:10px;
-    border-bottom:1px solid #222;
+padding:10px;
+border-bottom:1px solid #222;
 }
 
 .highlight{
-    color:#00ff88;
-    font-weight:bold;
+color:#00ff88;
+font-weight:bold;
 }
 
 .footer{
-    text-align:center;
-    opacity:0.3;
-    font-size:12px;
-    padding:8px;
+text-align:center;
+opacity:0.3;
+font-size:12px;
+padding:8px;
 }
-</style>
-</head>
-
-<body>
-
-<div class="header">⚽ IFK VÄRNAMO</div>
-<div class="sub">Superettan 2026</div>
-
-<div class="container">
-
-<div class="panel">
+</style></head><body><div class="headerWrap">
+<img class="logo" src="https://upload.wikimedia.org/wikipedia/en/7/7c/IFK_Varnamo_logo.png">
+<div class="header">IFK VÄRNAMO</div>
+</div><div class="sub">Superettan 2026</div><div class="container"><div class="panel">
 <div class="big" id="nextMatch">Väntar på spelschema…</div>
 <div class="countdown" id="countdown">--</div>
-<div class="info" id="status">Matchschema fastställs av förbundet</div>
-</div>
-
-<div class="panel">
+<div class="info" id="status">Matchschema fastställs av förbundet</div><h3>Senaste nytt</h3>
+<div id="news">Laddar nyheter…</div>
+</div><div class="panel">
+<div class="version">v1.1</div>
 <h2>Superettan lag 2026</h2>
 <table id="table"></table>
-</div>
-
-</div>
-
-<div class="footer">Uppdateras automatiskt</div>
-
-<script>
+</div></div><div class="footer">Sportbar aktiv</div><script>
 const TEAM="IFK Värnamo";
 const LEAGUE="4403";
 
-// alla lag 2026
 const teams=[
-"IFK Värnamo",
-"Helsingborgs IF",
-"GIF Sundsvall",
-"Östers IF",
-"Utsiktens BK",
-"Trelleborgs FF",
-"Östersunds FK",
-"Gefle IF",
-"Skövde AIK",
-"Varbergs BoIS",
-"IK Brage",
-"Landskrona BoIS",
-"Örgryte IS",
-"Sandvikens IF",
-"Falkenbergs FF",
-"Oddevold"
+"IFK Värnamo","Helsingborgs IF","GIF Sundsvall","Östers IF",
+"Utsiktens BK","Trelleborgs FF","Östersunds FK","Gefle IF",
+"Skövde AIK","Varbergs BoIS","IK Brage","Landskrona BoIS",
+"Örgryte IS","Sandvikens IF","Falkenbergs FF","Oddevold"
 ];
 
-// visa laglista innan tabell finns
 function showTeams(){
-    let html="<tr><th>Lag</th></tr>";
-    teams.forEach(t=>{
-        let hl=t===TEAM?"class='highlight'":"";
-        html+=`<tr ${hl}><td>${t}</td></tr>`;
-    });
-    document.getElementById("table").innerHTML=html;
+let html="<tr><th>Lag</th></tr>";
+teams.forEach(t=>{
+let hl=t===TEAM?"class='highlight'":"";
+html+=`<tr ${hl}><td>${t}</td></tr>`;
+});
+document.getElementById("table").innerHTML=html;
 }
 
-// countdown
 function startCountdown(dateStr){
-    function update(){
-        const match=new Date(dateStr+"T19:00:00").getTime();
-        const now=new Date().getTime();
-        const diff=match-now;
+function update(){
+const match=new Date(dateStr+"T19:00:00").getTime();
+const now=new Date().getTime();
+const diff=match-now;
+if(diff<0)return;
 
-        if(diff<0){
-            document.getElementById("countdown").innerHTML="Match pågår/spelad";
-            return;
-        }
+const d=Math.floor(diff/86400000);
+const h=Math.floor((diff%86400000)/3600000);
+const m=Math.floor((diff%3600000)/60000);
 
-        const d=Math.floor(diff/86400000);
-        const h=Math.floor((diff%86400000)/3600000);
-        const m=Math.floor((diff%3600000)/60000);
-
-        document.getElementById("countdown").innerHTML=
-        d+"d "+h+"h "+m+"m";
-    }
-    update();
-    setInterval(update,60000);
+document.getElementById("countdown").innerHTML=
+d+"d "+h+"h "+m+"m";
+}
+update();
+setInterval(update,60000);
 }
 
-// hämta matcher från API
 async function loadMatches(){
-    try{
-        const t=await fetch(`https://www.thesportsdb.com/api/v1/json/3/searchteams.php?t=${TEAM}`);
-        const td=await t.json();
-        const id=td.teams[0].idTeam;
+try{
+const t=await fetch(`https://www.thesportsdb.com/api/v1/json/3/searchteams.php?t=${TEAM}`);
+const td=await t.json();
+const id=td.teams[0].idTeam;
 
-        const res=await fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsnext.php?id=${id}`);
-        const data=await res.json();
+const res=await fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsnext.php?id=${id}`);
+const data=await res.json();
 
-        if(!data.events){
-            return; // fortsätt visa väntläge
-        }
+if(!data.events)return;
 
-        const m=data.events[0];
+const m=data.events[0];
 
-        document.getElementById("nextMatch").innerHTML=
-        m.strHomeTeam+" vs "+m.strAwayTeam;
+document.getElementById("nextMatch").innerHTML=
+m.strHomeTeam+" vs "+m.strAwayTeam;
 
-        document.getElementById("status").innerHTML=
-        "Nästa match: "+m.dateEvent;
+document.getElementById("status").innerHTML=
+"Nästa match: "+m.dateEvent;
 
-        startCountdown(m.dateEvent);
+startCountdown(m.dateEvent);
 
-    }catch{}
+}catch{}
 }
 
-// riktig tabell när den finns
 async function loadTable(){
-    const year=new Date().getFullYear();
-    try{
-        const res=await fetch(`https://www.thesportsdb.com/api/v1/json/3/lookuptable.php?l=${LEAGUE}&s=${year}`);
-        const data=await res.json();
+const year=new Date().getFullYear();
+try{
+const res=await fetch(`https://www.thesportsdb.com/api/v1/json/3/lookuptable.php?l=${LEAGUE}&s=${year}`);
+const data=await res.json();
 
-        if(!data.table || data.table.length<10){
-            showTeams();
-            return;
-        }
+if(!data.table || data.table.length<10){
+showTeams();
+return;
+}
 
-        let html="<tr><th>#</th><th>Lag</th><th>P</th></tr>";
-        data.table.forEach(t=>{
-            let hl=t.strTeam===TEAM?"class='highlight'":"";
-            html+=`<tr ${hl}><td>${t.intRank}</td><td>${t.strTeam}</td><td>${t.intPoints}</td></tr>`;
-        });
+let html="<tr><th>#</th><th>Lag</th><th>P</th></tr>";
+data.table.forEach(t=>{
+let hl=t.strTeam===TEAM?"class='highlight'":"";
+html+=`<tr ${hl}><td>${t.intRank}</td><td>${t.strTeam}</td><td>${t.intPoints}</td></tr>`;
+});
 
-        document.getElementById("table").innerHTML=html;
+document.getElementById("table").innerHTML=html;
 
-    }catch{
-        showTeams();
-    }
+}catch{
+showTeams();
+}
+}
+
+async function loadNews(){
+try{
+const res=await fetch("https://api.rss2json.com/v1/api.json?rss_url=https://ifkvarnamo.se/feed/");
+const data=await res.json();
+
+let html="";
+data.items.slice(0,3).forEach(n=>{
+html+=`<div class="newsItem">
+<a href="${n.link}" target="_blank">${n.title}</a>
+</div>`;
+});
+
+document.getElementById("news").innerHTML=html;
+
+}catch{
+document.getElementById("news").innerHTML="Kunde inte hämta nyheter";
+}
 }
 
 function init(){
-    showTeams();
-    loadMatches();
-    loadTable();
+showTeams();
+loadMatches();
+loadTable();
+loadNews();
 }
 
 init();
 setInterval(init,300000);
-</script>
-
-</body>
+</script></body>
 </html>
