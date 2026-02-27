@@ -1,1 +1,178 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bor SK Sportbar</title>
 
+<style>
+body{
+margin:0;
+background:#05070a;
+color:white;
+font-family:Arial, Helvetica, sans-serif;
+overflow-x:hidden;
+}
+
+body::before{
+content:"";
+position:fixed;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+width:950px;
+height:950px;
+background:url("bor.png") no-repeat center;
+background-size:contain;
+opacity:0.18;
+filter:blur(0.6px);
+z-index:0;
+}
+
+.container{
+display:grid;
+grid-template-columns:1.4fr 1fr;
+gap:25px;
+padding:40px;
+position:relative;
+z-index:2;
+}
+
+.panel{
+background:#0c1118ee;
+border-radius:18px;
+padding:25px;
+box-shadow:0 0 40px rgba(0,0,0,0.7);
+position:relative;
+}
+
+.version{
+position:absolute;
+top:12px;
+right:18px;
+color:#00ff87;
+font-size:14px;
+}
+
+.bigPos{
+font-size:70px;
+font-weight:bold;
+color:#00ff87;
+text-align:center;
+margin-top:20px;
+}
+
+.sub{
+text-align:center;
+font-size:22px;
+color:#aaa;
+margin-top:8px;
+}
+
+.matchCard{
+padding:18px 10px;
+border-bottom:1px solid #1f2630;
+}
+.matchTeams{
+font-size:24px;
+font-weight:bold;
+}
+.matchTime{
+font-size:20px;
+color:#aaa;
+margin-top:4px;
+}
+
+table{width:100%;border-collapse:collapse;font-size:18px;}
+td,th{padding:10px;border-bottom:1px solid #222;}
+.borRow{color:#00ff87;font-weight:bold;}
+
+.footer{
+text-align:center;
+opacity:0.25;
+font-size:12px;
+padding:10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="panel">
+<h2>Senaste / Nästa matcher</h2>
+<div id="matches"></div>
+</div>
+
+<div class="panel">
+<div class="version">BOR v1.0</div>
+
+<div class="bigPos" id="placering">–</div>
+<div class="sub" id="poang">0 poäng</div>
+<div class="sub" id="mal">0 i målskillnad</div>
+
+<h2>Tabell</h2>
+<table>
+<tr><th>#</th><th>Lag</th><th>P</th><th>+/-</th></tr>
+
+<tr class="borRow"><td>1</td><td>Bor SK</td><td>0</td><td>0</td></tr>
+<tr><td>2</td><td>Bosna IF</td><td>0</td><td>0</td></tr>
+<tr><td>3</td><td>Unnaryds GoIF</td><td>0</td><td>0</td></tr>
+<tr><td>4</td><td>Rydaholms GoIF</td><td>0</td><td>0</td></tr>
+<tr><td>5</td><td>Kulltorps GoIF</td><td>0</td><td>0</td></tr>
+<tr><td>6</td><td>Bredaryd/Lanna</td><td>0</td><td>0</td></tr>
+<tr><td>7</td><td>Reftele GoIF</td><td>0</td><td>0</td></tr>
+<tr><td>8</td><td>Burseryds IF</td><td>0</td><td>0</td></tr>
+<tr><td>9</td><td>Skeppshults BK</td><td>0</td><td>0</td></tr>
+<tr><td>10</td><td>Dannäs SK</td><td>0</td><td>0</td></tr>
+
+</table>
+</div>
+
+</div>
+
+<div class="footer">Bor SK Sportbar aktiv</div>
+
+<script>
+
+/* REDIGERA ENDAST HÄR EFTER MATCH */
+let borPlacering = 1;
+let borPoang = 0;
+let borMal = 0;
+
+/* MATCHLISTA */
+const matches = [
+["Premiär","Bor SK – ???"],
+["Omg 2","??? – Bor SK"],
+["Omg 3","Bor SK – ???"]
+];
+
+function updateInfo(){
+document.getElementById("placering").innerText = borPlacering + ":a plats";
+document.getElementById("poang").innerText = borPoang + " poäng";
+document.getElementById("mal").innerText = borMal + " i målskillnad";
+}
+
+function showMatches(){
+let html="";
+matches.forEach(m=>{
+html+=`
+<div class="matchCard">
+<div class="matchTeams">${m[1]}</div>
+<div class="matchTime">${m[0]}</div>
+</div>`;
+});
+document.getElementById("matches").innerHTML = html;
+}
+
+updateInfo();
+showMatches();
+
+/* AUTO REFRESH VAR 10 MIN (för framtida livekoppling) */
+setInterval(()=>{location.reload();},600000);
+
+</script>
+
+</body>
+</html>
