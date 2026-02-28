@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bor SK Sportbar</title>
+<title>Bor Sportbar</title>
 
 <style>
 body{
@@ -14,15 +14,15 @@ font-family:Arial, Helvetica, sans-serif;
 overflow:hidden;
 }
 
-/* BAKGRUND LOGGA */
+/* BAKGRUND */
 body::before{
 content:"";
 position:fixed;
 top:50%;
 left:50%;
 transform:translate(-50%,-50%);
-width:1100px;
-height:1100px;
+width:1150px;
+height:1150px;
 background:url("bor.png") no-repeat center;
 background-size:contain;
 opacity:0.50;
@@ -32,13 +32,13 @@ z-index:0;
 
 .container{
 display:grid;
-grid-template-columns:1.4fr 1fr;
-gap:30px;
+grid-template-columns:1fr 1.6fr;
+gap:40px;
 padding:50px;
-position:relative;
-z-index:2;
 height:100vh;
 box-sizing:border-box;
+position:relative;
+z-index:2;
 }
 
 .panel{
@@ -46,69 +46,54 @@ background:#0c1118ee;
 border-radius:22px;
 padding:30px;
 box-shadow:0 0 60px rgba(0,0,0,0.8);
-position:relative;
 }
 
-h1{
-margin-top:0;
-font-size:40px;
-letter-spacing:1px;
+/* MATCHINFO */
+.block{
+margin-bottom:30px;
 }
 
-.bigPosition{
-font-size:90px;
-font-weight:bold;
-color:#00ff87;
-text-align:center;
-margin:20px 0;
-}
-
-.subInfo{
-text-align:center;
-font-size:26px;
-color:#ccc;
-margin-bottom:10px;
-}
-
-.matchCard{
-padding:18px 10px;
-border-bottom:1px solid #1f2630;
-}
-
-.matchTeams{
-font-size:26px;
-font-weight:bold;
-}
-
-.matchTime{
-font-size:20px;
+.title{
+font-size:22px;
 color:#aaa;
-margin-top:6px;
+margin-bottom:8px;
 }
 
+.big{
+font-size:34px;
+font-weight:bold;
+}
+
+.form{
+font-size:28px;
+letter-spacing:6px;
+}
+
+/* TABELL */
 table{
 width:100%;
 border-collapse:collapse;
-font-size:20px;
+font-size:24px;
 }
 
-th,td{
-padding:12px;
+td,th{
+padding:14px;
 border-bottom:1px solid #222;
 }
 
-.borRow{
+.bor{
 color:#00ff87;
 font-weight:bold;
 }
 
+/* FOOTER */
 .footer{
 position:absolute;
-bottom:15px;
+bottom:12px;
 width:100%;
 text-align:center;
-font-size:12px;
-opacity:0.25;
+font-size:13px;
+opacity:0.35;
 }
 </style>
 </head>
@@ -117,23 +102,28 @@ opacity:0.25;
 
 <div class="container">
 
-<!-- VÄNSTER PANEL -->
+<!-- VÄNSTER INFO -->
 <div class="panel">
-<h1>Division 5</h1>
 
-<div class="bigPosition" id="placering">1:a</div>
-<div class="subInfo" id="poang">0 poäng</div>
-<div class="subInfo" id="mal">0 i målskillnad</div>
+<div class="block">
+<div class="title">Senaste match</div>
+<div class="big" id="lastMatch">Ingen match spelad</div>
+</div>
 
-<h2>Senaste / Nästa</h2>
-<div id="matches"></div>
+<div class="block">
+<div class="title">Nästa match</div>
+<div class="big" id="nextMatch">Schema ej klart</div>
+</div>
+
+<div class="block">
+<div class="title">Form</div>
+<div class="form" id="formRad">- - - - -</div>
+</div>
 
 </div>
 
-<!-- HÖGER PANEL -->
+<!-- TABELL -->
 <div class="panel">
-
-<h2>Tabell</h2>
 
 <table>
 <tr>
@@ -143,7 +133,7 @@ opacity:0.25;
 <th>+/-</th>
 </tr>
 
-<tr class="borRow"><td>1</td><td>Bors SK</td><td>0</td><td>0</td></tr>
+<tr class="bor"><td>1</td><td>Bors SK</td><td>0</td><td>0</td></tr>
 <tr><td>2</td><td>Hallaryds IF</td><td>0</td><td>0</td></tr>
 <tr><td>3</td><td>HL21</td><td>0</td><td>0</td></tr>
 <tr><td>4</td><td>Lagans AIK</td><td>0</td><td>0</td></tr>
@@ -162,44 +152,40 @@ opacity:0.25;
 
 </div>
 
-<div class="footer">Bor SK Sportbar aktiv</div>
+<div class="footer" id="updateTime">Uppdaterad: --</div>
 
 <script>
 
-/* ÄNDRA ENDAST HÄR EFTER MATCH (tills vi kopplar live) */
-let borPlacering = 1;
-let borPoang = 0;
-let borMal = 0;
+/* FYLL I NÄR SÄSONG STARTAR */
+let lastMatch = "Bor – Hallaryd 3-1";
+let nextMatch = "Lör 13:00  Ryssby – Bor";
+let form = ["V","V","F","O","V"]; // senaste 5
 
-const matches = [
-["Premiär","Bors SK – ???"],
-["Omg 2","??? – Bors SK"],
-["Omg 3","Bors SK – ???"]
-];
+document.getElementById("lastMatch").innerText = lastMatch;
+document.getElementById("nextMatch").innerText = nextMatch;
 
-function updateInfo(){
-document.getElementById("placering").innerText = borPlacering + ":a";
-document.getElementById("poang").innerText = borPoang + " poäng";
-document.getElementById("mal").innerText = borMal + " i målskillnad";
-}
-
-function showMatches(){
-let html="";
-matches.forEach(m=>{
-html+=`
-<div class="matchCard">
-<div class="matchTeams">${m[1]}</div>
-<div class="matchTime">${m[0]}</div>
-</div>`;
+/* FORM */
+let formHtml="";
+form.forEach(f=>{
+if(f=="V") formHtml+="🟢";
+if(f=="O") formHtml+="🟡";
+if(f=="F") formHtml+="🔴";
 });
-document.getElementById("matches").innerHTML = html;
+document.getElementById("formRad").innerHTML=formHtml;
+
+/* UPPDATERAD TID */
+function updateClock(){
+let d=new Date();
+let t=d.toLocaleTimeString("sv-SE",{hour:'2-digit',minute:'2-digit'});
+let dat=d.toLocaleDateString("sv-SE");
+document.getElementById("updateTime").innerText="Uppdaterad: "+dat+" "+t;
 }
+updateClock();
 
-updateInfo();
-showMatches();
-
-/* REFRESH VID ÖPPNING + redo för framtida auto */
-setInterval(()=>{location.reload();},600000);
+/* AUTO REFRESH */
+setInterval(()=>{
+location.reload();
+},3600000); // 1 gång/timme nu
 
 </script>
 
