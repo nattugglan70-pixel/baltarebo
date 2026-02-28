@@ -14,27 +14,27 @@ font-family:Arial, Helvetica, sans-serif;
 overflow:hidden;
 }
 
-/* BAKGRUND */
+/* BAKGRUND LOGGA */
 body::before{
 content:"";
 position:fixed;
 top:50%;
 left:50%;
 transform:translate(-50%,-50%);
-width:1150px;
-height:1150px;
+width:950px;
+height:950px;
 background:url("bor.png") no-repeat center;
 background-size:contain;
 opacity:0.50;
-filter:blur(0.5px);
+filter:blur(0.4px);
 z-index:0;
 }
 
 .container{
 display:grid;
-grid-template-columns:1fr 1.6fr;
-gap:40px;
-padding:50px;
+grid-template-columns:0.9fr 1.7fr;
+gap:25px;
+padding:25px 35px;
 height:100vh;
 box-sizing:border-box;
 position:relative;
@@ -43,42 +43,32 @@ z-index:2;
 
 .panel{
 background:#0c1118ee;
-border-radius:22px;
-padding:30px;
-box-shadow:0 0 60px rgba(0,0,0,0.8);
+border-radius:18px;
+padding:22px;
+box-shadow:0 0 40px rgba(0,0,0,0.7);
 }
 
-/* MATCHINFO */
-.block{
-margin-bottom:30px;
-}
-
-.title{
-font-size:22px;
-color:#aaa;
-margin-bottom:8px;
-}
-
-.big{
-font-size:34px;
-font-weight:bold;
-}
-
-.form{
-font-size:28px;
-letter-spacing:6px;
-}
+/* INFO */
+.block{margin-bottom:25px;}
+.title{font-size:18px;color:#9aa4af;margin-bottom:6px;}
+.big{font-size:28px;font-weight:bold;}
+.form{font-size:22px;letter-spacing:6px;}
 
 /* TABELL */
 table{
 width:100%;
 border-collapse:collapse;
-font-size:24px;
+font-size:20px;
 }
 
 td,th{
-padding:14px;
-border-bottom:1px solid #222;
+padding:8px 10px;
+border-bottom:1px solid #1d2430;
+}
+
+th{
+font-weight:normal;
+color:#8b97a7;
 }
 
 .bor{
@@ -89,10 +79,10 @@ font-weight:bold;
 /* FOOTER */
 .footer{
 position:absolute;
-bottom:12px;
+bottom:6px;
 width:100%;
 text-align:center;
-font-size:13px;
+font-size:12px;
 opacity:0.35;
 }
 </style>
@@ -102,17 +92,17 @@ opacity:0.35;
 
 <div class="container">
 
-<!-- VÄNSTER INFO -->
+<!-- INFO -->
 <div class="panel">
 
 <div class="block">
 <div class="title">Senaste match</div>
-<div class="big" id="lastMatch">Ingen match spelad</div>
+<div class="big" id="lastMatch">Säsongen ej startad</div>
 </div>
 
 <div class="block">
 <div class="title">Nästa match</div>
-<div class="big" id="nextMatch">Schema ej klart</div>
+<div class="big" id="nextMatch">Väntar på seriepremiär</div>
 </div>
 
 <div class="block">
@@ -149,23 +139,18 @@ opacity:0.35;
 </table>
 
 </div>
-
 </div>
 
-<div class="footer" id="updateTime">Uppdaterad: --</div>
+<div class="footer" id="updateTime"></div>
 
 <script>
 
-/* FYLL I NÄR SÄSONG STARTAR */
-let lastMatch = "Bor – Hallaryd 3-1";
-let nextMatch = "Lör 13:00  Ryssby – Bor";
-let form = ["V","V","F","O","V"]; // senaste 5
+/* ===== FORM (kommer fyllas auto sen) ===== */
+let form = [];
 
-document.getElementById("lastMatch").innerText = lastMatch;
-document.getElementById("nextMatch").innerText = nextMatch;
-
-/* FORM */
+/* render form */
 let formHtml="";
+if(form.length===0){formHtml="- - - - -";}
 form.forEach(f=>{
 if(f=="V") formHtml+="🟢";
 if(f=="O") formHtml+="🟡";
@@ -173,19 +158,21 @@ if(f=="F") formHtml+="🔴";
 });
 document.getElementById("formRad").innerHTML=formHtml;
 
-/* UPPDATERAD TID */
+/* uppdaterad tid */
 function updateClock(){
 let d=new Date();
 let t=d.toLocaleTimeString("sv-SE",{hour:'2-digit',minute:'2-digit'});
 let dat=d.toLocaleDateString("sv-SE");
-document.getElementById("updateTime").innerText="Uppdaterad: "+dat+" "+t;
+document.getElementById("updateTime").innerText="Aktiv sportbar • "+dat+" "+t;
 }
 updateClock();
 
-/* AUTO REFRESH */
-setInterval(()=>{
-location.reload();
-},3600000); // 1 gång/timme nu
+/* ===== AUTO SYSTEM (vilande tills säsong start) ===== */
+/* När serien startar kopplas live-data in här */
+async function autoCheck(){
+/* här kopplas live-tabell senare vis säsongsstart */
+}
+setInterval(autoCheck,600000); // redo
 
 </script>
 
