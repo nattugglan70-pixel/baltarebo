@@ -25,7 +25,6 @@ height:950px;
 background:url("IFK.png") no-repeat center;
 background-size:contain;
 opacity:0.22;
-filter:blur(0.6px);
 z-index:0;
 }
 
@@ -58,15 +57,35 @@ font-size:14px;
 padding:18px 10px;
 border-bottom:1px solid #1f2630;
 }
+
 .matchTeams{
 font-size:24px;
 font-weight:bold;
 }
+
 .matchTime{
 font-size:20px;
 color:#aaa;
 margin-top:4px;
 }
+
+.nextMatch{
+background:#16263f;
+padding:18px;
+border-radius:12px;
+margin-bottom:15px;
+}
+
+.badge{
+display:inline-block;
+padding:4px 10px;
+border-radius:8px;
+font-size:12px;
+margin-left:10px;
+}
+
+.home{background:#1e7a1e;}
+.away{background:#7a1e1e;}
 
 table{width:100%;border-collapse:collapse;font-size:18px;}
 td,th{padding:10px;border-bottom:1px solid #222;}
@@ -90,26 +109,11 @@ padding:10px;
 </div>
 
 <div class="panel">
-<div class="version">v3.1</div>
+<div class="version">v4.0</div>
 <h2>Tabell 2026</h2>
 <table>
 <tr><th>#</th><th>Lag</th><th>P</th><th>+/-</th></tr>
 <tr class="ifkRow"><td>1</td><td>IFK Värnamo</td><td>0</td><td>0</td></tr>
-<tr><td>2</td><td>IK Brage</td><td>0</td><td>0</td></tr>
-<tr><td>3</td><td>Falkenbergs FF</td><td>0</td><td>0</td></tr>
-<tr><td>4</td><td>GIF Sundsvall</td><td>0</td><td>0</td></tr>
-<tr><td>5</td><td>Helsingborgs IF</td><td>0</td><td>0</td></tr>
-<tr><td>6</td><td>Landskrona BoIS</td><td>0</td><td>0</td></tr>
-<tr><td>7</td><td>Ljungskile SK</td><td>0</td><td>0</td></tr>
-<tr><td>8</td><td>Nordic United</td><td>0</td><td>0</td></tr>
-<tr><td>9</td><td>Norrby IF</td><td>0</td><td>0</td></tr>
-<tr><td>10</td><td>IFK Norrköping</td><td>0</td><td>0</td></tr>
-<tr><td>11</td><td>IK Oddevold</td><td>0</td><td>0</td></tr>
-<tr><td>12</td><td>Sandvikens IF</td><td>0</td><td>0</td></tr>
-<tr><td>13</td><td>Varbergs BoIS</td><td>0</td><td>0</td></tr>
-<tr><td>14</td><td>Örebro SK</td><td>0</td><td>0</td></tr>
-<tr><td>15</td><td>Östers IF</td><td>0</td><td>0</td></tr>
-<tr><td>16</td><td>Östersunds FK</td><td>0</td><td>0</td></tr>
 </table>
 </div>
 
@@ -120,53 +124,81 @@ padding:10px;
 <script>
 const TEAM = "IFK Värnamo";
 
-/* MANUELLT SCHEMA MED RÄTT HEMMA/BORTA */
 const manualMatches = [
-["04/04-07/04","IFK Norrköping – IFK Värnamo"],
-["11/04-14/04","IFK Värnamo – GIF Sundsvall"],
-["18-21/4","Sandvikens IF – IFK Värnamo"],
-["25-28/4","IFK Värnamo – IK Oddevold"],
-["2-5/5","Östersunds FK – IFK Värnamo"],
-["9-11/5","Varbergs BoIS FC – IFK Värnamo"],
-["13-14/5","IFK Värnamo – Örebro SK"],
-["16-19/5","IFK Värnamo – Norrby IF"],
-["23-26/5","Falkenbergs FF – IFK Värnamo"],
-["30-31/5","IFK Värnamo – Nordic United FC"],
-["10-11/6","Östers IF – IFK Värnamo"],
-["13-16/6","IFK Värnamo – Helsingborgs IF"],
-["20-23/6","IK Brage – IFK Värnamo"],
-["27-30/6","Landskrona BoIS – IFK Värnamo"],
-["18-21/7","IFK Värnamo – Ljungskile SK"],
-["25-28/7","IFK Värnamo – IK Brage"],
-["1-4/8","Örebro SK – IFK Värnamo"],
-["8-12/8","Helsingborgs IF – IFK Värnamo"],
-["15-18/8","IFK Värnamo – Östersunds FK"],
-["22-25/8","IFK Värnamo – Landskrona BoIS"],
-["29/8-1/9","Ljungskile SK – IFK Värnamo"],
-["5-7/9","IFK Värnamo – Varbergs BoIS FC"],
-["9-10/9","Nordic United FC – IFK Värnamo"],
-["12-15/9","IFK Värnamo – Östers IF"],
-["19-20/9","IK Oddevold – IFK Värnamo"],
-["10-13/10","IFK Värnamo – Falkenbergs FF"],
-["17-20/10","GIF Sundsvall – IFK Värnamo"],
-["24-27/10","IFK Värnamo – Sandvikens IF"],
-["31/10-2/11","Norrby IF – IFK Värnamo"],
-["7/11","IFK Värnamo – IFK Norrköping"]
+{date:"2026-04-04 12:30", teams:"IFK Norrköping – IFK Värnamo"},
+{date:"2026-04-14 19:00", teams:"IFK Värnamo – GIF Sundsvall"},
+{date:"2026-04-18 15:00", teams:"Sandvikens IF – IFK Värnamo"},
+{date:"2026-04-26 13:00", teams:"IFK Värnamo – IK Oddevold"},
+{date:"2026-05-03 13:00", teams:"Östersunds FK – IFK Värnamo"},
+{date:"2026-05-08 19:00", teams:"Varbergs BoIS FC – IFK Värnamo"},
+{date:"2026-05-12 19:00", teams:"IFK Värnamo – Örebro SK"},
+{date:"2026-05-17 17:00", teams:"IFK Värnamo – Norrby IF"},
+{date:"2026-05-23 17:00", teams:"Falkenbergs FF – IFK Värnamo"},
+{date:"2026-05-31 15:00", teams:"IFK Värnamo – Nordic United FC"},
+{date:"2026-06-09 19:00", teams:"Östers IF – IFK Värnamo"},
+{date:"2026-06-16 19:00", teams:"IFK Värnamo – Helsingborgs IF"},
+{date:"2026-06-21 15:00", teams:"IK Brage – IFK Värnamo"},
+{date:"2026-06-28 15:00", teams:"Landskrona BoIS – IFK Värnamo"},
+{date:"2026-07-19 15:00", teams:"IFK Värnamo – Ljungskile SK"}
 ];
 
 function showManual(){
+
+const now = new Date();
+
+const upcoming = manualMatches
+.filter(m => new Date(m.date) >= now)
+.sort((a,b)=> new Date(a.date) - new Date(b.date));
+
 let html="";
-manualMatches.forEach(m=>{
+
+if(upcoming.length){
+const next = upcoming[0];
+const d = new Date(next.date);
+
+html+=`
+<div class="nextMatch">
+<b>NÄSTA MATCH</b><br>
+${next.teams}<br>
+${formatDate(d)}
+</div>`;
+}
+
+upcoming.forEach(m=>{
+
+const d = new Date(m.date);
+
+const isHome = m.teams.startsWith("IFK Värnamo");
+const badge = isHome 
+? '<span class="badge home">HEMMA</span>' 
+: '<span class="badge away">BORTA</span>';
+
 html+=`
 <div class="matchCard">
-<div class="matchTeams">${m[1]}</div>
-<div class="matchTime">${m[0]}</div>
+<div class="matchTeams">${m.teams} ${badge}</div>
+<div class="matchTime">${formatDate(d)}</div>
 </div>`;
 });
+
 document.getElementById("matches").innerHTML = html;
 }
 
-/* API TAR ÖVER SEN */
+function formatDate(d){
+const dateStr = d.toLocaleDateString("sv-SE", {
+weekday:"short",
+day:"numeric",
+month:"short"
+});
+
+const timeStr = d.toLocaleTimeString("sv-SE", {
+hour:"2-digit",
+minute:"2-digit"
+});
+
+return `${dateStr} kl ${timeStr}`;
+}
+
+/* API (optional boost) */
 async function loadFromAPI(){
 try{
 const t=await fetch(`https://www.thesportsdb.com/api/v1/json/3/searchteams.php?t=${TEAM}`);
@@ -176,9 +208,10 @@ const id=td.teams[0].idTeam;
 const res=await fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsnext.php?id=${id}`);
 const data=await res.json();
 
-if(!data.events) return;
+if(!data.events || data.events.length === 0) return;
 
-let html="";
+let html=document.getElementById("matches").innerHTML;
+
 data.events.forEach(m=>{
 html+=`
 <div class="matchCard">
