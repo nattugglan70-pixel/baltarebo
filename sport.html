@@ -87,6 +87,20 @@ margin-left:10px;
 .home{background:#1e7a1e;}
 .away{background:#7a1e1e;}
 
+.arenaLink{
+font-size:14px;
+color:#6fa8ff;
+margin-top:3px;
+display:inline-block;
+text-decoration:none;
+}
+
+.arenaLink:hover{
+text-decoration:underline;
+color:#9fc5ff;
+cursor:pointer;
+}
+
 table{width:100%;border-collapse:collapse;font-size:18px;}
 td,th{padding:10px;border-bottom:1px solid #222;}
 .ifkRow{color:gold;font-weight:bold;}
@@ -109,7 +123,7 @@ padding:10px;
 </div>
 
 <div class="panel">
-<div class="version">v4.0</div>
+<div class="version">v4.1</div>
 <h2>Tabell 2026</h2>
 <table>
 <tr><th>#</th><th>Lag</th><th>P</th><th>+/-</th></tr>
@@ -122,25 +136,29 @@ padding:10px;
 <div class="footer">Sportbar aktiv</div>
 
 <script>
-const TEAM = "IFK Värnamo";
-
 const manualMatches = [
-{date:"2026-04-04 12:30", teams:"IFK Norrköping – IFK Värnamo"},
+{date:"2026-04-04 12:30", teams:"IFK Norrköping – IFK Värnamo", arena:"PlatinumCars Arena", map:"https://www.google.com/maps?q=PlatinumCars+Arena+Norrköping"},
 {date:"2026-04-14 19:00", teams:"IFK Värnamo – GIF Sundsvall"},
-{date:"2026-04-18 15:00", teams:"Sandvikens IF – IFK Värnamo"},
+{date:"2026-04-18 15:00", teams:"Sandvikens IF – IFK Värnamo", arena:"Jernvallen", map:"https://www.google.com/maps?q=Jernvallen+Sandviken"},
 {date:"2026-04-26 13:00", teams:"IFK Värnamo – IK Oddevold"},
-{date:"2026-05-03 13:00", teams:"Östersunds FK – IFK Värnamo"},
-{date:"2026-05-08 19:00", teams:"Varbergs BoIS FC – IFK Värnamo"},
+{date:"2026-05-03 13:00", teams:"Östersunds FK – IFK Värnamo", arena:"Jämtkraft Arena", map:"https://www.google.com/maps?q=Jämtkraft+Arena"},
+{date:"2026-05-08 19:00", teams:"Varbergs BoIS FC – IFK Värnamo", arena:"Påskbergsvallen", map:"https://www.google.com/maps?q=Påskbergsvallen"},
 {date:"2026-05-12 19:00", teams:"IFK Värnamo – Örebro SK"},
 {date:"2026-05-17 17:00", teams:"IFK Värnamo – Norrby IF"},
-{date:"2026-05-23 17:00", teams:"Falkenbergs FF – IFK Värnamo"},
+{date:"2026-05-23 17:00", teams:"Falkenbergs FF – IFK Värnamo", arena:"Falcon Arena", map:"https://www.google.com/maps?q=Falcon+Arena+Falkenberg"},
 {date:"2026-05-31 15:00", teams:"IFK Värnamo – Nordic United FC"},
-{date:"2026-06-09 19:00", teams:"Östers IF – IFK Värnamo"},
+{date:"2026-06-09 19:00", teams:"Östers IF – IFK Värnamo", arena:"Spiris Arena", map:"https://www.google.com/maps?q=Spiris+Arena+Växjö"},
 {date:"2026-06-16 19:00", teams:"IFK Värnamo – Helsingborgs IF"},
-{date:"2026-06-21 15:00", teams:"IK Brage – IFK Värnamo"},
-{date:"2026-06-28 15:00", teams:"Landskrona BoIS – IFK Värnamo"},
+{date:"2026-06-21 15:00", teams:"IK Brage – IFK Värnamo", arena:"Borlänge Energi Arena", map:"https://www.google.com/maps?q=Borlänge+Energi+Arena"},
+{date:"2026-06-28 15:00", teams:"Landskrona BoIS – IFK Värnamo", arena:"Landskrona IP", map:"https://www.google.com/maps?q=Landskrona+IP"},
 {date:"2026-07-19 15:00", teams:"IFK Värnamo – Ljungskile SK"}
 ];
+
+function formatDate(d){
+const dateStr = d.toLocaleDateString("sv-SE", {weekday:"short",day:"numeric",month:"short"});
+const timeStr = d.toLocaleTimeString("sv-SE", {hour:"2-digit",minute:"2-digit"});
+return `${dateStr} kl ${timeStr}`;
+}
 
 function showManual(){
 
@@ -154,80 +172,40 @@ let html="";
 
 if(upcoming.length){
 const next = upcoming[0];
-const d = new Date(next.date);
-
 html+=`
 <div class="nextMatch">
 <b>NÄSTA MATCH</b><br>
 ${next.teams}<br>
-${formatDate(d)}
+${formatDate(new Date(next.date))}
 </div>`;
 }
 
 upcoming.forEach(m=>{
 
 const d = new Date(m.date);
-
 const isHome = m.teams.startsWith("IFK Värnamo");
+
 const badge = isHome 
 ? '<span class="badge home">HEMMA</span>' 
 : '<span class="badge away">BORTA</span>';
+
+let arenaHtml = "";
+if(!isHome && m.arena && m.map){
+arenaHtml = `<a class="arenaLink" href="${m.map}" target="_blank">📍 ${m.arena}</a>`;
+}
 
 html+=`
 <div class="matchCard">
 <div class="matchTeams">${m.teams} ${badge}</div>
 <div class="matchTime">${formatDate(d)}</div>
+${arenaHtml}
 </div>`;
 });
 
 document.getElementById("matches").innerHTML = html;
 }
 
-function formatDate(d){
-const dateStr = d.toLocaleDateString("sv-SE", {
-weekday:"short",
-day:"numeric",
-month:"short"
-});
-
-const timeStr = d.toLocaleTimeString("sv-SE", {
-hour:"2-digit",
-minute:"2-digit"
-});
-
-return `${dateStr} kl ${timeStr}`;
-}
-
-/* API (optional boost) */
-async function loadFromAPI(){
-try{
-const t=await fetch(`https://www.thesportsdb.com/api/v1/json/3/searchteams.php?t=${TEAM}`);
-const td=await t.json();
-const id=td.teams[0].idTeam;
-
-const res=await fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsnext.php?id=${id}`);
-const data=await res.json();
-
-if(!data.events || data.events.length === 0) return;
-
-let html=document.getElementById("matches").innerHTML;
-
-data.events.forEach(m=>{
-html+=`
-<div class="matchCard">
-<div class="matchTeams">${m.strHomeTeam} – ${m.strAwayTeam}</div>
-<div class="matchTime">${m.dateEvent}</div>
-</div>`;
-});
-
-document.getElementById("matches").innerHTML=html;
-
-}catch{}
-}
-
 showManual();
-loadFromAPI();
-setInterval(loadFromAPI,600000);
 </script>
 
 </body>
