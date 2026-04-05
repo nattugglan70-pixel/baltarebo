@@ -1,3 +1,15 @@
+<!--
+IFK SPORTBAR
+Version: 4.2
+Datum: 2026-04-05
+
+ÄNDRINGAR:
+- Automatisk tabell via FotMob
+- Nedräkning till avspark
+- MATCH IDAG highlight
+- Klickbar arena (bortamatcher)
+-->
+
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -11,21 +23,6 @@ margin:0;
 background:#05070a;
 color:white;
 font-family:Arial, Helvetica, sans-serif;
-overflow-x:hidden;
-}
-
-body::before{
-content:"";
-position:fixed;
-top:50%;
-left:50%;
-transform:translate(-50%,-50%);
-width:950px;
-height:950px;
-background:url("IFK.png") no-repeat center;
-background-size:contain;
-opacity:0.22;
-z-index:0;
 }
 
 .container{
@@ -33,84 +30,54 @@ display:grid;
 grid-template-columns:1.4fr 1fr;
 gap:25px;
 padding:40px;
-position:relative;
-z-index:2;
 }
 
 .panel{
 background:#0c1118ee;
 border-radius:18px;
 padding:25px;
-box-shadow:0 0 40px rgba(0,0,0,0.7);
-position:relative;
 }
 
-.version{
-position:absolute;
-top:12px;
-right:18px;
-color:gold;
-font-size:14px;
-}
-
-.matchCard{
-padding:18px 10px;
-border-bottom:1px solid #1f2630;
-}
-
-.matchTeams{
-font-size:24px;
-font-weight:bold;
-}
-
-.matchTime{
-font-size:20px;
-color:#aaa;
-margin-top:4px;
-}
+.matchCard{padding:15px;border-bottom:1px solid #222;}
+.matchTeams{font-size:22px;font-weight:bold;}
+.matchTime{color:#aaa;margin-top:5px;}
 
 .nextMatch{
 background:#16263f;
-padding:18px;
-border-radius:12px;
+padding:15px;
+border-radius:10px;
 margin-bottom:15px;
 }
 
-.badge{
-display:inline-block;
-padding:4px 10px;
-border-radius:8px;
-font-size:12px;
-margin-left:10px;
-}
-
+.badge{padding:3px 8px;border-radius:6px;font-size:12px;margin-left:8px;}
 .home{background:#1e7a1e;}
 .away{background:#7a1e1e;}
 
+.today{
+background:#7a1e1e;
+padding:2px 6px;
+border-radius:6px;
+margin-left:6px;
+animation:pulse 1.5s infinite;
+}
+
+@keyframes pulse{
+0%{opacity:1;}
+50%{opacity:0.4;}
+100%{opacity:1;}
+}
+
 .arenaLink{
-font-size:14px;
+font-size:13px;
 color:#6fa8ff;
-margin-top:3px;
-display:inline-block;
 text-decoration:none;
 }
 
-.arenaLink:hover{
-text-decoration:underline;
-color:#9fc5ff;
-cursor:pointer;
-}
+.arenaLink:hover{text-decoration:underline;}
 
-table{width:100%;border-collapse:collapse;font-size:18px;}
-td,th{padding:10px;border-bottom:1px solid #222;}
+table{width:100%;border-collapse:collapse;}
+td,th{padding:8px;border-bottom:1px solid #222;}
 .ifkRow{color:gold;font-weight:bold;}
-
-.footer{
-text-align:center;
-opacity:0.25;
-font-size:12px;
-padding:10px;
-}
 </style>
 </head>
 
@@ -123,55 +90,42 @@ padding:10px;
 </div>
 
 <div class="panel">
-<div class="version">v4.1</div>
-<h2>Tabell 2026</h2>
-<table>
-<tr><th>#</th><th>Lag</th><th>P</th><th>+/-</th></tr>
-<tr class="ifkRow"><td>1</td><td>IFK Värnamo</td><td>0</td><td>0</td></tr>
-</table>
+<h2>Tabell</h2>
+<table id="table"></table>
 </div>
 
 </div>
-
-<div class="footer">Sportbar aktiv</div>
 
 <script>
 const manualMatches = [
-{date:"2026-04-04 12:30", teams:"IFK Norrköping – IFK Värnamo", arena:"PlatinumCars Arena", map:"https://www.google.com/maps?q=PlatinumCars+Arena+Norrköping"},
+{date:"2026-04-04 12:30", teams:"IFK Norrköping – IFK Värnamo", arena:"PlatinumCars Arena", map:"https://www.google.com/maps/dir/?api=1&destination=PlatinumCars+Arena+Norrköping"},
 {date:"2026-04-14 19:00", teams:"IFK Värnamo – GIF Sundsvall"},
-{date:"2026-04-18 15:00", teams:"Sandvikens IF – IFK Värnamo", arena:"Jernvallen", map:"https://www.google.com/maps?q=Jernvallen+Sandviken"},
-{date:"2026-04-26 13:00", teams:"IFK Värnamo – IK Oddevold"},
-{date:"2026-05-03 13:00", teams:"Östersunds FK – IFK Värnamo", arena:"Jämtkraft Arena", map:"https://www.google.com/maps?q=Jämtkraft+Arena"},
-{date:"2026-05-08 19:00", teams:"Varbergs BoIS FC – IFK Värnamo", arena:"Påskbergsvallen", map:"https://www.google.com/maps?q=Påskbergsvallen"},
-{date:"2026-05-12 19:00", teams:"IFK Värnamo – Örebro SK"},
-{date:"2026-05-17 17:00", teams:"IFK Värnamo – Norrby IF"},
-{date:"2026-05-23 17:00", teams:"Falkenbergs FF – IFK Värnamo", arena:"Falcon Arena", map:"https://www.google.com/maps?q=Falcon+Arena+Falkenberg"},
-{date:"2026-05-31 15:00", teams:"IFK Värnamo – Nordic United FC"},
-{date:"2026-06-09 19:00", teams:"Östers IF – IFK Värnamo", arena:"Spiris Arena", map:"https://www.google.com/maps?q=Spiris+Arena+Växjö"},
-{date:"2026-06-16 19:00", teams:"IFK Värnamo – Helsingborgs IF"},
-{date:"2026-06-21 15:00", teams:"IK Brage – IFK Värnamo", arena:"Borlänge Energi Arena", map:"https://www.google.com/maps?q=Borlänge+Energi+Arena"},
-{date:"2026-06-28 15:00", teams:"Landskrona BoIS – IFK Värnamo", arena:"Landskrona IP", map:"https://www.google.com/maps?q=Landskrona+IP"},
-{date:"2026-07-19 15:00", teams:"IFK Värnamo – Ljungskile SK"}
+{date:"2026-04-18 15:00", teams:"Sandvikens IF – IFK Värnamo", arena:"Jernvallen", map:"https://www.google.com/maps/dir/?api=1&destination=Jernvallen+Sandviken"}
 ];
 
 function formatDate(d){
-const dateStr = d.toLocaleDateString("sv-SE", {weekday:"short",day:"numeric",month:"short"});
-const timeStr = d.toLocaleTimeString("sv-SE", {hour:"2-digit",minute:"2-digit"});
-return `${dateStr} kl ${timeStr}`;
+return d.toLocaleString("sv-SE",{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
+}
+
+function countdown(date){
+const diff = new Date(date) - new Date();
+if(diff<=0) return "Match startad";
+const h=Math.floor(diff/1000/60/60);
+const m=Math.floor((diff/1000/60)%60);
+return `${h}h ${m}m kvar`;
 }
 
 function showManual(){
+  const now=new Date();
 
-const now = new Date();
-
-const upcoming = manualMatches
-.filter(m => new Date(m.date) >= now)
-.sort((a,b)=> new Date(a.date) - new Date(b.date));
+const upcoming=manualMatches
+.filter(m=>new Date(m.date)>=now)
+.sort((a,b)=>new Date(a.date)-new Date(b.date));
 
 let html="";
 
 if(upcoming.length){
-const next = upcoming[0];
+const next=upcoming[0];
 html+=`
 <div class="nextMatch">
 <b>NÄSTA MATCH</b><br>
@@ -181,69 +135,59 @@ ${formatDate(new Date(next.date))}
 }
 
 upcoming.forEach(m=>{
+const d=new Date(m.date);
+const isHome=m.teams.startsWith("IFK Värnamo");
+const badge=isHome?'<span class="badge home">HEMMA</span>':'<span class="badge away">BORTA</span>';
+const today=(d.toDateString()===new Date().toDateString())?'<span class="today">IDAG</span>':'';
 
-const d = new Date(m.date);
-const isHome = m.teams.startsWith("IFK Värnamo");
-
-const badge = isHome 
-? '<span class="badge home">HEMMA</span>' 
-: '<span class="badge away">BORTA</span>';
-
-let arenaHtml = "";
-if(!isHome && m.arena && m.map){
-arenaHtml = `<a class="arenaLink" href="${m.map}" target="_blank">📍 ${m.arena}</a>`;
+let arena="";
+if(!isHome && m.arena){
+arena=`<a class="arenaLink" href="${m.map}" target="_blank">📍 ${m.arena}</a>`;
 }
 
 html+=`
 <div class="matchCard">
-<div class="matchTeams">${m.teams} ${badge}</div>
-<div class="matchTime">${formatDate(d)}</div>
-${arenaHtml}
+<div class="matchTeams">${m.teams} ${badge} ${today}</div>
+<div class="matchTime">
+${formatDate(d)}<br>
+${countdown(m.date)}
+</div>
+${arena}
 </div>`;
 });
 
-document.getElementById("matches").innerHTML = html;
+document.getElementById("matches").innerHTML=html;
+}
+
+async function loadTable(){
+try{
+const res=await fetch("https://www.fotmob.com/api/leagues?id=27&ccode3=SWE_MALE");
+const data=await res.json();
+const table=data.table[0].data.table.all;
+
+let html="<tr><th>#</th><th>Lag</th><th>P</th><th>+/-</th></tr>";
+
+table.forEach((t,i)=>{
+const isIFK=t.name==="IFK Värnamo";
+html+=`
+<tr class="${isIFK?'ifkRow':''}">
+<td>${i+1}</td>
+<td>${t.name}</td>
+<td>${t.pts}</td>
+<td>${t.gd}</td>
+</tr>`;
+});
+
+document.getElementById("table").innerHTML=html;
+
+}catch(e){
+console.log("Tabell fel");
+}
 }
 
 showManual();
-  async function loadTable(){
-
-try{
-
-const res = await fetch("https://www.fotmob.com/api/leagues?id=27&ccode3=SWE_MALE");
-const data = await res.json();
-
-/* hitta rätt tabell */
-const table = data.table[0].data.table.all;
-
-let html = `
-<tr><th>#</th><th>Lag</th><th>P</th><th>+/-</th></tr>
-`;
-
-table.forEach((team,i)=>{
-
-const isIFK = team.name === "IFK Värnamo";
-
-html += `
-<tr class="${isIFK ? 'ifkRow' : ''}">
-<td>${i+1}</td>
-<td>${team.name}</td>
-<td>${team.pts}</td>
-<td>${team.gd}</td>
-</tr>
-`;
-
-});
-
-document.querySelector("table").innerHTML = html;
-
-}catch(e){
-console.log("Tabell kunde inte laddas");
-}
-
-  }
-  loadTable();
-setInterval(loadTable, 600000); // uppdaterar var 10 min
+loadTable();
+setInterval(loadTable,600000);
 </script>
 
 </body>
