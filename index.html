@@ -169,22 +169,46 @@ async function updateWeather(){
     pressure.textContent=data.hourly.pressure_msl[0]+" hPa";
     precip.textContent=data.hourly.precipitation[0]+" mm";
 
-    const weatherMap={
-      0:["Klart","☀️"],
-      1:["Lätt moln","🌤️"],
-      2:["Molnigt","⛅"],
-      3:["Mulet","☁️"],
-      45:["Dimma","🌫️"],
-      48:["Dimma","🌫️"],
-      61:["Regn","🌧️"],
-      63:["Regn","🌧️"],
-      65:["Regn","🌧️"],
-      71:["Snö","❄️"],
-      73:["Snö","❄️"],
-      75:["Snö","❄️"],
-      95:["Åska","⛈️"]
-    };
+    const weatherMap = {
+  0:["Klart","☀️"],
+  1:["Mest klart","🌤️"],
+  2:["Delvis molnigt","⛅"],
+  3:["Mulet","☁️"],
 
+  45:["Dimma","🌫️"],
+  48:["Dimma","🌫️"],
+
+  51:["Duggregn","🌦️"],
+  53:["Duggregn","🌦️"],
+  55:["Duggregn","🌦️"],
+
+  56:["Underkylt regn","🌧️"],
+  57:["Underkylt regn","🌧️"],
+
+  61:["Regn","🌧️"],
+  63:["Regn","🌧️"],
+  65:["Kraftigt regn","🌧️"],
+
+  66:["Isregn","🌧️"],
+  67:["Isregn","🌧️"],
+
+  71:["Snö","❄️"],
+  73:["Snö","❄️"],
+  75:["Kraftig snö","❄️"],
+
+  77:["Snökorn","❄️"],
+
+  80:["Regnskurar","🌧️"],
+  81:["Regnskurar","🌧️"],
+  82:["Kraftiga skurar","🌧️"],
+
+  85:["Snöbyar","❄️"],
+  86:["Snöbyar","❄️"],
+
+  95:["Åska","⛈️"],
+  96:["Åska + hagel","⛈️"],
+  99:["Kraftig åska + hagel","⛈️"]
+};
     const w = weatherMap[cw.weathercode] || ["Väder","☁️"];
 
     // Visa emoji som SVG så storlek hålls stabil
