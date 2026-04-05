@@ -206,6 +206,44 @@ document.getElementById("matches").innerHTML = html;
 }
 
 showManual();
+  async function loadTable(){
+
+try{
+
+const res = await fetch("https://www.fotmob.com/api/leagues?id=27&ccode3=SWE_MALE");
+const data = await res.json();
+
+/* hitta rätt tabell */
+const table = data.table[0].data.table.all;
+
+let html = `
+<tr><th>#</th><th>Lag</th><th>P</th><th>+/-</th></tr>
+`;
+
+table.forEach((team,i)=>{
+
+const isIFK = team.name === "IFK Värnamo";
+
+html += `
+<tr class="${isIFK ? 'ifkRow' : ''}">
+<td>${i+1}</td>
+<td>${team.name}</td>
+<td>${team.pts}</td>
+<td>${team.gd}</td>
+</tr>
+`;
+
+});
+
+document.querySelector("table").innerHTML = html;
+
+}catch(e){
+console.log("Tabell kunde inte laddas");
+}
+
+  }
+  loadTable();
+setInterval(loadTable, 600000); // uppdaterar var 10 min
 </script>
 
 </body>
