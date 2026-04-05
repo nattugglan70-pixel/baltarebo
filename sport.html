@@ -161,14 +161,37 @@ document.getElementById("matches").innerHTML=html;
 
 async function loadTable(){
 try{
+async function loadTable(){
+
+try{
 const res=await fetch("https://www.fotmob.com/api/leagues?id=27&ccode3=SWE_MALE");
 const data=await res.json();
+
 const table=data.table[0].data.table.all;
+
+renderTable(table);
+
+}catch(e){
+
+const fallback = [
+{name:"IFK Värnamo", pts:3, gd:"+1"},
+{name:"GIF Sundsvall", pts:1, gd:"0"},
+{name:"IK Brage", pts:1, gd:"0"},
+{name:"Sandvikens IF", pts:0, gd:"-1"}
+];
+
+renderTable(fallback);
+}
+}
+
+function renderTable(table){
 
 let html="<tr><th>#</th><th>Lag</th><th>P</th><th>+/-</th></tr>";
 
 table.forEach((t,i)=>{
-const isIFK=t.name==="IFK Värnamo";
+
+const isIFK = t.name === "IFK Värnamo";
+
 html+=`
 <tr class="${isIFK?'ifkRow':''}">
 <td>${i+1}</td>
@@ -179,10 +202,6 @@ html+=`
 });
 
 document.getElementById("table").innerHTML=html;
-
-}catch(e){
-console.log("Tabell fel");
-}
 }
 
 showManual();
