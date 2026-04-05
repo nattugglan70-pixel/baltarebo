@@ -160,28 +160,34 @@ document.getElementById("matches").innerHTML=html;
 }
 
 async function loadTable(){
+async function loadTable(){
 
 try{
-const res=await fetch("https://www.fotmob.com/api/leagues?id=27&ccode3=SWE_MALE");
-const data=await res.json();
 
-const table=data.table[0].data.table.all;
+const url = "https://www.fotmob.com/api/leagues?id=27&ccode3=SWE_MALE";
+
+/* proxy */
+const res = await fetch("https://api.allorigins.win/get?url=" + encodeURIComponent(url));
+const data = await res.json();
+
+/* konvertera */
+const json = JSON.parse(data.contents);
+
+/* tabell */
+const table = json.table[0].data.table.all;
 
 renderTable(table);
 
 }catch(e){
+console.log("API fel – fallback används");
 
 const fallback = [
-{name:"IFK Värnamo", pts:3, gd:"+1"},
-{name:"GIF Sundsvall", pts:1, gd:"0"},
-{name:"IK Brage", pts:1, gd:"0"},
-{name:"Sandvikens IF", pts:0, gd:"-1"}
+{name:"IFK Värnamo", pts:0, gd:"-1"}
 ];
 
 renderTable(fallback);
 }
 }
-
 function renderTable(table){
 
 let html="<tr><th>#</th><th>Lag</th><th>P</th><th>+/-</th></tr>";
